@@ -55,6 +55,187 @@ const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
     return <span className={`px-2 py-1 text-xs font-semibold rounded ${color}`}>{priority}</span>;
 };
 
+const DailyStatsWidget: React.FC = () => {
+    const tasks = useAppStore(state => state.tasks);
+    
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    
+    const todayCompleted = tasks.filter(t => t.completedAt && t.completedAt >= startOfDay);
+    const inProgress = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS);
+    const highPriority = tasks.filter(t => t.priority === TaskPriority.HIGH && t.status !== TaskStatus.DONE);
+
+    return (
+        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                📊 Today's Stats
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <p className="text-3xl font-bold text-green-500">{todayCompleted.length}</p>
+                    <p className="text-sm text-gray-400 mt-1">Completed</p>
+                </div>
+                <div className="text-center p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                    <p className="text-3xl font-bold text-orange-500">{inProgress.length}</p>
+                    <p className="text-sm text-gray-400 mt-1">In Progress</p>
+                </div>
+                <div className="text-center p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+                    <p className="text-3xl font-bold text-red-500">{highPriority.length}</p>
+                    <p className="text-sm text-gray-400 mt-1">High Priority</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// NEW: Recent Activity Feed
+const RecentActivity: React.FC = () => {
+    const tasks = useAppStore(state => state.tasks);
+    
+    const recentActivities = tasks
+        .filter(t => t.completedAt)
+        .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
+        .slice(0, 5);
+
+    if (recentActivities.length === 0) {
+        return (
+            <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">📋 Recent Activity</h3>
+                <p className="text-gray-500 text-center py-8">No completed tasks yet</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">📋 Recent Activity</h3>
+            <div className="space-y-3">
+                {recentActivities.map(task => (
+                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg hover:bg-gray-800/60 transition">
+                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{task.title}</p>
+                            <p className="text-gray-400 text-xs">{task.category}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                            <span className="text-xs text-gray-500 block">
+                                {new Date(task.completedAt!).toLocaleTimeString('en-US', { 
+                                    hour: 'numeric', 
+                                    minute: '2-digit' 
+                                })}
+                            </span>
+                            <span className="text-xs text-green-400">{task.duration}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// NEW: Quick Task Templates
+const QuickTemplates: React.FC = () => {
+    const { addTask } = useAppStore();
+
+    const templates = [
+        { title: "📚 Study Session", category: "Learning", duration: "2 hours", priority: TaskPriority.HIGH },
+        { title: "🏋️ Workout", category: "Fitness", duration: "1 hour", priority: TaskPriority.MEDIUM },
+        { title: "💻 Code Review", category: "Development", duration: "30 min", priority: TaskPriority.HIGH },
+        { title: "📧 Check Emails", category: "Admin", duration: "20 min", priority: TaskPriority.LOW },
+        { title: "☕ Break", category: "Rest", duration: "15 min", priority: TaskPriority.LOW },
+        { title: "📖 Read Articles", category: "Learning", duration: "45 min", priority: TaskPriority.MEDIUM },
+    ];
+
+    const addFromTemplate = (template: any) => {
+        addTask({
+            ...template,
+            id: Date.now(),
+            status: TaskStatus.TODO,
+            isCompleted: false,
+        });
+    };
+
+    return (
+        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">⚡ Quick Add Templates</h3>
+            <div className="grid grid-cols-2 gap-3">
+                {templates.map((template, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => addFromTemplate(template)}
+                        className="p-3 bg-gray-800/40 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500/40 rounded-lg text-left transition group"
+                    >
+                        <p className="text-white text-sm font-medium group-hover:text-orange-400 transition">{template.title}</p>
+                        <div className="flex justify-between items-center mt-1">
+                            <p className="text-gray-400 text-xs">{template.duration}</p>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                template.priority === TaskPriority.HIGH ? 'bg-red-500/20 text-red-400' :
+                                template.priority === TaskPriority.MEDIUM ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-blue-500/20 text-blue-400'
+                            }`}>
+                                {template.priority}
+                            </span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// NEW: Category Breakdown
+const CategoryBreakdown: React.FC = () => {
+    const tasks = useAppStore(state => state.tasks);
+    
+    const categoryStats = useMemo(() => {
+        const stats: Record<string, { total: number; completed: number }> = {};
+        
+        tasks.forEach(task => {
+            if (!stats[task.category]) {
+                stats[task.category] = { total: 0, completed: 0 };
+            }
+            stats[task.category].total++;
+            if (task.isCompleted) {
+                stats[task.category].completed++;
+            }
+        });
+        
+        return Object.entries(stats)
+            .map(([category, data]) => ({
+                category,
+                ...data,
+                percentage: Math.round((data.completed / data.total) * 100)
+            }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+    }, [tasks]);
+
+    return (
+        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">📂 Category Breakdown</h3>
+            <div className="space-y-4">
+                {categoryStats.map(({ category, total, completed, percentage }) => (
+                    <div key={category}>
+                        <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-300 font-medium">{category}</span>
+                            <span className="text-gray-400">{completed}/{total}</span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                            <div 
+                                className="bg-gradient-to-r from-orange-500 to-pink-500 h-2 rounded-full transition-all duration-500" 
+                                style={{ width: `${percentage}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 // -----------------------------------------------------------------------------
 // Task Card Component
 const TaskCard = ({
@@ -314,9 +495,6 @@ const TasksPage = () => {
         });
     };
 
-
-
-
     const tasksByStatus = useMemo(() =>
         tasks.reduce((acc, t) => {
             acc[t.status] = acc[t.status] || [];
@@ -342,9 +520,9 @@ const TasksPage = () => {
         batch.forEach(task => addTask({ ...task, id: Date.now() + Math.random() }));
     };
 
-
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
+            {/* Header */}
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-white">Tasks</h1>
                 <p className="text-gray-400 text-sm">
@@ -354,15 +532,15 @@ const TasksPage = () => {
 
             {/* Buttons */}
             <div className="flex justify-end gap-3">
-                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-orange-600 text-white rounded-lg flex items-center gap-2 hover:bg-orange-500">
+                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-orange-600 text-white rounded-lg flex items-center gap-2 hover:bg-orange-500 transition">
                     <PlusIcon className="h-5 w-5" /> Add Task
                 </button>
-                <button onClick={() => setAiModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-500">
+                <button onClick={() => setAiModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-500 transition">
                     <SparklesIcon className="h-5 w-5" /> AI
                 </button>
             </div>
 
-            {/* Columns */}
+            {/* Kanban Columns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {COLUMNS.map(status => (
                     <div key={status}
@@ -389,16 +567,30 @@ const TasksPage = () => {
                 ))}
             </div>
 
-            <AddTaskModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  onAddTask={(t: any) =>
-    addTask({ ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false })
-  }
-/>
+            {/* ✅ NEW: Bottom Widgets Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                <DailyStatsWidget />
+                <CategoryBreakdown />
+            </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <QuickTemplates />
+                <RecentActivity />
+            </div>
+
+            {/* Modals */}
+            <AddTaskModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onAddTask={(t: any) =>
+                    addTask({ ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false })
+                }
+            />
 
             <GeneratePlanModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} onAddBatch={handleAddBatchTasks} />
+
+            {/* Rotating Motivation */}
+            <RotatingMotivation />
         </div>
     );
 };
