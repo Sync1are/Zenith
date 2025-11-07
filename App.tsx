@@ -27,12 +27,7 @@ const App: React.FC = () => {
 
   };
   useEffect(() => {
-    const interval = setInterval(() => {
-      useAppStore.getState().tick();
-    }, 1000);
-
-
-    return () => clearInterval(interval);
+    
   }, []);
 
   return (
