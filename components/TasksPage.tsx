@@ -314,30 +314,7 @@ const TasksPage = () => {
         });
     };
 
-    // ✅ GLOBAL TIMER - Runs even when switching pages
-    useEffect(() => {
-        if (activeTaskId == null) return;
 
-        const interval = setInterval(() => {
-            setTasks(prev =>
-                prev.map(t => {
-                    if (t.id !== activeTaskId) return t;
-
-                    if (t.duration && t.remainingTime !== undefined) {
-                        const newTime = Math.max(t.remainingTime - 1, 0);
-                        if (newTime === 0) {
-                            return { ...t, remainingTime: 0, status: TaskStatus.DONE, isCompleted: true };
-                        }
-                        return { ...t, remainingTime: newTime };
-                    }
-
-                    return { ...t, elapsedTime: (t.elapsedTime ?? 0) + 1 };
-                })
-            );
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [activeTaskId, setTasks]);
 
 
     const tasksByStatus = useMemo(() =>
