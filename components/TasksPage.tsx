@@ -6,7 +6,7 @@ import { useAppStore } from '../store/useAppStore';
 import {
     PlusIcon, SparklesIcon, ClockIcon, TagIcon, PlayIcon, PauseIcon,
     EditIcon, TrashIcon
-} from '../components/icons/IconComponents';
+} from './icons/IconComponents';
 const COLUMNS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
 
@@ -115,9 +115,23 @@ const TaskCard = ({
 
             {/* Time + Category */}
             <div className="text-sm text-gray-400 flex justify-between mb-3">
-                <span className="flex items-center gap-1"><TagIcon className="w-3 h-3" />{task.category}</span>
-                <span className="font-mono flex items-center gap-1"><ClockIcon className="w-3 h-3" />{formattedTotal}</span>
+                <span className="flex items-center gap-1">
+                    <TagIcon className="w-3 h-3" /> {task.category}
+                </span>
+
+                <span className="font-mono flex items-center gap-1">
+                    <ClockIcon className="w-3 h-3" />
+
+                    {/* If task has set duration → countdown mode */}
+                    {task.duration
+                        ? formatSeconds(task.remainingTime ?? parseDurationToSeconds(task.duration))
+
+                        /* If no duration → stopwatch mode */
+                        : formatSeconds(task.elapsedTime ?? 0)
+                    }
+                </span>
             </div>
+
 
             {/* Subtasks List */}
             {task.subtasks && task.subtasks.length > 0 && (
@@ -272,70 +286,58 @@ Goal: ${prompt}
 };
 
 // -----------------------------------------------------------------------------
-// MAIN PAGE
 const TasksPage = () => {
-    const { tasks, setTasks } = useAppStore();
-
+    const { 
+        tasks, 
+        activeTaskId,
+        setTasks,
+        startTask, 
+        pauseTask, 
+        updateTask, 
+        deleteTask, 
+        addTask 
+    } = useAppStore();
 
     const [draggedTask, setDraggedTask] = useState<Task | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [aiModalOpen, setAiModalOpen] = useState(false);
-    const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
-    const handleToggleSubtask = (taskId: number, subtaskId: number) => {
-        setTasks(prev =>
-            prev.map(task => {
-                if (task.id !== taskId) return task;
 
-                const updatedSubtasks = task.subtasks!.map(st =>
+    const handleToggleSubtask = (taskId: number, subtaskId: number) => {
+        updateTask(taskId, {
+            subtasks: tasks
+                .find(t => t.id === taskId)!
+                .subtasks!.map(st =>
                     st.id === subtaskId
                         ? { ...st, isCompleted: !st.isCompleted, completedAt: Date.now() }
                         : st
-                );
-
-                const allDone = updatedSubtasks.every(st => st.isCompleted);
-
-                return {
-                    ...task,
-                    subtasks: updatedSubtasks,
-                    status: allDone ? TaskStatus.DONE : task.status,
-                    isCompleted: allDone,
-                    completedAt: allDone ? Date.now() : task.completedAt,
-                };
-            })
-        );
+                )
+        });
     };
 
-
-    // Timer ticker
+    // ✅ GLOBAL TIMER - Runs even when switching pages
     useEffect(() => {
         if (activeTaskId == null) return;
 
         const interval = setInterval(() => {
             setTasks(prev =>
-                prev.map(task => {
-                    if (task.id !== activeTaskId) return task;
+                prev.map(t => {
+                    if (t.id !== activeTaskId) return t;
 
-                    const remaining = (task.remainingTime ?? parseDurationToSeconds(task.duration)) - 1;
-
-                    // Auto complete when finished
-                    if (remaining <= 0) {
-                        setActiveTaskId(null); // stop timer
-                        return {
-                            ...task,
-                            remainingTime: 0,
-                            status: TaskStatus.DONE,
-                            isCompleted: true,
-                            completedAt: Date.now(), // <--- IMPORTANT for dashboard
-                        };
+                    if (t.duration && t.remainingTime !== undefined) {
+                        const newTime = Math.max(t.remainingTime - 1, 0);
+                        if (newTime === 0) {
+                            return { ...t, remainingTime: 0, status: TaskStatus.DONE, isCompleted: true };
+                        }
+                        return { ...t, remainingTime: newTime };
                     }
 
-                    return { ...task, remainingTime: remaining };
+                    return { ...t, elapsedTime: (t.elapsedTime ?? 0) + 1 };
                 })
             );
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [activeTaskId]);
+    }, [activeTaskId, setTasks]);
 
 
     const tasksByStatus = useMemo(() =>
@@ -347,120 +349,43 @@ const TasksPage = () => {
         , [tasks]);
 
     const moveTask = (task: Task, status: TaskStatus) => {
-        if (activeTaskId === task.id) setActiveTaskId(null);
-        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status } : t));
+        updateTask(task.id, { status, isCompleted: status === TaskStatus.DONE });
+        if (status !== TaskStatus.IN_PROGRESS) pauseTask();
     };
 
-    const handleStart = (task: Task) => {
-        const totalSeconds = task.subtasks?.length
-            ? task.subtasks.reduce((acc, st) => {
-                const num = parseInt(st.duration);
-                if (st.duration.includes("hour")) return acc + num * 3600;
-                if (st.duration.includes("min")) return acc + num * 60;
-                return acc + num;
-            }, 0)
-            : parseDurationToSeconds(task.duration);
-
-        setTasks(prev =>
-            prev.map(t =>
-                t.id === task.id
-                    ? {
-                        ...t,
-                        status: TaskStatus.IN_PROGRESS,
-                        remainingTime: t.remainingTime ?? totalSeconds  // ✅ Use total subtask time
-                    }
-                    : t
-            )
-        );
-
-        setActiveTaskId(task.id);
-    };
-
-
-    const handlePause = () => setActiveTaskId(null);
+    const handleStart = (task: Task) => startTask(task.id);
+    const handlePause = () => pauseTask();
 
     const handleDeleteTask = (id: number) => {
-        if (id === activeTaskId) setActiveTaskId(null);
-        setTasks(prev => prev.filter(t => t.id !== id));
+        if (id === activeTaskId) pauseTask();
+        deleteTask(id);
     };
 
-    const handleAddBatchTasks = (batch: any[]) => {
-        const formatted = batch.map(t => ({
-            ...t,
-            id: Date.now() + Math.random(),
-            status: TaskStatus.TODO,
-            isCompleted: false
-        }));
-        setTasks(prev => [...prev, ...formatted]);
+    const handleAddBatchTasks = (batch: Task[]) => {
+        batch.forEach(task => addTask({ ...task, id: Date.now() + Math.random() }));
     };
+
 
     return (
         <div className="space-y-6">
-            {/* Today's Date Header */}
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-white">Tasks</h1>
                 <p className="text-gray-400 text-sm">
-                    {new Date().toLocaleDateString("en-US", {
-                        weekday: "long",
-                        month: "long",
-                        day: "numeric"
-                    })}
+                    {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </p>
             </div>
-
-            {/* DAILY PRODUCTIVITY DASHBOARD */}
-            <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
-                {(() => {
-                    const now = new Date();
-                    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
-                    const todaysTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfDay);
-                    const todaysSubtasks = tasks.flatMap(t => t.subtasks || []).filter(st => st.completedAt && st.completedAt >= startOfDay);
-
-                    const totalFocusSec = todaysTasks.reduce((acc, t) => acc + (parseDurationToSeconds(t.duration)), 0);
-                    const formattedFocus = formatSeconds(totalFocusSec);
-
-                    const score = Math.min(100, Math.floor((todaysTasks.length * 15) + (todaysSubtasks.length * 5)));
-
-                    return (
-                        <>
-                            <div className="text-center">
-                                <p className="text-gray-400 text-sm">Tasks Completed</p>
-                                <p className="text-3xl font-bold text-white">{todaysTasks.length}</p>
-                            </div>
-
-                            <div className="text-center">
-                                <p className="text-gray-400 text-sm">Subtasks Completed</p>
-                                <p className="text-3xl font-bold text-white">{todaysSubtasks.length}</p>
-                            </div>
-
-                            <div className="text-center">
-                                <p className="text-gray-400 text-sm">Total Focus Time</p>
-                                <p className="text-3xl font-bold text-white">{formattedFocus}</p>
-                            </div>
-
-                            <div className="text-center">
-                                <p className="text-gray-400 text-sm">Productivity Score</p>
-                                <p className="text-3xl font-bold text-orange-400">{score}</p>
-                            </div>
-                        </>
-                    );
-                })()}
-            </div>
-
 
             {/* Buttons */}
             <div className="flex justify-end gap-3">
                 <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-orange-600 text-white rounded-lg flex items-center gap-2 hover:bg-orange-500">
                     <PlusIcon className="h-5 w-5" /> Add Task
                 </button>
-
                 <button onClick={() => setAiModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-500">
                     <SparklesIcon className="h-5 w-5" /> AI
                 </button>
             </div>
 
-            {/* Task Columns */}
+            {/* Columns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {COLUMNS.map(status => (
                     <div key={status}
@@ -469,6 +394,7 @@ const TasksPage = () => {
                         className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-4 space-y-4 min-h-[200px]"
                     >
                         <h3 className="text-white font-bold">{status}</h3>
+
                         {(tasksByStatus[status] || []).map(task => (
                             <TaskCard
                                 key={task.id}
@@ -486,43 +412,48 @@ const TasksPage = () => {
                 ))}
             </div>
 
-            {/* Modals */}
-            <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddTask={(t: any) =>
-                setTasks(prev => [...prev, { ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false }])} />
+            <AddTaskModal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  onAddTask={(t: any) =>
+    addTask({ ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false })
+  }
+/>
+
 
             <GeneratePlanModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} onAddBatch={handleAddBatchTasks} />
-
         </div>
     );
 };
+
 const motivations = [
-  "⚡ Consistency is your real superpower.",
-  "🧠 Discipline is remembering what you want.",
-  "🔥 If you don’t sacrifice for your goals, your goals become the sacrifice.",
-  "⏳ One hour of deep focus beats five hours of half-focus.",
-  "🥶 No emotion, just execution.",
-  "👁️ You said you’d become someone — prove it.",
-  "📈 Small progress daily → Unstoppable in months.",
-  "🔒 When you feel nothing, work anyway.",
-  "🏁 Show up. That’s the whole game."
+    "⚡ Consistency is your real superpower.",
+    "🧠 Discipline is remembering what you want.",
+    "🔥 If you don’t sacrifice for your goals, your goals become the sacrifice.",
+    "⏳ One hour of deep focus beats five hours of half-focus.",
+    "🥶 No emotion, just execution.",
+    "👁️ You said you’d become someone — prove it.",
+    "📈 Small progress daily → Unstoppable in months.",
+    "🔒 When you feel nothing, work anyway.",
+    "🏁 Show up. That’s the whole game."
 ];
 
 const RotatingMotivation: React.FC = () => {
-  const [index, setIndex] = useState(0);
+    const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex(prev => (prev + 1) % motivations.length);
-    }, 12000); // changes every 12 seconds (you can tune this)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIndex(prev => (prev + 1) % motivations.length);
+        }, 12000); // changes every 12 seconds (you can tune this)
 
-    return () => clearInterval(interval);
-  }, []);
+        return () => clearInterval(interval);
+    }, []);
 
-  return (
-  <div className="text-center mt-12 text-gray-500 text-sm select-none fade-in">
-    {motivations[index]}
-  </div>
-);
+    return (
+        <div className="text-center mt-12 text-gray-500 text-sm select-none fade-in">
+            {motivations[index]}
+        </div>
+    );
 
 };
 

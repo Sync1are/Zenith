@@ -28,6 +28,8 @@ export interface Task {
   status: TaskStatus;
   isCompleted: boolean;
   subtasks?: Subtask[];
+    // For stopwatch mode (no duration)
+  elapsedTime?: number; 
   remainingTime?: number;
   completedAt?: number; // timestamp
 }

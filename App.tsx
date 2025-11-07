@@ -3,13 +3,16 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import TitleBar from './components/TitleBar'; // ✅ ADD THIS
-import Tasks from './components/Tasks';
+import Tasks from './components/TasksPage';
+import { useEffect } from "react";
+import { useAppStore } from "./store/useAppStore";
+import { TaskStatus } from "./types";
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
-
+  const tick = useAppStore((s) => s.tick)
   const renderContent = () => {
-    switch(activePage) {
+    switch (activePage) {
       case 'Dashboard':
         return <Dashboard />;
       default:
@@ -21,8 +24,16 @@ const App: React.FC = () => {
       case 'Tasks':
         return <Tasks />;
     }
-      
+
   };
+  useEffect(() => {
+    const interval = setInterval(() => {
+      useAppStore.getState().tick();
+    }, 1000);
+
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#111217] text-white flex flex-col">
