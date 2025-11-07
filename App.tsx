@@ -10,7 +10,6 @@ import { TaskStatus } from "./types";
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
-  const tick = useAppStore((s) => s.tick)
   const renderContent = () => {
     switch (activePage) {
       case 'Dashboard':
@@ -27,7 +26,12 @@ const App: React.FC = () => {
 
   };
   useEffect(() => {
-    
+    const interval = setInterval(() => {
+      useAppStore.getState().tick();
+    }, 1000);
+
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
