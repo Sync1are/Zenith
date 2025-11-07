@@ -1,0 +1,529 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Task, TaskPriority, TaskStatus } from '../types';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { useAppStore } from '../store/useAppStore';
+
+import {
+    PlusIcon, SparklesIcon, ClockIcon, TagIcon, PlayIcon, PauseIcon,
+    EditIcon, TrashIcon
+} from '../components/icons/IconComponents';
+const COLUMNS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
+
+
+// -----------------------------------------------------------------------------
+// INITIAL DATA
+const initialTasksData: Task[] = [
+    { id: 1, title: 'Build UI for Dashboard', category: 'Project Phoenix', priority: TaskPriority.HIGH, duration: '4 hours', status: TaskStatus.DONE, isCompleted: true },
+    { id: 2, title: 'Review marketing copy', category: 'Marketing', priority: TaskPriority.MEDIUM, duration: '30 min', status: TaskStatus.IN_PROGRESS, isCompleted: false },
+    { id: 3, title: 'Weekly team sync', category: 'Meetings', priority: TaskPriority.LOW, duration: '1 hour', status: TaskStatus.TODO, isCompleted: false },
+    { id: 4, title: 'Draft Q3 report', category: 'Reporting', priority: TaskPriority.HIGH, duration: '2 hours', status: TaskStatus.TODO, isCompleted: false },
+];
+
+// -----------------------------------------------------------------------------
+// Duration Helpers
+const parseDurationToSeconds = (duration: string): number => {
+    const num = parseInt(duration);
+    if (duration.includes("hour")) return num * 3600;
+    if (duration.includes("min")) return num * 60;
+    return num;
+};
+
+const formatSeconds = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+
+    if (h > 0) {
+        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
+            .toString()
+            .padStart(2, "0")}`;
+    }
+
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+};
+
+
+// -----------------------------------------------------------------------------
+// UI Small Components
+const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
+    const color = {
+        [TaskPriority.HIGH]: "bg-red-500/20 text-red-400",
+        [TaskPriority.MEDIUM]: "bg-yellow-500/20 text-yellow-400",
+        [TaskPriority.LOW]: "bg-blue-500/20 text-blue-400"
+    }[priority];
+
+    return <span className={`px-2 py-1 text-xs font-semibold rounded ${color}`}>{priority}</span>;
+};
+
+// -----------------------------------------------------------------------------
+// Task Card Component
+const TaskCard = ({
+    task,
+    isActive,
+    onDragStart,
+    onStartOrResumeTask,
+    onPauseTask,
+    onEditTask,
+    onDeleteTask,
+    onToggleSubtask
+}: any) => {
+
+    const totalTime = task.subtasks?.length
+        ? task.subtasks.reduce((acc: number, st: any) => {
+            const n = parseInt(st.duration);
+            if (st.duration.includes("hour")) return acc + n * 3600;
+            if (st.duration.includes("min")) return acc + n * 60;
+            return acc + n;
+        }, 0)
+        : task.remainingTime ?? parseDurationToSeconds(task.duration);
+
+
+    const formattedTotal = formatSeconds(totalTime);
+
+    const completedSubtasks = task.subtasks?.filter(st => st.isCompleted).length || 0;
+
+    return (
+        <div
+            draggable
+            onDragStart={(e) => onDragStart(e, task)}
+            className="bg-[#1C1C1E] border border-gray-800 rounded-lg p-4 group transition hover:-translate-y-1 hover:shadow-lg relative"
+        >
+            {/* Controls */}
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 flex gap-1 transition">
+                {task.status !== TaskStatus.DONE && (
+                    isActive ?
+                        <button onClick={() => onPauseTask(task)} className="p-1 hover:bg-gray-700 rounded">
+                            <PauseIcon className="w-4 h-4 text-gray-300" />
+                        </button>
+                        :
+                        <button onClick={() => onStartOrResumeTask(task)} className="p-1 hover:bg-gray-700 rounded">
+                            <PlayIcon className="w-4 h-4 text-gray-300" />
+                        </button>
+                )}
+
+                <button onClick={() => onEditTask(task)} className="p-1 hover:bg-gray-700 rounded">
+                    <EditIcon className="w-4 h-4 text-gray-300" />
+                </button>
+
+                <button onClick={() => onDeleteTask(task.id)} className="p-1 hover:bg-red-600/40 rounded">
+                    <TrashIcon className="w-4 h-4 text-red-300" />
+                </button>
+            </div>
+
+            {/* Title */}
+            <p className="font-semibold text-white mb-2">{task.title}</p>
+
+            {/* Time + Category */}
+            <div className="text-sm text-gray-400 flex justify-between mb-3">
+                <span className="flex items-center gap-1"><TagIcon className="w-3 h-3" />{task.category}</span>
+                <span className="font-mono flex items-center gap-1"><ClockIcon className="w-3 h-3" />{formattedTotal}</span>
+            </div>
+
+            {/* Subtasks List */}
+            {task.subtasks && task.subtasks.length > 0 && (
+                <div className="space-y-1 mt-2">
+                    {task.subtasks.map(st => (
+                        <div key={st.id} className="flex items-center justify-between text-gray-400 text-sm">
+                            <button onClick={() => onToggleSubtask(task.id, st.id)} className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full border ${st.isCompleted ? "bg-orange-500" : "border-gray-500"}`} />
+                                <span className={`${st.isCompleted ? "line-through text-gray-600" : "text-gray-300"}`}>{st.title}</span>
+                            </button>
+                            <span className="font-mono text-xs">{st.duration}</span>
+                        </div>
+                    ))}
+                    <p className="text-xs text-gray-500 mt-1">{completedSubtasks}/{task.subtasks.length} subtasks done</p>
+                </div>
+            )}
+
+            <PriorityBadge priority={task.priority} />
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// Add Task Modal
+const AddTaskModal = ({ isOpen, onClose, onAddTask }: any) => {
+    const [title, setTitle] = useState("");
+    const [category, setCategory] = useState("");
+    const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
+    const [duration, setDuration] = useState("");
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+            <div className="bg-[#1C1C1E] p-6 rounded-xl border border-gray-800 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-xl font-bold text-white mb-4">Add Task</h2>
+
+                <input className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
+                    placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+
+                <input className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
+                    placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+
+                <div className="flex gap-3 mb-4">
+                    <select className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
+                        value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+                        {Object.values(TaskPriority).map(p => <option key={p}>{p}</option>)}
+                    </select>
+
+                    <input className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
+                        placeholder="45 min" value={duration} onChange={(e) => setDuration(e.target.value)} />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                    <button className="px-4 py-2 bg-gray-700 rounded text-white" onClick={onClose}>Cancel</button>
+                    <button className="px-4 py-2 bg-orange-600 rounded text-white"
+                        onClick={() => { onAddTask({ title, category, priority, duration }); onClose(); }}>
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// AI Task Planner Modal
+const GeneratePlanModal = ({ isOpen, onClose, onAddBatch }: any) => {
+    const [prompt, setPrompt] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const generatePlan = async () => {
+        if (!prompt.trim()) return;
+        setLoading(true);
+
+        try {
+            const genAI = new GoogleGenerativeAI(process.env.API_KEY!);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+            const response = await model.generateContent(`
+Return ONLY valid JSON. No explanation, no markdown.
+
+{
+  "task": {
+    "title": "",
+    "category": "",
+    "priority": "HIGH|MEDIUM|LOW",
+    "subtasks": [
+      { "title": "", "duration": "30 min" }
+    ]
+  }
+}
+
+Goal: ${prompt}
+    `);
+
+            let text = response.response.text().trim().replace(/```json|```/g, "");
+
+            const data = JSON.parse(text);
+
+            const mainTask = {
+                id: Date.now(),
+                title: data.task.title,
+                category: data.task.category,
+                priority: data.task.priority,
+                duration: "0 min", // will be recalculated
+                status: TaskStatus.TODO,
+                isCompleted: false,
+                subtasks: data.task.subtasks.map((st: any) => ({
+                    id: Date.now() + Math.random(),
+                    title: st.title,
+                    duration: st.duration,
+                    isCompleted: false
+                }))
+            };
+
+            onAddBatch([mainTask]);
+            onClose();
+
+        } catch (err) {
+            console.error(err);
+            alert("⚠️ AI could not create tasks. Try rephrasing your prompt.");
+        }
+
+        setLoading(false);
+    };
+
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+            <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6 w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-xl text-white font-bold mb-4">AI Task Planner</h2>
+
+                <textarea
+                    className="w-full h-32 bg-[#111217] border border-gray-700 text-white rounded p-3"
+                    placeholder="Example: Study math calculus notes and revise electrostatics..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                />
+
+                <div className="flex justify-end gap-3 mt-4">
+                    <button className="px-4 py-2 bg-gray-700 rounded text-white" onClick={onClose}>Cancel</button>
+                    <button className="px-4 py-2 bg-indigo-600 rounded text-white disabled:opacity-50"
+                        disabled={loading}
+                        onClick={generatePlan}>
+                        {loading ? "Thinking..." : "Generate"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// MAIN PAGE
+const TasksPage = () => {
+    const { tasks, setTasks } = useAppStore();
+
+
+    const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [aiModalOpen, setAiModalOpen] = useState(false);
+    const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+    const handleToggleSubtask = (taskId: number, subtaskId: number) => {
+        setTasks(prev =>
+            prev.map(task => {
+                if (task.id !== taskId) return task;
+
+                const updatedSubtasks = task.subtasks!.map(st =>
+                    st.id === subtaskId
+                        ? { ...st, isCompleted: !st.isCompleted, completedAt: Date.now() }
+                        : st
+                );
+
+                const allDone = updatedSubtasks.every(st => st.isCompleted);
+
+                return {
+                    ...task,
+                    subtasks: updatedSubtasks,
+                    status: allDone ? TaskStatus.DONE : task.status,
+                    isCompleted: allDone,
+                    completedAt: allDone ? Date.now() : task.completedAt,
+                };
+            })
+        );
+    };
+
+
+    // Timer ticker
+    useEffect(() => {
+        if (activeTaskId == null) return;
+
+        const interval = setInterval(() => {
+            setTasks(prev =>
+                prev.map(task => {
+                    if (task.id !== activeTaskId) return task;
+
+                    const remaining = (task.remainingTime ?? parseDurationToSeconds(task.duration)) - 1;
+
+                    // Auto complete when finished
+                    if (remaining <= 0) {
+                        setActiveTaskId(null); // stop timer
+                        return {
+                            ...task,
+                            remainingTime: 0,
+                            status: TaskStatus.DONE,
+                            isCompleted: true,
+                            completedAt: Date.now(), // <--- IMPORTANT for dashboard
+                        };
+                    }
+
+                    return { ...task, remainingTime: remaining };
+                })
+            );
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [activeTaskId]);
+
+
+    const tasksByStatus = useMemo(() =>
+        tasks.reduce((acc, t) => {
+            acc[t.status] = acc[t.status] || [];
+            acc[t.status].push(t);
+            return acc;
+        }, {} as Record<TaskStatus, Task[]>)
+        , [tasks]);
+
+    const moveTask = (task: Task, status: TaskStatus) => {
+        if (activeTaskId === task.id) setActiveTaskId(null);
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status } : t));
+    };
+
+    const handleStart = (task: Task) => {
+        const totalSeconds = task.subtasks?.length
+            ? task.subtasks.reduce((acc, st) => {
+                const num = parseInt(st.duration);
+                if (st.duration.includes("hour")) return acc + num * 3600;
+                if (st.duration.includes("min")) return acc + num * 60;
+                return acc + num;
+            }, 0)
+            : parseDurationToSeconds(task.duration);
+
+        setTasks(prev =>
+            prev.map(t =>
+                t.id === task.id
+                    ? {
+                        ...t,
+                        status: TaskStatus.IN_PROGRESS,
+                        remainingTime: t.remainingTime ?? totalSeconds  // ✅ Use total subtask time
+                    }
+                    : t
+            )
+        );
+
+        setActiveTaskId(task.id);
+    };
+
+
+    const handlePause = () => setActiveTaskId(null);
+
+    const handleDeleteTask = (id: number) => {
+        if (id === activeTaskId) setActiveTaskId(null);
+        setTasks(prev => prev.filter(t => t.id !== id));
+    };
+
+    const handleAddBatchTasks = (batch: any[]) => {
+        const formatted = batch.map(t => ({
+            ...t,
+            id: Date.now() + Math.random(),
+            status: TaskStatus.TODO,
+            isCompleted: false
+        }));
+        setTasks(prev => [...prev, ...formatted]);
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Today's Date Header */}
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-white">Tasks</h1>
+                <p className="text-gray-400 text-sm">
+                    {new Date().toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric"
+                    })}
+                </p>
+            </div>
+
+            {/* DAILY PRODUCTIVITY DASHBOARD */}
+            <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
+                {(() => {
+                    const now = new Date();
+                    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+                    const todaysTasks = tasks.filter(t => t.completedAt && t.completedAt >= startOfDay);
+                    const todaysSubtasks = tasks.flatMap(t => t.subtasks || []).filter(st => st.completedAt && st.completedAt >= startOfDay);
+
+                    const totalFocusSec = todaysTasks.reduce((acc, t) => acc + (parseDurationToSeconds(t.duration)), 0);
+                    const formattedFocus = formatSeconds(totalFocusSec);
+
+                    const score = Math.min(100, Math.floor((todaysTasks.length * 15) + (todaysSubtasks.length * 5)));
+
+                    return (
+                        <>
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Tasks Completed</p>
+                                <p className="text-3xl font-bold text-white">{todaysTasks.length}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Subtasks Completed</p>
+                                <p className="text-3xl font-bold text-white">{todaysSubtasks.length}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Total Focus Time</p>
+                                <p className="text-3xl font-bold text-white">{formattedFocus}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Productivity Score</p>
+                                <p className="text-3xl font-bold text-orange-400">{score}</p>
+                            </div>
+                        </>
+                    );
+                })()}
+            </div>
+
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3">
+                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-orange-600 text-white rounded-lg flex items-center gap-2 hover:bg-orange-500">
+                    <PlusIcon className="h-5 w-5" /> Add Task
+                </button>
+
+                <button onClick={() => setAiModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-500">
+                    <SparklesIcon className="h-5 w-5" /> AI
+                </button>
+            </div>
+
+            {/* Task Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {COLUMNS.map(status => (
+                    <div key={status}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => draggedTask && moveTask(draggedTask, status)}
+                        className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-4 space-y-4 min-h-[200px]"
+                    >
+                        <h3 className="text-white font-bold">{status}</h3>
+                        {(tasksByStatus[status] || []).map(task => (
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                isActive={task.id === activeTaskId}
+                                onDragStart={(e: any, t: Task) => { setDraggedTask(t); e.dataTransfer.effectAllowed = "move"; }}
+                                onStartOrResumeTask={handleStart}
+                                onPauseTask={handlePause}
+                                onEditTask={(t: Task) => alert("Editing coming soon")}
+                                onDeleteTask={handleDeleteTask}
+                                onToggleSubtask={handleToggleSubtask}
+                            />
+                        ))}
+                    </div>
+                ))}
+            </div>
+
+            {/* Modals */}
+            <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddTask={(t: any) =>
+                setTasks(prev => [...prev, { ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false }])} />
+
+            <GeneratePlanModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} onAddBatch={handleAddBatchTasks} />
+
+        </div>
+    );
+};
+const motivations = [
+  "⚡ Consistency is your real superpower.",
+  "🧠 Discipline is remembering what you want.",
+  "🔥 If you don’t sacrifice for your goals, your goals become the sacrifice.",
+  "⏳ One hour of deep focus beats five hours of half-focus.",
+  "🥶 No emotion, just execution.",
+  "👁️ You said you’d become someone — prove it.",
+  "📈 Small progress daily → Unstoppable in months.",
+  "🔒 When you feel nothing, work anyway.",
+  "🏁 Show up. That’s the whole game."
+];
+
+const RotatingMotivation: React.FC = () => {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex(prev => (prev + 1) % motivations.length);
+    }, 12000); // changes every 12 seconds (you can tune this)
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+  <div className="text-center mt-12 text-gray-500 text-sm select-none fade-in">
+    {motivations[index]}
+  </div>
+);
+
+};
+
+export default TasksPage;

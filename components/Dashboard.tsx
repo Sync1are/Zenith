@@ -15,25 +15,31 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-6">
+
+            {/* Hero Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 min-w-0">
                     <AiCoachCard />
                 </div>
-                <div>
+                <div className="min-w-0">
                     <AnalyticsChartCard />
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+
+            {/* Stats — Responsive Flow */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map(stat => (
                     <StatCard key={stat.label} {...stat} />
                 ))}
             </div>
 
-            <div>
+            {/* Task List */}
+            <div className="min-w-0">
                 <TaskList />
             </div>
+
         </div>
+
     );
 };
 

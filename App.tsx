@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
+import TitleBar from './components/TitleBar'; // ✅ ADD THIS
+import Tasks from './components/Tasks';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
@@ -16,17 +18,24 @@ const App: React.FC = () => {
             Content for {activePage} is not yet implemented.
           </div>
         );
+      case 'Tasks':
+        return <Tasks />;
     }
+      
   };
 
   return (
-    <div className="min-h-screen bg-[#111217] text-white flex">
-      <Sidebar activeItem={activePage} onSelect={setActivePage} />
+    <div className="min-h-screen bg-[#111217] text-white flex flex-col">
+      <TitleBar /> {/* ✅ NEW CUSTOM TITLEBAR */}
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
-        <Header currentPage={activePage} />
-        {renderContent()}
-      </main>
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar activeItem={activePage} onSelect={setActivePage} />
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-10 overflow-y-auto">
+          <Header currentPage={activePage} />
+          {renderContent()}
+        </main>
+      </div>
     </div>
   );
 };
