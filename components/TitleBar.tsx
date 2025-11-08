@@ -1,15 +1,13 @@
 // src/components/TitleBar.tsx
-import { X, Square, Minus } from "lucide-react"; // ✅ icons
-// Install if needed: npm install lucide-react
+import { X, Square, Minus } from "lucide-react";
 
 const TitleBar = () => {
   return (
     <div
-  className="h-10 bg-[#111217] flex items-center justify-end px-4 select-none z-50"
-  style={{ WebkitAppRegion: "drag" }}
->
-
-      <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" }}>
+      className="fixed top-0 left-0 right-0 h-10 bg-[#111217] flex items-center justify-end px-4 select-none z-50"
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+    >
+      <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
         
         {/* Minimize */}
         <button

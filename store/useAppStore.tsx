@@ -2,9 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Task, TaskStatus } from "../types";
 
+export type FocusMode = "Pomodoro" | "Deep Work" | "Short Break" | "Long Break";
+
 interface AppState {
   tasks: Task[];
   activeTaskId: number | null;
+
+  focusMode: FocusMode;
+  timerActive: boolean;
+  timerRemaining: number; // seconds
 
   setTasks: (updater: (prev: Task[]) => Task[]) => void;
   addTask: (task: Task) => void;
@@ -15,8 +21,20 @@ interface AppState {
   pauseTask: () => void;
   setActiveTask: (id: number | null) => void;
 
+  setFocusMode: (mode: FocusMode) => void;
+  setTimerActive: (active: boolean) => void;
+  setTimerRemaining: (seconds: number) => void;
+  resetTimer: () => void;
+
   tick: () => void;
 }
+
+const FOCUS_MODE_DURATIONS: Record<FocusMode, number> = {
+  Pomodoro: 25 * 60,
+  "Deep Work": 50 * 60,
+  "Short Break": 5 * 60,
+  "Long Break": 15 * 60,
+};
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -24,24 +42,18 @@ export const useAppStore = create<AppState>()(
       tasks: [],
       activeTaskId: null,
 
-      // ✅ Functional setTasks (used in TasksPage)
-      setTasks: (updater) =>
-        set((state) => ({ tasks: updater(state.tasks) })),
+      focusMode: "Pomodoro",
+      timerActive: false,
+      timerRemaining: FOCUS_MODE_DURATIONS["Pomodoro"],
 
-      addTask: (task) =>
-        set((state) => ({ tasks: [...state.tasks, task] })),
-
+      // Task CRUD
+      setTasks: (updater) => set((state) => ({ tasks: updater(state.tasks) })),
+      addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
       updateTask: (taskId, data) =>
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === taskId ? { ...t, ...data } : t
-          ),
+          tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, ...data } : t)),
         })),
-
-      deleteTask: (id) =>
-        set((state) => ({
-          tasks: state.tasks.filter((t) => t.id !== id),
-        })),
+      deleteTask: (id) => set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),
 
       setActiveTask: (id) => set({ activeTaskId: id }),
 
@@ -56,7 +68,6 @@ export const useAppStore = create<AppState>()(
           return num;
         };
 
-        // ✅ Support for tasks with subtasks
         const totalSeconds = task.subtasks?.length
           ? task.subtasks.reduce((acc, st) => {
               const num = parseInt(st.duration);
@@ -70,47 +81,62 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({
           activeTaskId: taskId,
+          timerRemaining: remaining,
+          timerActive: true,
           tasks: state.tasks.map((t) =>
-            t.id === taskId
-              ? { ...t, status: TaskStatus.IN_PROGRESS, remainingTime: remaining }
-              : t
+            t.id === taskId ? { ...t, status: TaskStatus.IN_PROGRESS, remainingTime: remaining } : t.status === TaskStatus.IN_PROGRESS ? { ...t, status: TaskStatus.IDLE } : t
           ),
         }));
       },
 
-      pauseTask: () => set({ activeTaskId: null }),
+      pauseTask: () => set({ activeTaskId: null, timerActive: false }),
 
-      // ✅ Global tick (keeps timer running even when switching pages)
+      setFocusMode: (mode) =>
+        set({
+          focusMode: mode,
+          timerRemaining: FOCUS_MODE_DURATIONS[mode],
+          timerActive: false,
+        }),
+
+      setTimerActive: (active) => set({ timerActive: active }),
+
+      setTimerRemaining: (seconds) => set({ timerRemaining: seconds }),
+
+      resetTimer: () => {
+        const mode = get().focusMode;
+        set({
+          timerRemaining: FOCUS_MODE_DURATIONS[mode],
+          timerActive: false,
+        });
+      },
+
       tick: () => {
-        const { activeTaskId, tasks } = get();
-        if (!activeTaskId) return;
+        const { timerRemaining, timerActive, activeTaskId, tasks } = get();
+        if (!timerActive || timerRemaining <= 0) return;
 
-        set(() => {
-          let shouldStop = false;
+        let shouldStop = false;
 
-          const updated = tasks.map((t) => {
-            if (t.id !== activeTaskId) return t;
+        const newTasks = tasks.map((t) => {
+          if (t.id !== activeTaskId) return t;
+          const newRemaining = (t.remainingTime ?? 1) - 1;
+          if (newRemaining <= 0) {
+            shouldStop = true;
+            return {
+              ...t,
+              remainingTime: 0,
+              status: TaskStatus.DONE,
+              isCompleted: true,
+              completedAt: Date.now(),
+            };
+          }
+          return { ...t, remainingTime: newRemaining };
+        });
 
-            const newTime = (t.remainingTime ?? 1) - 1;
-
-            if (newTime <= 0) {
-              shouldStop = true;
-              return {
-                ...t,
-                remainingTime: 0,
-                status: TaskStatus.DONE,
-                isCompleted: true,
-                completedAt: Date.now(),
-              };
-            }
-
-            return { ...t, remainingTime: newTime };
-          });
-
-          return {
-            tasks: updated,
-            activeTaskId: shouldStop ? null : activeTaskId,
-          };
+        set({
+          timerRemaining: timerRemaining - 1,
+          tasks: newTasks,
+          timerActive: shouldStop ? false : timerActive,
+          activeTaskId: shouldStop ? null : activeTaskId,
         });
       },
     }),

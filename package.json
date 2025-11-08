@@ -18,7 +18,9 @@
     "release": "npm run clean && npm run version:bump && npm run dist"
   },
   "dependencies": {
+    "@fullpage/react-fullpage": "^0.1.49",
     "@google/generative-ai": "^0.24.1",
+    "framer-motion": "^12.23.24",
     "lucide-react": "^0.552.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

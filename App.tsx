@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import FocusPage from './components/FocusPage';
 import Dashboard from './components/Dashboard';
 import TitleBar from './components/TitleBar';
+import Notifications from './components/Notifications';
 import Tasks from './components/TasksPage';
+import CalendarPage from './components/CalendarPage';
 import { useAppStore } from "./store/useAppStore";
 
 const App: React.FC = () => {
@@ -109,6 +112,20 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (activePage === "Dashboard") return <Dashboard />;
     if (activePage === "Tasks") return <Tasks />;
+    if (activePage === "Calendar") return <CalendarPage />;
+    if (activePage === "Focus") return <FocusPage />;
+    if (activePage === "Analytics") return (
+      <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
+        <h2 className="text-2xl font-bold text-white mb-4">📊 Analytics</h2>
+        <p className="text-gray-400">Analytics dashboard coming soon...</p>
+      </div>
+    );
+    if (activePage === "Settings") return (
+      <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
+        <h2 className="text-2xl font-bold text-white mb-4">⚙️ Settings</h2>
+        <p className="text-gray-400">Settings panel coming soon...</p>
+      </div>
+    );
 
     return (
       <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
@@ -120,8 +137,9 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#111217] text-white flex flex-col">
       <TitleBar />
+      <Notifications /> 
 
-      {/* ✅ Mobile overlay - for drawer */}
+      {/* Mobile overlay - for drawer */}
       {isMobileDrawerOpen && window.innerWidth < 768 && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
@@ -129,7 +147,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden pt-10">
         <Sidebar
           activeItem={activePage}
           onSelect={(page) => {
@@ -140,12 +158,15 @@ const App: React.FC = () => {
           setIsMobileDrawerOpen={setIsMobileDrawerOpen}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-10 overflow-y-auto">
-          <Header 
-            currentPage={activePage}
-            setSidebarOpen={setIsMobileDrawerOpen}
-          />
-          {renderContent()}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-full px-4 sm:px-6 lg:px-10 py-6">
+            {/* Responsive padding for ALL pages is controlled right here */}
+            <Header 
+              currentPage={activePage}
+              setSidebarOpen={setIsMobileDrawerOpen}
+            />
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>

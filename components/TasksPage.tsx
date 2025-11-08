@@ -2,27 +2,18 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Task, TaskPriority, TaskStatus } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useAppStore } from '../store/useAppStore';
+import { useCalendarStore } from '../store/useCalendarStore';
 
 import {
     PlusIcon, SparklesIcon, ClockIcon, TagIcon, PlayIcon, PauseIcon,
     EditIcon, TrashIcon
 } from './icons/IconComponents';
+
 const COLUMNS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
 // Api key
 const API_KEY: string = "AIzaSyDvzLie0z1jMUOypmaZmxyckqMA4k42bHA";
 
-
-// -----------------------------------------------------------------------------
-// INITIAL DATA
-const initialTasksData: Task[] = [
-    { id: 1, title: 'Build UI for Dashboard', category: 'Project Phoenix', priority: TaskPriority.HIGH, duration: '4 hours', status: TaskStatus.DONE, isCompleted: true },
-    { id: 2, title: 'Review marketing copy', category: 'Marketing', priority: TaskPriority.MEDIUM, duration: '30 min', status: TaskStatus.IN_PROGRESS, isCompleted: false },
-    { id: 3, title: 'Weekly team sync', category: 'Meetings', priority: TaskPriority.LOW, duration: '1 hour', status: TaskStatus.TODO, isCompleted: false },
-    { id: 4, title: 'Draft Q3 report', category: 'Reporting', priority: TaskPriority.HIGH, duration: '2 hours', status: TaskStatus.TODO, isCompleted: false },
-];
-
-// -----------------------------------------------------------------------------
 // Duration Helpers
 const parseDurationToSeconds = (duration: string): number => {
     const num = parseInt(duration);
@@ -45,8 +36,14 @@ const formatSeconds = (seconds: number): string => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
+const formatTime = (date: Date) => 
+  date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-// -----------------------------------------------------------------------------
+const isSameDay = (d1: Date, d2: Date) => 
+  d1.getFullYear() === d2.getFullYear() && 
+  d1.getMonth() === d2.getMonth() && 
+  d1.getDate() === d2.getDate();
+
 // UI Small Components
 const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
     const color = {
@@ -91,54 +88,68 @@ const DailyStatsWidget: React.FC = () => {
     );
 };
 
-// -----------------------------------------------------------------------------
-// NEW: Recent Activity Feed
-const RecentActivity: React.FC = () => {
-    const tasks = useAppStore(state => state.tasks);
+// NEW: Today's Events from Calendar
+const TodaysEvents: React.FC = () => {
+    const events = useCalendarStore(state => state.events);
+    const today = new Date();
     
-    const recentActivities = tasks
-        .filter(t => t.completedAt)
-        .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
-        .slice(0, 5);
+    const todaysEvents = events
+        .filter(event => {
+            const eventDate = typeof event.start === 'string' ? new Date(event.start) : event.start;
+            return isSameDay(eventDate, today);
+        })
+        .sort((a, b) => {
+            const aStart = typeof a.start === 'string' ? new Date(a.start) : a.start;
+            const bStart = typeof b.start === 'string' ? new Date(b.start) : b.start;
+            return aStart.getTime() - bStart.getTime();
+        });
 
-    if (recentActivities.length === 0) {
+    const categoryColors = {
+        work: 'bg-blue-500',
+        personal: 'bg-green-500',
+        meeting: 'bg-purple-500',
+    };
+
+    if (todaysEvents.length === 0) {
         return (
             <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">📋 Recent Activity</h3>
-                <p className="text-gray-500 text-center py-8">No completed tasks yet</p>
+                <h3 className="text-lg font-semibold text-white mb-4">📅 Today's Events</h3>
+                <p className="text-gray-500 text-center py-8">No events scheduled today</p>
             </div>
         );
     }
 
     return (
         <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">📋 Recent Activity</h3>
-            <div className="space-y-3">
-                {recentActivities.map(task => (
-                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg hover:bg-gray-800/60 transition">
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-medium truncate">{task.title}</p>
-                            <p className="text-gray-400 text-xs">{task.category}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                            <span className="text-xs text-gray-500 block">
-                                {new Date(task.completedAt!).toLocaleTimeString('en-US', { 
-                                    hour: 'numeric', 
-                                    minute: '2-digit' 
-                                })}
+            <h3 className="text-lg font-semibold text-white mb-4">📅 Today's Events</h3>
+            <div className="space-y-3 max-h-48 overflow-y-auto">
+                {todaysEvents.map(event => {
+                    const start = typeof event.start === 'string' ? new Date(event.start) : event.start;
+                    const end = typeof event.end === 'string' ? new Date(event.end) : event.end;
+                    
+                    return (
+                        <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg hover:bg-gray-800/60 transition">
+                            <div className={`w-2 h-10 rounded-full ${categoryColors[event.category]} flex-shrink-0`}></div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium truncate">{event.title}</p>
+                                <p className="text-gray-400 text-xs">{formatTime(start)} - {formatTime(end)}</p>
+                            </div>
+                            <span className={`text-[10px] px-2 py-1 rounded-full flex-shrink-0 ${
+                                event.category === 'work' ? 'bg-blue-500/20 text-blue-400' :
+                                event.category === 'personal' ? 'bg-green-500/20 text-green-400' :
+                                'bg-purple-500/20 text-purple-400'
+                            }`}>
+                                {event.category}
                             </span>
-                            <span className="text-xs text-green-400">{task.duration}</span>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
 };
 
-// -----------------------------------------------------------------------------
-// NEW: Quick Task Templates
+// Quick Task Templates
 const QuickTemplates: React.FC = () => {
     const { addTask } = useAppStore();
 
@@ -188,8 +199,7 @@ const QuickTemplates: React.FC = () => {
     );
 };
 
-// -----------------------------------------------------------------------------
-// NEW: Category Breakdown
+// Category Breakdown
 const CategoryBreakdown: React.FC = () => {
     const tasks = useAppStore(state => state.tasks);
     
@@ -238,7 +248,6 @@ const CategoryBreakdown: React.FC = () => {
         </div>
     );
 };
-
 // -----------------------------------------------------------------------------
 // Task Card Component
 const TaskCard = ({
@@ -340,45 +349,97 @@ const TaskCard = ({
 
 // -----------------------------------------------------------------------------
 // Add Task Modal
-const AddTaskModal = ({ isOpen, onClose, onAddTask }: any) => {
-    const [title, setTitle] = useState("");
-    const [category, setCategory] = useState("");
-    const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
-    const [duration, setDuration] = useState("");
+const TaskModal = ({ isOpen, onClose, onSave, editTask }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (task: any) => void;
+  editTask?: Task;
+}) => {
+  const [title, setTitle] = useState(editTask?.title || "");
+  const [category, setCategory] = useState(editTask?.category || "");
+  const [priority, setPriority] = useState<TaskPriority>(editTask?.priority || TaskPriority.MEDIUM);
+  const [duration, setDuration] = useState(editTask?.duration || "");
 
-    if (!isOpen) return null;
+  // Update fields when editTask changes
+  useEffect(() => {
+    if (editTask) {
+      setTitle(editTask.title);
+      setCategory(editTask.category);
+      setPriority(editTask.priority);
+      setDuration(editTask.duration);
+    } else {
+      setTitle("");
+      setCategory("");
+      setPriority(TaskPriority.MEDIUM);
+      setDuration("");
+    }
+  }, [editTask]);
 
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-            <div className="bg-[#1C1C1E] p-6 rounded-xl border border-gray-800 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-bold text-white mb-4">Add Task</h2>
+  const handleSubmit = () => {
+    if (!title.trim()) return;
+    
+    onSave({ 
+      title, 
+      category, 
+      priority, 
+      duration,
+      ...(editTask && { id: editTask.id, status: editTask.status, isCompleted: editTask.isCompleted })
+    });
+    onClose();
+  };
 
-                <input className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
-                    placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+  if (!isOpen) return null;
 
-                <input className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
-                    placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-[#1C1C1E] p-6 rounded-xl border border-gray-800 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-xl font-bold text-white mb-4">{editTask ? "Edit Task" : "Add Task"}</h2>
 
-                <div className="flex gap-3 mb-4">
-                    <select className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
-                        value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-                        {Object.values(TaskPriority).map(p => <option key={p}>{p}</option>)}
-                    </select>
+        <input 
+          className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
+          placeholder="Task title" 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+        />
 
-                    <input className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
-                        placeholder="45 min" value={duration} onChange={(e) => setDuration(e.target.value)} />
-                </div>
+        <input 
+          className="w-full bg-[#111217] px-3 py-2 rounded border border-gray-700 text-white mb-3"
+          placeholder="Category" 
+          value={category} 
+          onChange={(e) => setCategory(e.target.value)} 
+        />
 
-                <div className="flex justify-end gap-3">
-                    <button className="px-4 py-2 bg-gray-700 rounded text-white" onClick={onClose}>Cancel</button>
-                    <button className="px-4 py-2 bg-orange-600 rounded text-white"
-                        onClick={() => { onAddTask({ title, category, priority, duration }); onClose(); }}>
-                        Add
-                    </button>
-                </div>
-            </div>
+        <div className="flex gap-3 mb-4">
+          <select 
+            className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
+            value={priority} 
+            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+          >
+            {Object.values(TaskPriority).map(p => <option key={p}>{p}</option>)}
+          </select>
+
+          <input 
+            className="flex-1 bg-[#111217] border border-gray-700 text-white rounded px-3 py-2"
+            placeholder="45 min" 
+            value={duration} 
+            onChange={(e) => setDuration(e.target.value)} 
+          />
         </div>
-    );
+
+        <div className="flex justify-end gap-3">
+          <button className="px-4 py-2 bg-gray-700 rounded text-white hover:bg-gray-600 transition" onClick={onClose}>
+            Cancel
+          </button>
+          <button 
+            className="px-4 py-2 bg-orange-600 rounded text-white hover:bg-orange-500 transition"
+            onClick={handleSubmit}
+          >
+            {editTask ? "Update" : "Add"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // -----------------------------------------------------------------------------
@@ -562,7 +623,6 @@ const TasksPage = () => {
     const { 
         tasks, 
         activeTaskId,
-        setTasks,
         startTask, 
         pauseTask, 
         updateTask, 
@@ -573,6 +633,7 @@ const TasksPage = () => {
     const [draggedTask, setDraggedTask] = useState<Task | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [aiModalOpen, setAiModalOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState<Task | undefined>(); // ✅ Add this
 
     const handleToggleSubtask = (taskId: number, subtaskId: number) => {
         updateTask(taskId, {
@@ -595,7 +656,7 @@ const TasksPage = () => {
         , [tasks]);
 
     const moveTask = (task: Task, status: TaskStatus) => {
-        updateTask(task.id, { status, isCompleted: status === TaskStatus.DONE });
+        updateTask(task.id, { status, isCompleted: status === TaskStatus.DONE, completedAt: status === TaskStatus.DONE ? Date.now() : undefined });
         if (status !== TaskStatus.IN_PROGRESS) pauseTask();
     };
 
@@ -605,6 +666,35 @@ const TasksPage = () => {
     const handleDeleteTask = (id: number) => {
         if (id === activeTaskId) pauseTask();
         deleteTask(id);
+    };
+
+    // ✅ Add edit handler
+    const handleEditTask = (task: Task) => {
+        setEditingTask(task);
+        setIsModalOpen(true);
+    };
+
+    // ✅ Update save handler
+    const handleSaveTask = (taskData: any) => {
+        if (editingTask) {
+            // Update existing task
+            updateTask(editingTask.id, taskData);
+            setEditingTask(undefined);
+        } else {
+            // Add new task
+            addTask({ 
+                ...taskData, 
+                id: Date.now(), 
+                status: TaskStatus.TODO, 
+                isCompleted: false 
+            });
+        }
+    };
+
+    // ✅ Close modal handler
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingTask(undefined);
     };
 
     const handleAddBatchTasks = (batch: Task[]) => {
@@ -649,7 +739,7 @@ const TasksPage = () => {
                                 onDragStart={(e: any, t: Task) => { setDraggedTask(t); e.dataTransfer.effectAllowed = "move"; }}
                                 onStartOrResumeTask={handleStart}
                                 onPauseTask={handlePause}
-                                onEditTask={(t: Task) => alert("Editing coming soon")}
+                                onEditTask={handleEditTask} // ✅ Pass the handler
                                 onDeleteTask={handleDeleteTask}
                                 onToggleSubtask={handleToggleSubtask}
                             />
@@ -658,7 +748,7 @@ const TasksPage = () => {
                 ))}
             </div>
 
-            {/* ✅ NEW: Bottom Widgets Section */}
+            {/* Bottom Widgets */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                 <DailyStatsWidget />
                 <CategoryBreakdown />
@@ -666,21 +756,19 @@ const TasksPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <QuickTemplates />
-                <RecentActivity />
+                <TodaysEvents />
             </div>
 
-            {/* Modals */}
-            <AddTaskModal
+            {/* ✅ Updated Modal */}
+            <TaskModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onAddTask={(t: any) =>
-                    addTask({ ...t, id: Date.now(), status: TaskStatus.TODO, isCompleted: false })
-                }
+                onClose={handleCloseModal}
+                onSave={handleSaveTask}
+                editTask={editingTask}
             />
 
             <GeneratePlanModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} onAddBatch={handleAddBatchTasks} />
 
-            {/* Rotating Motivation */}
             <RotatingMotivation />
         </div>
     );
