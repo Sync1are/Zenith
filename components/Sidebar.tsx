@@ -8,6 +8,7 @@ import {
   AnalyticsIcon,
   SettingsIcon
 } from "./icons/IconComponents";
+import { Lock, Unlock } from "lucide-react";
 
 interface SidebarProps {
   activeItem: string;
@@ -32,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileDrawerOpen 
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isCompactMode] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   
   const touchStartX = useRef(0);
   const touchStartTime = useRef(0);
@@ -52,7 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setHighlight({ top: offsetTop, height: offsetHeight });
       setReady(true);
     }
-  }, [activeItem, isExpanded]);
+  }, [activeItem, isExpanded, isLocked]);
 
   // Touch swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -122,29 +123,53 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsMobileDrawerOpen(false);
   };
 
+  const toggleLock = () => {
+    setIsLocked(!isLocked);
+    if (!isLocked) {
+      setIsExpanded(true);
+    }
+  };
+
   return (
     <>
       {/* Desktop Sidebar - Hidden on small screens */}
       <aside
-        onMouseEnter={() => !isCompactMode && setIsExpanded(true)}
-        onMouseLeave={() => !isCompactMode && setIsExpanded(false)}
+        onMouseEnter={() => !isLocked && setIsExpanded(true)}
+        onMouseLeave={() => !isLocked && setIsExpanded(false)}
         className={`
           hidden md:flex flex-col
           bg-[#1C1C1E]/80 backdrop-blur-xl border border-[#2A2A2E]
           shadow-[0_8px_30px_rgba(0,0,0,0.45)]
           rounded-xl ml-4 mt-3 mb-4 p-4 transition-all duration-300 z-10
-          ${isExpanded && !isCompactMode ? "w-64" : "w-20"}
+          ${isExpanded || isLocked ? "w-64" : "w-20"}
         `}
       >
         {/* Logo */}
-        <div className="flex items-center text-white px-2 mb-6">
-          <LogoIcon className="h-9 w-9" />
-          <span
-            className={`text-2xl font-bold whitespace-nowrap overflow-hidden transition-all duration-300
-            ${isExpanded ? "opacity-100 ml-3 w-32" : "opacity-0 ml-0 w-0"}`}
+        <div className="flex items-center justify-between text-white px-2 mb-6">
+          <div className="flex items-center">
+            <LogoIcon className="h-9 w-9" />
+            <span
+              className={`text-2xl font-bold whitespace-nowrap overflow-hidden transition-all duration-300
+              ${isExpanded || isLocked ? "opacity-100 ml-3 w-32" : "opacity-0 ml-0 w-0"}`}
+            >
+              Zenith
+            </span>
+          </div>
+          
+          {/* Lock Button */}
+          <button
+            onClick={toggleLock}
+            className={`p-1.5 rounded-lg hover:bg-[#2A2A2E] transition-all duration-300
+              ${isExpanded || isLocked ? "opacity-100" : "opacity-0"}
+            `}
+            title={isLocked ? "Unlock sidebar" : "Lock sidebar"}
           >
-            Zenith
-          </span>
+            {isLocked ? (
+              <Lock className="h-5 w-5 text-indigo-400" />
+            ) : (
+              <Unlock className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
         </div>
 
         {/* Nav */}
@@ -171,13 +196,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 relative flex items-center w-full px-3 py-3 rounded-lg overflow-hidden
                 transition-colors duration-200 z-10
                 ${activeItem === item.label ? "text-white" : "text-gray-400 hover:text-white"}
-                ${!isExpanded && "justify-center"}
+                ${!(isExpanded || isLocked) && "justify-center"}
               `}
             >
               {item.icon}
               <span
                 className={`font-medium whitespace-nowrap transition-all duration-300
-                ${isExpanded ? "opacity-100 ml-4 w-32" : "opacity-0 ml-0 w-0"}`}
+                ${isExpanded || isLocked ? "opacity-100 ml-4 w-32" : "opacity-0 ml-0 w-0"}`}
               >
                 {item.label}
               </span>
