@@ -8,7 +8,6 @@ import {
   AnalyticsIcon,
   SettingsIcon
 } from "./icons/IconComponents";
-import { Lock, Unlock } from "lucide-react";
 
 interface SidebarProps {
   activeItem: string;
@@ -32,8 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   isMobileDrawerOpen, 
   setIsMobileDrawerOpen 
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
   
   const touchStartX = useRef(0);
   const touchStartTime = useRef(0);
@@ -53,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setHighlight({ top: offsetTop, height: offsetHeight });
       setReady(true);
     }
-  }, [activeItem, isExpanded, isLocked]);
+  }, [activeItem, isExpanded]);
 
   // Touch swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -123,53 +122,41 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsMobileDrawerOpen(false);
   };
 
-  const toggleLock = () => {
-    setIsLocked(!isLocked);
-    if (!isLocked) {
-      setIsExpanded(true);
-    }
+  const toggleExpanded = () => {
+    setIsAnimating(true);
+    setIsExpanded(!isExpanded);
+    setTimeout(() => setIsAnimating(false), 600);
   };
 
   return (
     <>
       {/* Desktop Sidebar - Hidden on small screens */}
       <aside
-        onMouseEnter={() => !isLocked && setIsExpanded(true)}
-        onMouseLeave={() => !isLocked && setIsExpanded(false)}
         className={`
           hidden md:flex flex-col
           bg-[#1C1C1E]/80 backdrop-blur-xl border border-[#2A2A2E]
           shadow-[0_8px_30px_rgba(0,0,0,0.45)]
           rounded-xl ml-4 mt-3 mb-4 p-4 transition-all duration-300 z-10
-          ${isExpanded || isLocked ? "w-64" : "w-20"}
+          ${isExpanded ? "w-64" : "w-20"}
         `}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-between text-white px-2 mb-6">
-          <div className="flex items-center">
-            <LogoIcon className="h-9 w-9" />
-            <span
-              className={`text-2xl font-bold whitespace-nowrap overflow-hidden transition-all duration-300
-              ${isExpanded || isLocked ? "opacity-100 ml-3 w-32" : "opacity-0 ml-0 w-0"}`}
-            >
-              Zenith
-            </span>
-          </div>
-          
-          {/* Lock Button */}
+        {/* Logo as Toggle Button */}
+        <div className={`flex items-center text-white mb-6 ${!isExpanded ? "justify-center px-0" : "px-2"}`}>
           <button
-            onClick={toggleLock}
-            className={`p-1.5 rounded-lg hover:bg-[#2A2A2E] transition-all duration-300
-              ${isExpanded || isLocked ? "opacity-100" : "opacity-0"}
+            onClick={toggleExpanded}
+            className={`p-1 rounded-lg hover:bg-[#2A2A2E] transition-all duration-300
+              ${isAnimating ? "scale-110 rotate-180" : "scale-100 rotate-0"}
             `}
-            title={isLocked ? "Unlock sidebar" : "Lock sidebar"}
+            title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {isLocked ? (
-              <Lock className="h-5 w-5 text-indigo-400" />
-            ) : (
-              <Unlock className="h-5 w-5 text-gray-400" />
-            )}
+            <LogoIcon className="h-9 w-9" />
           </button>
+          <span
+            className={`text-2xl font-bold whitespace-nowrap overflow-hidden transition-all duration-300
+            ${isExpanded ? "opacity-100 ml-3 w-32" : "opacity-0 ml-0 w-0"}`}
+          >
+            Zenith
+          </span>
         </div>
 
         {/* Nav */}
@@ -196,13 +183,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 relative flex items-center w-full px-3 py-3 rounded-lg overflow-hidden
                 transition-colors duration-200 z-10
                 ${activeItem === item.label ? "text-white" : "text-gray-400 hover:text-white"}
-                ${!(isExpanded || isLocked) && "justify-center"}
+                ${!isExpanded && "justify-center"}
               `}
             >
               {item.icon}
               <span
                 className={`font-medium whitespace-nowrap transition-all duration-300
-                ${isExpanded || isLocked ? "opacity-100 ml-4 w-32" : "opacity-0 ml-0 w-0"}`}
+                ${isExpanded ? "opacity-100 ml-4 w-32" : "opacity-0 ml-0 w-0"}`}
               >
                 {item.label}
               </span>
