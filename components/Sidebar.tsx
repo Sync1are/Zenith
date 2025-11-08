@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from "react";
+import React, { useState, useRef, useLayoutEffect, useEffect } from "react";
 import {
   LogoIcon,
   DashboardIcon,
@@ -43,16 +43,27 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [highlight, setHighlight] = useState({ top: 0, height: 0 });
   const [ready, setReady] = useState(false);
 
-  useLayoutEffect(() => {
+  // Update highlight position
+  const updateHighlight = () => {
     const index = navItems.findIndex((i) => i.label === activeItem);
     const btn = btnRefs.current[index];
 
     if (btn) {
       const { offsetTop, offsetHeight } = btn;
       setHighlight({ top: offsetTop, height: offsetHeight });
-      setReady(true);
+      if (!ready) setReady(true);
     }
+  };
+
+  useLayoutEffect(() => {
+    updateHighlight();
   }, [activeItem, isExpanded]);
+
+  // Force update on mount to fix initial positioning
+  useEffect(() => {
+    const timer = setTimeout(updateHighlight, 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Touch swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -163,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <nav className="relative flex flex-col flex-1 space-y-2 overflow-hidden">
           {ready && (
             <div
-              className="absolute left-0 right-0 bg-indigo-600 rounded-lg transition-transform duration-300"
+              className="absolute left-0 right-0 bg-indigo-600 rounded-lg transition-all duration-300"
               style={{
                 height: highlight.height,
                 transform: `translateY(${highlight.top}px)`
