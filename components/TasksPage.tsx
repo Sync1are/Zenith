@@ -9,6 +9,9 @@ import {
 } from './icons/IconComponents';
 const COLUMNS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
+// Api key
+const API_KEY: string = "AIzaSyDvzLie0z1jMUOypmaZmxyckqMA4k42bHA";
+
 
 // -----------------------------------------------------------------------------
 // INITIAL DATA
@@ -383,46 +386,89 @@ const AddTaskModal = ({ isOpen, onClose, onAddTask }: any) => {
 const GeneratePlanModal = ({ isOpen, onClose, onAddBatch }: any) => {
     const [prompt, setPrompt] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const generatePlan = async () => {
-        if (!prompt.trim()) return;
+        if (!prompt.trim()) {
+            setError("Please enter a prompt");
+            return;
+        }
+
+        if (!API_KEY) {
+            setError("⚠️ API Key not configured. Add VITE_GOOGLE_API_KEY to your .env file");
+            return;
+        }
+
         setLoading(true);
+        setError("");
 
         try {
-            const genAI = new GoogleGenerativeAI(process.env.API_KEY!);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const genAI = new GoogleGenerativeAI(API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
             const response = await model.generateContent(`
-Return ONLY valid JSON. No explanation, no markdown.
+You are a task planning assistant. Generate a structured task breakdown for the user's goal.
 
+IMPORTANT: Return ONLY valid JSON. No markdown, no explanations, no code blocks.
+
+Format:
 {
   "task": {
-    "title": "",
-    "category": "",
-    "priority": "HIGH|MEDIUM|LOW",
+    "title": "Main task title",
+    "category": "Category name",
+    "priority": "HIGH or MEDIUM or LOW",
     "subtasks": [
-      { "title": "", "duration": "30 min" }
+      { "title": "Subtask 1", "duration": "30 min" },
+      { "title": "Subtask 2", "duration": "45 min" }
     ]
   }
 }
 
-Goal: ${prompt}
-    `);
+User's goal: ${prompt}
 
-            let text = response.response.text().trim().replace(/```json|```/g, "");
+Generate 3-5 actionable subtasks with realistic durations.
+            `);
+
+            let text = response.response.text().trim();
+            
+            // Remove markdown code blocks if present
+            text = text.replace(/``````\n?/g, "").trim();
+            
+            // Try to find JSON in the response
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                text = jsonMatch[0];
+            }
 
             const data = JSON.parse(text);
+
+            if (!data.task || !data.task.title) {
+                throw new Error("Invalid response format");
+            }
+
+            // Calculate total duration from subtasks
+            const totalMinutes = data.task.subtasks.reduce((sum: number, st: any) => {
+                const match = st.duration.match(/(\d+)\s*(min|hour)/i);
+                if (match) {
+                    const value = parseInt(match[1]);
+                    const unit = match[2].toLowerCase();
+                    return sum + (unit.includes('hour') ? value * 60 : value);
+                }
+                return sum;
+            }, 0);
 
             const mainTask = {
                 id: Date.now(),
                 title: data.task.title,
                 category: data.task.category,
-                priority: data.task.priority,
-                duration: "0 min", // will be recalculated
+                priority: data.task.priority as TaskPriority,
+                duration: totalMinutes >= 60 
+                    ? `${Math.floor(totalMinutes / 60)} hours ${totalMinutes % 60} min`
+                    : `${totalMinutes} min`,
                 status: TaskStatus.TODO,
                 isCompleted: false,
-                subtasks: data.task.subtasks.map((st: any) => ({
-                    id: Date.now() + Math.random(),
+                subtasks: data.task.subtasks.map((st: any, index: number) => ({
+                    id: Date.now() + index,
                     title: st.title,
                     duration: st.duration,
                     isCompleted: false
@@ -430,36 +476,81 @@ Goal: ${prompt}
             };
 
             onAddBatch([mainTask]);
+            setPrompt("");
             onClose();
 
-        } catch (err) {
-            console.error(err);
-            alert("⚠️ AI could not create tasks. Try rephrasing your prompt.");
+        } catch (err: any) {
+            console.error("AI Generation Error:", err);
+            setError(
+                err.message?.includes("API") 
+                    ? "⚠️ API Error: Check your API key and quota"
+                    : "⚠️ Could not generate tasks. Try rephrasing your prompt."
+            );
         }
 
         setLoading(false);
     };
 
+    const handleClose = () => {
+        setPrompt("");
+        setError("");
+        onClose();
+    };
+
     if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={handleClose}>
             <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6 w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl text-white font-bold mb-4">AI Task Planner</h2>
+                <h2 className="text-xl text-white font-bold mb-4 flex items-center gap-2">
+                    <SparklesIcon className="h-6 w-6 text-indigo-400" />
+                    AI Task Planner
+                </h2>
 
                 <textarea
-                    className="w-full h-32 bg-[#111217] border border-gray-700 text-white rounded p-3"
-                    placeholder="Example: Study math calculus notes and revise electrostatics..."
+                    className="w-full h-32 bg-[#111217] border border-gray-700 text-white rounded p-3 focus:outline-none focus:border-indigo-500 transition"
+                    placeholder="Example: Plan my study session for calculus and physics, break down review of electrostatics chapter..."
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
+                    disabled={loading}
                 />
 
-                <div className="flex justify-end gap-3 mt-4">
-                    <button className="px-4 py-2 bg-gray-700 rounded text-white" onClick={onClose}>Cancel</button>
-                    <button className="px-4 py-2 bg-indigo-600 rounded text-white disabled:opacity-50"
-                        disabled={loading}
-                        onClick={generatePlan}>
-                        {loading ? "Thinking..." : "Generate"}
-                    </button>
+                {error && (
+                    <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
+                        {error}
+                    </div>
+                )}
+
+                <div className="flex justify-between items-center mt-4">
+                    <p className="text-xs text-gray-500">
+                        💡 Tip: Be specific about your goals for better results
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            className="px-4 py-2 bg-gray-700 rounded text-white hover:bg-gray-600 transition" 
+                            onClick={handleClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            className="px-4 py-2 bg-indigo-600 rounded text-white disabled:opacity-50 hover:bg-indigo-500 transition flex items-center gap-2"
+                            disabled={loading || !prompt.trim()}
+                            onClick={generatePlan}
+                        >
+                            {loading ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Thinking...
+                                </>
+                            ) : (
+                                <>
+                                    <SparklesIcon className="h-4 w-4" />
+                                    Generate
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
