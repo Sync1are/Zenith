@@ -48,12 +48,14 @@ const Notification = () => {
     const completedTasks = tasks.filter(t => t.status === TaskStatus.DONE);
     const currentCompletedIds = new Set(completedTasks.map(t => t.id));
     
+    // Find newly completed tasks
     completedTasks.forEach(task => {
       if (!lastCompletedTasksRef.current.has(task.id)) {
         sendTaskCompletionNotification(task);
       }
     });
 
+    // Update the ref with current completed tasks
     lastCompletedTasksRef.current = currentCompletedIds;
   }, [tasks]);
 
@@ -61,13 +63,16 @@ const Notification = () => {
     const eventStart = typeof event.start === 'string' ? new Date(event.start) : event.start;
     const timeStr = eventStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     
-    playNotificationSound(800, 0.5);
+    playNotificationSound(800, 0.5); // Higher pitch for events
 
     if ('Notification' in window && Notification.permission === 'granted') {
       const notification = new Notification('📅 Event Reminder', {
         body: `${event.title} starts at ${timeStr}`,
+        icon: '/logo.png',
+        badge: '/logo.png',
         tag: `event-${event.id}`,
         requireInteraction: false,
+        vibrate: [200, 100, 200],
       });
 
       notification.onclick = () => {
@@ -85,13 +90,16 @@ const Notification = () => {
   };
 
   const sendTaskCompletionNotification = (task: any) => {
-    playNotificationSound(600, 0.7);
+    playNotificationSound(600, 0.7); // Lower pitch for completions
 
     if ('Notification' in window && Notification.permission === 'granted') {
       const notification = new Notification('🎉 Task Completed!', {
         body: `Great job! You completed: ${task.title}`,
+        icon: '/logo.png',
+        badge: '/logo.png',
         tag: `task-${task.id}`,
         requireInteraction: false,
+        vibrate: [100, 50, 100, 50, 100],
       });
 
       notification.onclick = () => {
@@ -107,6 +115,7 @@ const Notification = () => {
       bgColor: 'bg-green-600'
     });
 
+    // Optional: Confetti effect
     triggerConfetti();
   };
 
@@ -164,6 +173,7 @@ const Notification = () => {
   };
 
   const triggerConfetti = () => {
+    // Simple confetti effect using emojis
     const emojis = ['🎉', '✨', '🎊', '⭐', '💫', '🌟'];
     const container = document.createElement('div');
     container.className = 'fixed inset-0 pointer-events-none z-[9998]';

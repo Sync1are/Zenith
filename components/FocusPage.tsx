@@ -3,6 +3,7 @@ import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 import { useAppStore } from "../store/useAppStore";
 import { TaskStatus } from "../types";
 import { AnimatePresence, motion } from "framer-motion";
+import SpotifyCard from "../components/SpotifyCard";
 
 
 // ===============================
@@ -490,8 +491,11 @@ const FocusPage: React.FC = () => {
           <div className="flex flex-col h-full overflow-hidden">
             <FocusTaskCarousel />
             <AmbientSounds />
+            <SpotifyCard />
             {/* Optional: Spotify section here */}
           </div>
+          
+
         </div>
       </div>
 
