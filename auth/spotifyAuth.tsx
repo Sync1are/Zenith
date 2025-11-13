@@ -2,7 +2,7 @@
 import { generateCodeChallenge, generateCodeVerifier, randomState } from "./pkce";
 
 export const SPOTIFY_CLIENT_ID = "c78fa3fb2fc34a76ae9f6771a403589f";
-export const REDIRECT_URI = "http://127.0.0.1:5173"; // use exact loopback root when not using a router
+export const REDIRECT_URI = "https://zenith-puce-iota.vercel.app/callback"; // use exact loopback root when not using a router
 
 export const SCOPES = [
   "user-read-playback-state",

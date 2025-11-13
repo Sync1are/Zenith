@@ -42,7 +42,7 @@ const SpotifyCallback: React.FC = () => {
           client_id: "c78fa3fb2fc34a76ae9f6771a403589f", // or use env
           grant_type: "authorization_code",
           code,
-          redirect_uri: "http://127.0.0.1:5173",
+          redirect_uri: "https://zenith-puce-iota.vercel.app/callback",
           code_verifier: verifier,
         });
 
