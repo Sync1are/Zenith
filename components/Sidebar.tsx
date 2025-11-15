@@ -185,7 +185,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           {navItems.map((item, index) => (
             <button
               key={item.label}
-              ref={(el) => (btnRefs.current[index] = el)}
+              // FIX: The ref callback should not return a value. Using curly braces fixes the type error.
+              ref={(el) => { btnRefs.current[index] = el; }}
               onClick={(e) => {
                 createRipple(e);
                 onSelect(item.label);

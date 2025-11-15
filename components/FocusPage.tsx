@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 import { useAppStore } from "../store/useAppStore";
-import { TaskStatus } from "../types";
+import { TaskStatus, TaskPriority } from "../types";
 import { AnimatePresence, motion } from "framer-motion";
 import SpotifyCard from "../components/SpotifyCard";
 
@@ -369,10 +369,11 @@ const FocusTaskCarousel: React.FC = () => {
                     <span className="text-gray-300 bg-white/10 px-2 py-0.5 rounded">{current.category}</span>
                     <span className="text-gray-300">⏱️ {current.duration || "--"}</span>
                     <span
+                      // FIX: Use TaskPriority enum for comparison to fix type errors.
                       className={`px-2 rounded border ${
-                        current.priority === "HIGH"
+                        current.priority === TaskPriority.HIGH
                           ? "border-red-400 text-red-300"
-                          : current.priority === "MEDIUM"
+                          : current.priority === TaskPriority.MEDIUM
                           ? "border-yellow-400 text-yellow-300"
                           : "border-blue-400 text-blue-300"
                       }`}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -8,15 +9,25 @@ import Notifications from "./components/Notifications";
 import Tasks from "./components/TasksPage";
 import CalendarPage from "./components/CalendarPage";
 import { useAppStore } from "./store/useAppStore";
+import AnalyticsPage from './components/AnalyticsPage'; // Import the new AnalyticsPage
+import SettingsPage from "./components/SettingsPage";
 
 // ✅ Spotify store + auth
 import { useSpotifyStore } from "./store/useSpotifyStore";
 import { beginLogin, handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
+import { useSettingsStore } from "./store/useSettingsStore";
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // ========== THEME INITIALIZATION ==========
+  useEffect(() => {
+    const removeListener = useSettingsStore.getState().startSystemThemeSync();
+    useSettingsStore.getState().applyThemeToDom(); // Apply theme on initial load
+    return () => removeListener(); // Cleanup listener
+  }, []);
 
   // ========== GLOBAL TIMER ==========
   useEffect(() => {
@@ -135,19 +146,9 @@ const App: React.FC = () => {
       case "Focus":
         return <FocusPage />;
       case "Analytics":
-        return (
-          <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
-            <h2 className="text-2xl font-bold text-white mb-4">📊 Analytics</h2>
-            <p className="text-gray-400">Analytics dashboard coming soon...</p>
-          </div>
-        );
+        return <AnalyticsPage />;
       case "Settings":
-        return (
-          <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
-            <h2 className="text-2xl font-bold text-white mb-4">⚙️ Settings</h2>
-            <p className="text-gray-400">Settings panel coming soon...</p>
-          </div>
-        );
+        return <SettingsPage />;
       default:
         return (
           <div className="text-center p-8 bg-[#1C1C1E] rounded-2xl border border-gray-800">
@@ -220,6 +221,7 @@ const App: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-full px-4 sm:px-6 lg:px-10 py-6">
+            {/* FIX: Pass setSidebarOpen to Header to fix TypeScript error */}
             <Header currentPage={activePage} setSidebarOpen={setIsMobileDrawerOpen} />
             {renderContent()}
           </div>

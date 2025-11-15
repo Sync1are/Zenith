@@ -1,0 +1,79 @@
+/* theme.css */
+:root {
+  /* neutrals */
+  --bg: #0f1115;
+  --panel: #141518;
+  --panel-border: #2a2c33;
+  --text: #ffffff;
+  --muted: #9ca3af; /* zinc-400-ish */
+  --muted-2: #6b7280; /* zinc-500-ish */
+
+  /* accents */
+  --primary: #6366f1; /* indigo-500 */
+  --success: #10b981;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+
+  /* controls */
+  --control-bg: #181a1f;
+  --control-border: #3f414a;
+}
+
+/* Light */
+:root[data-theme="light"] {
+  --bg: #f7f7f8;
+  --panel: #ffffff;
+  --panel-border: #e5e7eb;
+  --text: #0b0c0f;
+  --muted: #4b5563;
+  --muted-2: #6b7280;
+
+  --primary: #4f46e5;
+  --success: #059669;
+  --danger: #dc2626;
+  --warn: #d97706;
+
+  --control-bg: #f3f4f6;
+  --control-border: #d1d5db;
+}
+
+/* Dark (default) */
+:root[data-theme="dark"] {
+  /* same as :root defaults above; kept for clarity */
+}
+
+/* Midnight (ultra dark, low chroma) */
+:root[data-theme="midnight"] {
+  --bg: #0b0c10;
+  --panel: #121317;
+  --panel-border: #22242a;
+  --text: #f8fafc;
+  --muted: #a1a1aa;
+  --muted-2: #71717a;
+
+  --primary: #8b5cf6; /* violet-500 */
+  --success: #22c55e;
+  --danger: #f43f5e;
+  --warn: #f59e0b;
+
+  --control-bg: #14161b;
+  --control-border: #2d2f38;
+}
+
+/* Optional: high-contrast theme */
+:root[data-theme="contrast"] {
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --panel-border: #3f3f46;
+  --text: #ffffff;
+  --muted: #e4e4e7;
+  --muted-2: #c7c7cc;
+
+  --primary: #60a5fa;
+  --success: #34d399;
+  --danger: #fb7185;
+  --warn: #fbbf24;
+
+  --control-bg: #101010;
+  --control-border: #404040;
+}
