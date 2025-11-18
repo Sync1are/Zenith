@@ -34,6 +34,7 @@ const AiCoachCard: React.FC = () => {
                         border-[var(--text)]
                         hover:bg-[var(--text)]
                         hover:text-[var(--bg)]
+                        z-index-1
                     "
                 >
                     Break it down!
