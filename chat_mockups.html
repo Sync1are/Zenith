@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith Chat UI Concepts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;700&family=Space+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #09090b;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Option 1: Glass */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Option 2: Cyberpunk */
+        .cyber-panel {
+            background: #050505;
+            border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+            font-family: 'Space Mono', monospace;
+        }
+
+        .cyber-glow {
+            box-shadow: 0 0 10px #6366f1, 0 0 20px #6366f1;
+        }
+
+        /* Option 3: Soft Modern */
+        .soft-panel {
+            background: #18181b;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="p-10 min-h-screen flex flex-col items-center gap-10">
+
+    <h1 class="text-3xl font-bold text-gray-400 mb-4">Chat UI Concepts</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 w-full max-w-7xl">
+
+        <!-- OPTION 1: MINIMALIST GLASS -->
+        <div class="flex flex-col gap-4">
+            <h2 class="text-xl font-semibold text-center text-indigo-400">1. Zenith Glass</h2>
+            <div class="glass-panel rounded-2xl w-full h-[600px] flex flex-col overflow-hidden relative">
+                <!-- Header -->
+                <div class="p-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-700 relative overflow-hidden">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" />
+                        </div>
+                        <div>
+                            <div class="font-medium text-sm">Alice</div>
+                            <div class="text-xs text-green-400">Online</div>
+                        </div>
+                    </div>
+                    <button class="text-gray-400">✕</button>
+                </div>
+
+                <!-- Messages -->
+                <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                    <div class="flex justify-start">
+                        <div
+                            class="bg-[#27272a] px-4 py-2 rounded-2xl rounded-bl-none text-sm text-gray-300 max-w-[80%]">
+                            Hey! Did you finish the design?
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <div
+                            class="bg-indigo-600 px-4 py-2 rounded-2xl rounded-br-none text-sm text-white max-w-[80%] shadow-lg shadow-indigo-900/20">
+                            Almost done! Just tweaking the shadows.
+                        </div>
+                    </div>
+                    <div class="flex justify-start">
+                        <div
+                            class="bg-[#27272a] px-4 py-2 rounded-2xl rounded-bl-none text-sm text-gray-300 max-w-[80%]">
+                            Awesome, can't wait to see it.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="p-4">
+                    <div class="bg-white/5 border border-white/5 rounded-xl flex items-center p-1">
+                        <input type="text" placeholder="Message..."
+                            class="bg-transparent border-none outline-none text-sm text-white px-3 py-2 flex-1 placeholder-gray-600">
+                        <button class="p-2 bg-indigo-600 rounded-lg text-white">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTION 2: CYBERPUNK -->
+        <div class="flex flex-col gap-4">
+            <h2 class="text-xl font-semibold text-center text-fuchsia-400">2. Cyber Protocol</h2>
+            <div class="cyber-panel w-full h-[600px] flex flex-col overflow-hidden relative clip-path-polygon">
+                <!-- Header -->
+                <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-black">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 border border-fuchsia-500 p-0.5">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Bob" class="bg-gray-900" />
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm tracking-wider text-fuchsia-500">BOB_UNIT</div>
+                            <div class="text-[10px] text-gray-500 uppercase tracking-widest">CONNECTED</div>
+                        </div>
+                    </div>
+                    <button class="text-fuchsia-500 hover:text-white transition">✕</button>
+                </div>
+
+                <!-- Messages -->
+                <div
+                    class="flex-1 p-4 space-y-6 overflow-y-auto bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                    <div class="flex justify-start">
+                        <div class="border-l-2 border-fuchsia-500 pl-3">
+                            <div class="text-[10px] text-fuchsia-500 mb-1">BOB_UNIT // 10:42</div>
+                            <div class="bg-gray-900/80 p-3 text-xs text-gray-300 font-mono border border-gray-800">
+                                SYSTEM UPDATE REQUIRED.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <div class="border-r-2 border-cyan-500 pr-3 text-right">
+                            <div class="text-[10px] text-cyan-500 mb-1">YOU // 10:43</div>
+                            <div class="bg-cyan-900/20 p-3 text-xs text-cyan-100 font-mono border border-cyan-500/30">
+                                Initiating protocol...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="p-4 bg-black border-t border-gray-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-fuchsia-500">></span>
+                        <input type="text" placeholder="ENTER_COMMAND..."
+                            class="bg-transparent border-none outline-none text-sm text-fuchsia-100 flex-1 placeholder-gray-700 font-mono">
+                        <button class="text-cyan-500 font-mono text-xs">[SEND]</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTION 3: SOFT MODERN -->
+        <div class="flex flex-col gap-4">
+            <h2 class="text-xl font-semibold text-center text-blue-400">3. Soft Bubble</h2>
+            <div class="soft-panel w-full h-[600px] flex flex-col overflow-hidden relative">
+                <!-- Header -->
+                <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 p-0.5">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie"
+                                    class="rounded-2xl bg-black h-full w-full object-cover" />
+                            </div>
+                            <div
+                                class="absolute -bottom-1 -right-1 w-4 h-4 bg-[#18181b] rounded-full flex items-center justify-center">
+                                <div class="w-2.5 h-2.5 bg-green-400 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-lg">Charlie</div>
+                            <div class="text-xs text-gray-500">Active now</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="flex-1 p-6 space-y-6 overflow-y-auto">
+                    <div class="flex justify-start items-end gap-2">
+                        <div class="w-6 h-6 rounded-full bg-gray-700 overflow-hidden mb-1">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie" />
+                        </div>
+                        <div class="bg-[#27272a] px-5 py-3 rounded-2xl rounded-bl-none text-[15px] text-gray-200">
+                            Hey! Are we still on for the meeting?
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <div class="bg-blue-600 px-5 py-3 rounded-2xl rounded-br-none text-[15px] text-white">
+                            Yes! 3 PM works for me.
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <div class="bg-blue-600 px-5 py-3 rounded-2xl rounded-tr-none text-[15px] text-white">
+                            See you then! 👋
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="p-4">
+                    <div class="bg-[#27272a] rounded-full flex items-center px-2 py-2">
+                        <button class="p-2 text-gray-400 hover:text-white transition">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+                        <input type="text" placeholder="Type a message..."
+                            class="bg-transparent border-none outline-none text-[15px] text-white px-2 flex-1 placeholder-gray-500">
+                        <button class="p-2 bg-blue-600 rounded-full text-white hover:bg-blue-500 transition">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

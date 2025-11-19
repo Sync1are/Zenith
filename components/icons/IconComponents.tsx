@@ -1,10 +1,9 @@
-
 import React from 'react';
 
 export const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="11" fill="#F97316"/>
-        <path d="M12 7V12H16.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="12" r="11" fill="#F97316" />
+        <path d="M12 7V12H16.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 
@@ -27,9 +26,9 @@ export const CalendarIcon: React.FC<{ className?: string }> = ({ className }) =>
 );
 
 export const FocusIcon: React.FC<{ className?: string }> = ({ className }) => (
-     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.375 9.375c.932-.932 2.182-1.5 3.542-1.5 1.36 0 2.61.568 3.542 1.5.932.932 1.5 2.182 1.5 3.542 0 1.36-.568 2.61-1.5 3.542-.932.932-2.182 1.5-3.542 1.5-1.36 0-2.61-.568-3.542-1.5a4.966 4.966 0 01-1.5-3.542c0-1.36.568-2.61 1.5-3.542z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.375 9.375c.932-.932 2.182-1.5 3.542-1.5 1.36 0 2.61.568 3.542 1.5.932.932 1.5 2.182 1.5 3.542 0 1.36-.568 2.61-1.5 3.542-.932.932-2.182 1.5-3.542 1.5-1.36 0-2.61-.568-3.542-1.5a4.966 4.966 0 01-1.5-3.542c0-1.36.568-2.61 1.5-3.542z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 
@@ -96,11 +95,11 @@ export const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const SparklesIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-        <path d="M5 3v4"/>
-        <path d="M19 17v4"/>
-        <path d="M3 5h4"/>
-        <path d="M17 19h4"/>
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+        <path d="M5 3v4" />
+        <path d="M19 17v4" />
+        <path d="M3 5h4" />
+        <path d="M17 19h4" />
     </svg>
 );
 
@@ -131,5 +130,12 @@ export const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         <line x1="10" y1="11" x2="10" y2="17"></line>
         <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+);
+
+export const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
 );
