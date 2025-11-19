@@ -15,33 +15,66 @@ import FocusPage from "./components/FocusPage";
 import AnalyticsPage from "./components/AnalyticsPage";
 import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
+import LoginPage from "./components/LoginPage";
 
-// Stores & Spotify
+// Stores
 import { useAppStore } from "./store/useAppStore";
 import { useSettingsStore } from "./store/useSettingsStore";
 import { useSpotifyStore } from "./store/useSpotifyStore";
 import { useMessageStore } from "./store/useMessageStore";
-import { beginLogin, handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
+import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
+
 import { AnimatePresence } from "framer-motion";
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState("Dashboard");
 
-  // Messaging Store
-  const { activeUserId } = useMessageStore();
+  // 🌙 Messaging store
+  const currentUser = useMessageStore((s) => s.currentUser);
+  const activeUserId = useMessageStore((s) => s.activeUserId);
+  const subscribeToUsers = useMessageStore((s) => s.subscribeToUsers);
+  const subscribeToMessages = useMessageStore((s) => s.subscribeToMessages);
 
-  // Mobile drawer
+  // 🌙 Mobile drawer
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // 🌙 TopNav Server Tabs
+  const [activeServerId, setActiveServerId] = useState("home");
 
   // Theme Sync
   useEffect(() => {
-    const settingsState = useSettingsStore.getState();
-    const stop = settingsState.startSystemThemeSync();
-    settingsState.applyThemeToDom();
+    const settings = useSettingsStore.getState();
+    const stop = settings.startSystemThemeSync();
+    settings.applyThemeToDom();
     return () => stop();
   }, []);
 
-  // Global tick timer
+  // Messaging Subscriptions
+  // 1. Subscribe to Users
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsubscribe = subscribeToUsers();
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // 2. Subscribe to Active Chat Messages
+  useEffect(() => {
+    if (currentUser && activeUserId) {
+      const unsub = subscribeToMessages(activeUserId);
+      return () => unsub();
+    }
+  }, [currentUser, activeUserId]);
+
+  // 3. Subscribe to Notifications (Global)
+  const { subscribeToNotifications } = useMessageStore();
+  useEffect(() => {
+    if (currentUser) {
+      const unsub = subscribeToNotifications();
+      return () => unsub();
+    }
+  }, [currentUser]);
+
+  // Tick timer
   useEffect(() => {
     const interval = setInterval(() => useAppStore.getState().tick(), 1000);
     return () => clearInterval(interval);
@@ -53,21 +86,15 @@ const App: React.FC = () => {
     handleAuthRedirectIfPresent(acceptTokens);
   }, [acceptTokens]);
 
-  // Page Renderer
+  // Page switcher
   const renderContent = useCallback(() => {
     switch (activePage) {
-      case "Dashboard":
-        return <Dashboard />;
-      case "Tasks":
-        return <Tasks />;
-      case "Calendar":
-        return <CalendarPage />;
-      case "Focus":
-        return <FocusPage />;
-      case "Analytics":
-        return <AnalyticsPage />;
-      case "Settings":
-        return <SettingsPage />;
+      case "Dashboard": return <Dashboard />;
+      case "Tasks": return <Tasks />;
+      case "Calendar": return <CalendarPage />;
+      case "Focus": return <FocusPage />;
+      case "Analytics": return <AnalyticsPage />;
+      case "Settings": return <SettingsPage />;
       default:
         return (
           <div className="p-6 bg-[#1C1C1E] rounded-xl border border-gray-700 text-gray-400">
@@ -77,18 +104,26 @@ const App: React.FC = () => {
     }
   }, [activePage]);
 
+  // LOGIN FLOW
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={() => setActivePage("Dashboard")} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#111217] text-white">
 
       <TitleBar />
       <Notifications />
 
-      {/* Top Navigation (User List) */}
-      <TopNavBar />
+      {/* FIXED: TopNavBar now receives required props */}
+      <TopNavBar
+        activeServer={activeServerId}
+        onSelect={(id) => setActiveServerId(id)}
+      />
 
       <div className="flex flex-1 overflow-hidden pt-4 relative">
 
-        {/* Sidebar - Always Visible */}
+        {/* Sidebar */}
         <Sidebar
           activeItem={activePage}
           onSelect={(page) => {
@@ -105,13 +140,14 @@ const App: React.FC = () => {
               currentPage={activePage}
               setSidebarOpen={setIsMobileDrawerOpen}
             />
+
             {renderContent()}
           </div>
         </main>
 
       </div>
 
-      {/* Chat Overlay - Floating Window */}
+      {/* Chat overlay */}
       <AnimatePresence>
         {activeUserId && <ChatPage />}
       </AnimatePresence>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogoIcon, PlusIcon } from "./icons/IconComponents";
+import { LogoIcon } from "./icons/IconComponents";
 import { useMessageStore } from "../store/useMessageStore";
 
-const TopNavBar: React.FC = () => {
-  const { users, activeUserId, setActiveUser, addUser } = useMessageStore();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void; }> = ({ activeServer, onSelect }) => {
+  const { users, activeUserId, setActiveUser } = useMessageStore();
+  const notifications = useMessageStore((s) => s.notifications);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isAutoHidden, setIsAutoHidden] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,11 +36,6 @@ const TopNavBar: React.FC = () => {
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
   }, []);
-
-  const handleAddUser = () => {
-    const name = prompt("Enter username to add:");
-    if (name) addUser(name);
-  };
 
   return (
     <>
@@ -81,43 +78,42 @@ const TopNavBar: React.FC = () => {
 
           {/* USER LIST */}
           <div className="flex items-center gap-3">
-            {users.map((user) => (
-              <NavItem
-                key={user.id}
-                id={user.id}
-                label={user.username}
-                isActive={activeUserId === user.id}
-                onClick={() => setActiveUser(user.id)}
-                onHover={setHoveredId}
-                hoveredId={hoveredId}
-              >
-                <img
-                  src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
-                  alt={user.username}
-                  className="w-full h-full rounded-full object-cover"
-                />
-                {/* Status Indicator */}
-                <div className={`
+            {[...users]
+              .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
+              .map((user) => {
+                const unreadCount = notifications[user.id] || 0;
+
+                return (
+                  <NavItem
+                    key={user.id}
+                    id={user.id}
+                    label={user.username}
+                    isActive={activeUserId === user.id}
+                    onClick={() => setActiveUser(user.id)}
+                    onHover={setHoveredId}
+                    hoveredId={hoveredId}
+                  >
+                    <img
+                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                      alt={user.username}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                    {/* Status Indicator */}
+                    <div className={`
                   absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#18181b]
                   ${user.status === 'online' ? 'bg-green-500' : user.status === 'busy' ? 'bg-red-500' : 'bg-gray-500'}
                 `} />
-              </NavItem>
-            ))}
-          </div>
 
-          {/* ADD USER BUTTON */}
-          <button
-            onClick={handleAddUser}
-            className="
-              w-12 h-12 rounded-full flex items-center justify-center
-              bg-white/5 hover:bg-green-500/20 text-green-500
-              border border-dashed border-green-500/30 hover:border-green-500
-              transition-all duration-300 group
-            "
-            title="Add Friend"
-          >
-            <PlusIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </button>
+                    {/* Notification Badge */}
+                    {unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-[#18181b] z-20">
+                        <span className="text-[10px] font-bold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                      </div>
+                    )}
+                  </NavItem>
+                )
+              })}
+          </div>
         </nav>
       </div>
     </>

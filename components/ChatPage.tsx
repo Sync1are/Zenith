@@ -10,7 +10,7 @@ const SendIcon = ({ className }: { className?: string }) => (
 );
 
 const ChatPage: React.FC = () => {
-    const { activeUserId, users, messages, sendMessage, setActiveUser } = useMessageStore();
+    const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser } = useMessageStore();
     const [inputText, setInputText] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
@@ -100,7 +100,7 @@ const ChatPage: React.FC = () => {
                 ) : (
                     <AnimatePresence initial={false}>
                         {currentMessages.map((msg) => {
-                            const isMe = msg.senderId === 'me';
+                            const isMe = msg.senderId === currentUser?.id;
                             return (
                                 <motion.div
                                     key={msg.id}
