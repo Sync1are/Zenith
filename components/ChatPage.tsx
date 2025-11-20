@@ -73,7 +73,7 @@ const ChatPage: React.FC = () => {
                     </motion.div>
                     <div>
                         <h2 className="text-sm font-medium text-white">{activeUser.username}</h2>
-                        <p className="text-xs text-green-400">
+                        <p className={`text-xs ${activeUser.status === 'online' ? 'text-green-400' : 'text-gray-500'}`}>
                             {activeUser.status === 'online' ? 'Online' : 'Offline'}
                         </p>
                     </div>

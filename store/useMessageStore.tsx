@@ -175,7 +175,27 @@ export const useMessageStore = create<MessageState>()(
                         set({ currentUser: null, isLoading: false });
                     }
                 });
-                return unsub;
+
+                // Set user offline when they close the tab/browser
+                const handleBeforeUnload = async () => {
+                    const { currentUser } = get();
+                    if (currentUser) {
+                        // Use navigator.sendBeacon for reliable offline status update
+                        const userRef = doc(db, "users", currentUser.id);
+                        await setDoc(
+                            userRef,
+                            { status: "offline", lastActive: Date.now() },
+                            { merge: true }
+                        );
+                    }
+                };
+
+                window.addEventListener('beforeunload', handleBeforeUnload);
+
+                return () => {
+                    unsub();
+                    window.removeEventListener('beforeunload', handleBeforeUnload);
+                };
             },
 
             // SIGNUP
