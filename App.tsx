@@ -28,7 +28,10 @@ import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { AnimatePresence } from "framer-motion";
 
 const App: React.FC = () => {
-  const [activePage, setActivePage] = useState("Dashboard");
+  // 🌙 Navigation
+  const activePage = useAppStore((s) => s.activePage);
+  const setActivePage = useAppStore((s) => s.setActivePage);
+
   const [isSignup, setIsSignup] = useState(false);
 
   // 🌙 Messaging store

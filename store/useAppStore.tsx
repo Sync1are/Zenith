@@ -1,3 +1,4 @@
+// src/store/useAppStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Task, TaskStatus } from "../types";
@@ -26,6 +27,35 @@ type Device = {
   type: string;
   volume_percent: number | null;
 };
+
+// Prefer providing your Client ID via environment in Vite/Electron
+const SPOTIFY_CLIENT_ID =
+  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID) ||
+  process.env.SPOTIFY_CLIENT_ID ||
+  "c78fa3fb2fc34a76ae9f6771a403589f";
+
+// ---------- Token refresh helper (PKCE: no client_secret) ----------
+async function refreshAccessToken(
+  refreshToken: string
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
+  const body = new URLSearchParams({
+    client_id: SPOTIFY_CLIENT_ID,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Spotify refresh failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
 
 // ---------- AppState ----------
 interface AppState {
@@ -60,7 +90,10 @@ interface AppState {
   spotifySkipNext: () => Promise<{ ok: boolean; status: number; note: string }>;
   spotifyTogglePlayback: (play: boolean) => Promise<{ ok: boolean; status: number; note: string }>;
   spotifyGetDevices: () => Promise<Device[] | null>;
-  spotifyTransferPlayback: (deviceId: string, play?: boolean) => Promise<{ ok: boolean; status: number; note: string }>;
+  spotifyTransferPlayback: (
+    deviceId: string,
+    play?: boolean
+  ) => Promise<{ ok: boolean; status: number; note: string }>;
   spotifyGetCurrentlyPlaying: () => Promise<any | null>;
 
   // Task CRUD
@@ -80,37 +113,15 @@ interface AppState {
   setTimerRemaining: (seconds: number) => void;
   resetTimer: () => void;
 
-  // Tick
+  // App reset
+  resetApp: () => void;
+
+  // Navigation
+  activePage: string;
+  setActivePage: (page: string) => void;
+
+  // Ticker
   tick: () => void;
-}
-
-// Prefer providing your Client ID via environment in Vite/Electron
-const SPOTIFY_CLIENT_ID =
-  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID) ||
-  process.env.SPOTIFY_CLIENT_ID ||
-  "c78fa3fb2fc34a76ae9f6771a403589f";
-
-// ---------- Token refresh helper (PKCE: no client_secret) ----------
-async function refreshAccessToken(
-  refreshToken: string
-): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
-  const body = new URLSearchParams({
-    client_id: SPOTIFY_CLIENT_ID,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-  });
-
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Spotify refresh failed: ${res.status} ${text}`);
-  }
-  return res.json();
 }
 
 // ---------- Store ----------
@@ -128,6 +139,10 @@ export const useAppStore = create<AppState>()(
       sessionHistory: [],
       lastStartRemaining: null,
 
+      // Navigation
+      activePage: "Dashboard",
+      setActivePage: (page) => set({ activePage: page }),
+
       // Legacy single token (implicit flow) — consider migrating to spotify.{...}
       spotifyToken: null,
       setSpotifyToken: (token) => set({ spotifyToken: token }),
@@ -135,7 +150,8 @@ export const useAppStore = create<AppState>()(
       // PKCE tokens
       spotify: { accessToken: null, refreshToken: null, expiresAt: null },
       setSpotifyTokens: (t) => set({ spotify: t }),
-      clearSpotifyTokens: () => set({ spotify: { accessToken: null, refreshToken: null, expiresAt: null } }),
+      clearSpotifyTokens: () =>
+        set({ spotify: { accessToken: null, refreshToken: null, expiresAt: null } }),
 
       // Prefer this to read a token in your UI/services
       getEffectiveSpotifyToken: () => {
@@ -154,6 +170,8 @@ export const useAppStore = create<AppState>()(
 
         try {
           const data = await refreshAccessToken(spotify.refreshToken);
+          // Note: Spotify may omit refresh_token on refresh; reuse the stored one in that case.
+          // See community/dev notes about refresh_token not always rotating. [web:27][web:30][web:32]
           const expiresAt = Date.now() + (data.expires_in - 30) * 1000;
           setSpotifyTokens({
             accessToken: data.access_token,
@@ -162,9 +180,14 @@ export const useAppStore = create<AppState>()(
           });
           return data.access_token;
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.error(e);
           // Clear only the access token so user can try login again if needed
-          setSpotifyTokens({ accessToken: null, refreshToken: spotify.refreshToken, expiresAt: null });
+          setSpotifyTokens({
+            accessToken: null,
+            refreshToken: spotify.refreshToken,
+            expiresAt: null,
+          });
           return null;
         }
       },
@@ -179,7 +202,8 @@ export const useAppStore = create<AppState>()(
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 204) return { ok: true, status: 204, note: "Skipped" };
-        if (res.status === 403) return { ok: false, status: 403, note: "Premium required or scope missing" };
+        if (res.status === 403)
+          return { ok: false, status: 403, note: "Premium required or scope missing" };
         if (res.status === 404) return { ok: false, status: 404, note: "No active device" };
         return { ok: res.ok, status: res.status, note: await res.text().catch(() => "Error") };
       },
@@ -194,7 +218,8 @@ export const useAppStore = create<AppState>()(
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 204) return { ok: true, status: 204, note: play ? "Playing" : "Paused" };
-        if (res.status === 403) return { ok: false, status: 403, note: "Premium required or scope missing" };
+        if (res.status === 403)
+          return { ok: false, status: 403, note: "Premium required or scope missing" };
         if (res.status === 404) return { ok: false, status: 404, note: "No active device" };
         return { ok: res.ok, status: res.status, note: await res.text().catch(() => "Error") };
       },
@@ -215,13 +240,15 @@ export const useAppStore = create<AppState>()(
       spotifyTransferPlayback: async (deviceId: string, play = true) => {
         const token = await get().ensureSpotifyAccessToken();
         if (!token) return { ok: false, status: 0, note: "Not connected" };
+        // The API expects { device_ids: [id], play } and returns 204 on success. [web:25][web:23]
         const res = await fetch("https://api.spotify.com/v1/me/player", {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ device_ids: [deviceId], play }),
         });
         if (res.status === 204) return { ok: true, status: 204, note: "Transferred" };
-        if (res.status === 403) return { ok: false, status: 403, note: "Premium required or scope missing" };
+        if (res.status === 403)
+          return { ok: false, status: 403, note: "Premium required or scope missing" };
         return { ok: res.ok, status: res.status, note: await res.text().catch(() => "Error") };
       },
 
@@ -358,7 +385,8 @@ export const useAppStore = create<AppState>()(
 
       // ---------- Tick ----------
       tick: () => {
-        const { timerRemaining, timerActive, activeTaskId, tasks, lastStartRemaining, logSession } = get();
+        const { timerRemaining, timerActive, activeTaskId, tasks, lastStartRemaining, logSession } =
+          get();
         if (!timerActive || timerRemaining <= 0) return;
 
         const newRemaining = timerRemaining - 1;
@@ -395,6 +423,21 @@ export const useAppStore = create<AppState>()(
           lastStartRemaining: shouldFinish ? null : lastStartRemaining,
         });
       },
+
+      // ---------- App reset ----------
+      resetApp: () =>
+        set({
+          tasks: [],
+          activeTaskId: null,
+          focusMode: "Pomodoro",
+          timerActive: false,
+          timerRemaining: FOCUS_MODE_DURATIONS["Pomodoro"],
+          sessionHistory: [],
+          lastStartRemaining: null,
+          spotifyToken: null,
+          spotify: { accessToken: null, refreshToken: null, expiresAt: null },
+          activePage: "Dashboard",
+        }),
     }),
     {
       name: "zenith-app-storage",
@@ -406,6 +449,7 @@ export const useAppStore = create<AppState>()(
         timerActive: state.timerActive,
         timerRemaining: state.timerRemaining,
         sessionHistory: state.sessionHistory,
+        activePage: state.activePage,
 
         // Legacy token for old UI (safe to remove once migrated)
         spotifyToken: state.spotifyToken,

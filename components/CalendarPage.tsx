@@ -194,7 +194,7 @@ const MonthlyCalendar: React.FC<{
         </button>
       </div>
       <div className="grid grid-cols-7 text-center text-xs text-[var(--subtle)] mb-2">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => <div key={day}>{day}</div>)}
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => <div key={i}>{day}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {daysInMonth.map((day, i) => {

@@ -28,21 +28,30 @@ export interface Task {
   status: TaskStatus;
   isCompleted: boolean;
   subtasks?: Subtask[];
-    // For stopwatch mode (no duration)
-  elapsedTime?: number; 
+  // For stopwatch mode (no duration)
+  elapsedTime?: number;
   remainingTime?: number;
   completedAt?: number; // timestamp
 }
 
 
 export interface Stat {
-    label: string;
-    value: string;
-    iconBgColor: string;
+  label: string;
+  value: string;
+  iconBgColor: string;
 }
 
 export interface AnalyticsData {
-    name:string;
-    currentWeek: number;
-    previousWeek: number;
+  name: string;
+  currentWeek: number;
+  previousWeek: number;
+}
+
+// Aze Chatbot types
+export interface ChatMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  hasAudio?: boolean;
 }

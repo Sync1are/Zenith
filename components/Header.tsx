@@ -23,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showAzeChat, setShowAzeChat] = useState(false);
   const [customStatusText, setCustomStatusText] = useState(currentUser?.customStatus || "");
   const [statusEmoji, setStatusEmoji] = useState(currentUser?.statusEmoji || "");
   const dropdownRef = useRef<HTMLDivElement>(null);
