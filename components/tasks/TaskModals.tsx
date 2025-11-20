@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Task, TaskPriority, TaskStatus } from '../../types';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SparklesIcon } from '../icons/IconComponents';
 
-// Api key
-const API_KEY: string = "AIzaSyDvzLie0z1jMUOypmaZmxyckqMA4k42bHA";
+// OpenRouter API key
+const API_KEY: string = "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";
 
 interface TaskModalProps {
     isOpen: boolean;
@@ -119,7 +118,7 @@ export const GeneratePlanModal: React.FC<GeneratePlanModalProps> = ({ isOpen, on
         }
 
         if (!API_KEY) {
-            setError("⚠️ API Key not configured. Add VITE_GOOGLE_API_KEY to your .env file");
+            setError("⚠️ API Key not configured. Add your OpenRouter API key");
             return;
         }
 
@@ -127,13 +126,25 @@ export const GeneratePlanModal: React.FC<GeneratePlanModalProps> = ({ isOpen, on
         setError("");
 
         try {
-            const genAI = new GoogleGenerativeAI(API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-
-            const response = await model.generateContent(`
-You are a task planning assistant. Generate a structured task breakdown for the user's goal.
-
-IMPORTANT: Return ONLY valid JSON. No markdown, no explanations, no code blocks.
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": window.location.origin, // Optional, for rankings
+                    "X-Title": "Zenith AI Task Planner", // Optional, shows in rankings
+                },
+                body: JSON.stringify({
+                    model: "google/gemini-3-pro-preview", // Using Gemini 3 Pro via OpenRouter
+                    max_tokens: 2000, // Limit tokens to reduce costs
+                    messages: [
+                        {
+                            role: "system",
+                            content: "You are a task planning assistant. Generate ONLY valid JSON with no markdown, explanations, or code blocks."
+                        },
+                        {
+                            role: "user",
+                            content: `Generate a structured task breakdown for the user's goal.
 
 Format:
 {
@@ -150,13 +161,22 @@ Format:
 
 User's goal: ${prompt}
 
-Generate 3-5 actionable subtasks with realistic durations.
-            `);
+Generate 3-5 actionable subtasks with realistic durations.`
+                        }
+                    ]
+                })
+            });
 
-            let text = response.response.text().trim();
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            let text = data.choices[0].message.content.trim();
 
             // Remove markdown code blocks if present
-            text = text.replace(/``````\n?/g, "").trim();
+            text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
             // Try to find JSON in the response
             const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -164,14 +184,14 @@ Generate 3-5 actionable subtasks with realistic durations.
                 text = jsonMatch[0];
             }
 
-            const data = JSON.parse(text);
+            const parsedData = JSON.parse(text);
 
-            if (!data.task || !data.task.title) {
+            if (!parsedData.task || !parsedData.task.title) {
                 throw new Error("Invalid response format");
             }
 
             // Calculate total duration from subtasks
-            const totalMinutes = data.task.subtasks.reduce((sum: number, st: any) => {
+            const totalMinutes = parsedData.task.subtasks.reduce((sum: number, st: any) => {
                 const match = st.duration.match(/(\d+)\s*(min|hour)/i);
                 if (match) {
                     const value = parseInt(match[1]);
@@ -183,15 +203,15 @@ Generate 3-5 actionable subtasks with realistic durations.
 
             const mainTask = {
                 id: Date.now(),
-                title: data.task.title,
-                category: data.task.category,
-                priority: data.task.priority as TaskPriority,
+                title: parsedData.task.title,
+                category: parsedData.task.category,
+                priority: parsedData.task.priority as TaskPriority,
                 duration: totalMinutes >= 60
                     ? `${Math.floor(totalMinutes / 60)} hours ${totalMinutes % 60} min`
                     : `${totalMinutes} min`,
                 status: TaskStatus.TODO,
                 isCompleted: false,
-                subtasks: data.task.subtasks.map((st: any, index: number) => ({
+                subtasks: parsedData.task.subtasks.map((st: any, index: number) => ({
                     id: Date.now() + index,
                     title: st.title,
                     duration: st.duration,

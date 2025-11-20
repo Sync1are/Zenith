@@ -286,13 +286,13 @@ export const useAppStore = create<AppState>()(
 
         const totalSeconds = task.subtasks?.length
           ? task.subtasks.reduce((acc, st) => {
-              const n = parseInt(st.duration);
-              if (Number.isNaN(n)) return acc;
-              const low = st.duration.toLowerCase();
-              if (low.includes("hour")) return acc + n * 3600;
-              if (low.includes("min")) return acc + n * 60;
-              return acc + n;
-            }, 0)
+            const n = parseInt(st.duration);
+            if (Number.isNaN(n)) return acc;
+            const low = st.duration.toLowerCase();
+            if (low.includes("hour")) return acc + n * 3600;
+            if (low.includes("min")) return acc + n * 60;
+            return acc + n;
+          }, 0)
           : parseToSeconds(task.duration);
 
         const remaining = task.remainingTime ?? totalSeconds;
@@ -306,8 +306,8 @@ export const useAppStore = create<AppState>()(
             t.id === taskId
               ? { ...t, status: TaskStatus.IN_PROGRESS, remainingTime: remaining }
               : t.status === TaskStatus.IN_PROGRESS
-              ? { ...t, status: TaskStatus.IDLE }
-              : t
+                ? { ...t, status: TaskStatus.TODO }
+                : t
           ),
         }));
       },
@@ -321,10 +321,10 @@ export const useAppStore = create<AppState>()(
           if (spentSeconds > 0) logSession(Math.round(spentSeconds / 60));
         }
 
-        // Persist current remaining time into the active task and set it Idle
+        // Persist current remaining time into the active task and set it back to TODO
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === activeTaskId ? { ...t, remainingTime: timerRemaining, status: TaskStatus.IDLE } : t
+            t.id === activeTaskId ? { ...t, remainingTime: timerRemaining, status: TaskStatus.TODO } : t
           ),
           activeTaskId: null,
           timerActive: false,
