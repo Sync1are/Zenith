@@ -51,6 +51,13 @@ const THEMES: Array<{ key: string; label: string }> = [
   { key: "ivory-gold", label: "Ivory Gold" },
   { key: "monarch", label: "Monarch" },
   { key: "amber-stone", label: "Amber Stone" },
+
+  /* Ultra Pack */
+  { key: "cyberpunk", label: "Cyberpunk" },
+  { key: "sunset", label: "Sunset" },
+  { key: "oceanic", label: "Oceanic" },
+  { key: "forest", label: "Forest" },
+  { key: "royal", label: "Royal" },
 ];
 
 /**
@@ -61,7 +68,7 @@ const THEMES: Array<{ key: string; label: string }> = [
  */
 const colorMap: Record<
   string,
-  { bg: string; card: string; text: string; accent: string; subtle: string; border: string }
+  { bg: string; card: string; text: string; accent: string; subtle: string; border: string; gradient?: string }
 > = {
   system: { bg: "var(--bg)", card: "var(--card)", text: "var(--text)", accent: "var(--accent)", subtle: "var(--subtle)", border: "var(--border)" },
 
@@ -103,6 +110,13 @@ const colorMap: Record<
   "ivory-gold": { bg: "#f7f5ef", card: "#ffffff", text: "#1d1b18", accent: "#e1b450", subtle: "#947d59", border: "#dfd9ce" },
   monarch: { bg: "#0a0a0a", card: "#141414", text: "#fdf6d1", accent: "#ffcc33", subtle: "#c9b36f", border: "#242424" },
   "amber-stone": { bg: "#1d1813", card: "#261f18", text: "#ffe7cc", accent: "#ffb55a", subtle: "#c79a72", border: "#3a2f26" },
+
+  /* Ultra Pack */
+  cyberpunk: { bg: "#050505", card: "rgba(10, 10, 15, 0.6)", text: "#e0f7ff", accent: "#ff0055", subtle: "#00b8ff", border: "rgba(0, 255, 157, 0.2)", gradient: "linear-gradient(135deg, #0b0014 0%, #000614 100%)" },
+  sunset: { bg: "#1a0b0b", card: "rgba(40, 20, 20, 0.4)", text: "#ffecd1", accent: "#ff6b6b", subtle: "#ffb8b8", border: "rgba(255, 107, 107, 0.2)", gradient: "linear-gradient(to bottom right, #2b0f0f, #1a0b14)" },
+  oceanic: { bg: "#001219", card: "rgba(0, 40, 50, 0.4)", text: "#e0fbfc", accent: "#00d4ff", subtle: "#98c1d9", border: "rgba(0, 212, 255, 0.15)", gradient: "radial-gradient(circle at top right, #002b36, #001219)" },
+  forest: { bg: "#051405", card: "rgba(10, 30, 10, 0.4)", text: "#e8f5e9", accent: "#4ade80", subtle: "#86efac", border: "rgba(74, 222, 128, 0.2)", gradient: "linear-gradient(180deg, #0a1f0a 0%, #020a02 100%)" },
+  royal: { bg: "#1a0b2e", card: "rgba(45, 27, 78, 0.5)", text: "#f3e8ff", accent: "#d8b4fe", subtle: "#c084fc", border: "rgba(216, 180, 254, 0.2)", gradient: "radial-gradient(circle at center, #2d1b4e, #1a0b2e)" },
 };
 
 export default function ThemeGrid() {
@@ -183,10 +197,14 @@ export default function ThemeGrid() {
               }}
             >
               {/* color stripes */}
-              <div className="flex h-10 w-full overflow-hidden rounded-sm">
-                <div style={{ width: "50%", background: map.bg }} />
-                <div style={{ width: "30%", background: map.card }} />
-                <div style={{ width: "20%", background: map.accent }} />
+              <div className="flex h-10 w-full overflow-hidden rounded-sm relative">
+                {map.gradient ? (
+                  <div className="absolute inset-0" style={{ background: map.gradient }} />
+                ) : (
+                  <div style={{ width: "50%", background: map.bg }} />
+                )}
+                {!map.gradient && <div style={{ width: "30%", background: map.card }} />}
+                <div className="relative z-10" style={{ width: map.gradient ? "100%" : "20%", background: map.gradient ? "transparent" : map.accent }} />
               </div>
 
               {/* name */}

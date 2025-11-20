@@ -28,16 +28,16 @@ const navItems = [
 ];
 
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  activeItem, 
-  onSelect, 
-  isMobileDrawerOpen, 
-  setIsMobileDrawerOpen 
+const Sidebar: React.FC<SidebarProps> = ({
+  activeItem,
+  onSelect,
+  isMobileDrawerOpen,
+  setIsMobileDrawerOpen
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isAutoHidden, setIsAutoHidden] = useState(false);
-  
+
   const touchStartX = useRef(0);
   const touchStartTime = useRef(0);
   const mouseStartX = useRef(0);
@@ -192,13 +192,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Auto-hide Trigger Zone */}
-      <div 
+      <div
         className="hidden md:block fixed left-0 top-0 h-screen w-4 z-40"
         onMouseEnter={handleMouseEnterTrigger}
       />
 
       {/* Desktop Sidebar - Hidden on small screens, centered vertically */}
-      <div 
+      <div
         className={`
           hidden md:flex items-center fixed left-0 top-0 h-screen z-50
           transition-transform duration-300 ease-in-out
@@ -341,8 +341,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               className={`
                 relative flex items-center w-full px-3 py-3 rounded-lg overflow-hidden
                 transition-colors duration-200
-                ${activeItem === item.label 
-                  ? "text-white bg-indigo-600" 
+                ${activeItem === item.label
+                  ? "text-white bg-indigo-600"
                   : "text-gray-400 hover:text-white hover:bg-[#2A2A2E]"}
               `}
             >

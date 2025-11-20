@@ -4,13 +4,16 @@
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 6px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
@@ -23,13 +26,27 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slide-in {
-  from { transform: translateX(400px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .animate-slide-in {
@@ -37,13 +54,27 @@
 }
 
 @keyframes slide-out {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(400px); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
 }
 
 @keyframes confetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
 }
 
 .animate-confetti {
@@ -51,18 +82,27 @@
 }
 
 /* ========================================================
-   BALANCED AESTHETIC THEMES (text colors fixed)
+   BALANCED AESTHETIC THEMES
    ======================================================== */
+
+/* Default Variables */
+:root {
+  --bg-gradient: none;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --sidebar-bg: var(--bg);
+}
 
 /* Soft Light */
 :root[data-theme='light'] {
   --bg: #e9eaed;
   --fg: #1b1c20;
-  --text: var(--fg);       /* Primary text color */
-  --card: #f3f4f6;
+  --text: var(--fg);
+  --card: #ffffff;
   --accent: #4f67ff;
   --subtle: #555;
   --border: #c7c7c7;
+  --sidebar-bg: #f0f1f4;
 }
 
 /* Dark (default) */
@@ -70,32 +110,102 @@
   --bg: #111215;
   --fg: #e2e2e2;
   --text: var(--fg);
-  --card: #17181c;
+  --card: #18181b;
   --accent: #6366f1;
   --subtle: #7f7f7f;
-  --border: #292a2e;
+  --border: #27272a;
+  --sidebar-bg: #09090b;
 }
 
 /* Midnight */
 :root[data-theme='midnight'] {
-  --bg: #08080a;
+  --bg: #000000;
   --fg: #d4d4d4;
   --text: var(--fg);
-  --card: #111114;
+  --card: #111111;
   --accent: #7c3aed;
   --subtle: #6a6a6a;
-  --border: #1d1d20;
+  --border: #222;
+  --sidebar-bg: #050505;
 }
 
-/* Contrast (premium gold accent) */
-:root[data-theme='contrast'] {
-  --bg: #0b0b0c;
-  --fg: #ffffff;
-  --text: var(--fg);
-  --card: #161616;
-  --accent: #ffcc00;
-  --subtle: #bababa;
-  --border: #2a2a2a;
+/* ========================================================
+   ULTRA THEMES (Gradients & Glass)
+   ======================================================== */
+
+/* Cyberpunk Neon */
+:root[data-theme='cyberpunk'] {
+  --bg: #050505;
+  --bg-gradient: linear-gradient(135deg, #0b0014 0%, #000614 100%);
+  --fg: #00ff9d;
+  --text: #e0f7ff;
+  --card: rgba(10, 10, 15, 0.6);
+  --accent: #ff0055;
+  --subtle: #00b8ff;
+  --border: rgba(0, 255, 157, 0.2);
+  --glass-bg: rgba(0, 0, 0, 0.7);
+  --glass-border: rgba(0, 255, 157, 0.3);
+  --sidebar-bg: rgba(5, 5, 10, 0.8);
+}
+
+/* Sunset Bliss */
+:root[data-theme='sunset'] {
+  --bg: #1a0b0b;
+  --bg-gradient: linear-gradient(to bottom right, #2b0f0f, #1a0b14);
+  --fg: #ffecd1;
+  --text: #ffecd1;
+  --card: rgba(40, 20, 20, 0.4);
+  --accent: #ff6b6b;
+  --subtle: #ffb8b8;
+  --border: rgba(255, 107, 107, 0.2);
+  --glass-bg: rgba(40, 10, 10, 0.3);
+  --glass-border: rgba(255, 150, 150, 0.1);
+  --sidebar-bg: rgba(20, 5, 5, 0.6);
+}
+
+/* Oceanic Depth */
+:root[data-theme='oceanic'] {
+  --bg: #001219;
+  --bg-gradient: radial-gradient(circle at top right, #002b36, #001219);
+  --fg: #e0fbfc;
+  --text: #e0fbfc;
+  --card: rgba(0, 40, 50, 0.4);
+  --accent: #00d4ff;
+  --subtle: #98c1d9;
+  --border: rgba(0, 212, 255, 0.15);
+  --glass-bg: rgba(0, 20, 30, 0.5);
+  --glass-border: rgba(0, 212, 255, 0.1);
+  --sidebar-bg: rgba(0, 15, 20, 0.7);
+}
+
+/* Forest Glass */
+:root[data-theme='forest'] {
+  --bg: #051405;
+  --bg-gradient: linear-gradient(180deg, #0a1f0a 0%, #020a02 100%);
+  --fg: #e8f5e9;
+  --text: #e8f5e9;
+  --card: rgba(10, 30, 10, 0.4);
+  --accent: #4ade80;
+  --subtle: #86efac;
+  --border: rgba(74, 222, 128, 0.2);
+  --glass-bg: rgba(5, 20, 5, 0.6);
+  --glass-border: rgba(74, 222, 128, 0.15);
+  --sidebar-bg: rgba(2, 10, 2, 0.8);
+}
+
+/* Royal Velvet */
+:root[data-theme='royal'] {
+  --bg: #1a0b2e;
+  --bg-gradient: radial-gradient(circle at center, #2d1b4e, #1a0b2e);
+  --fg: #f3e8ff;
+  --text: #f3e8ff;
+  --card: rgba(45, 27, 78, 0.5);
+  --accent: #d8b4fe;
+  --subtle: #c084fc;
+  --border: rgba(216, 180, 254, 0.2);
+  --glass-bg: rgba(30, 10, 50, 0.6);
+  --glass-border: rgba(216, 180, 254, 0.15);
+  --sidebar-bg: rgba(20, 5, 35, 0.8);
 }
 
 /* ========================================================
@@ -103,8 +213,11 @@
    ======================================================== */
 body {
   background-color: var(--bg);
-  color: var(--text);              /* FIXED TEXT COLOR */
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--text);
+  transition: background 0.5s ease, color 0.3s ease;
 }
 
 .reduce-motion * {
@@ -381,3 +494,225 @@ body {
   --border: #3a2f26;
 }
 
+/* ============================
+   Utilities
+```
+/* Hex Red */
+:root[data-theme='hex-red'] {
+  --bg: #0a0202;
+  --text: #ffdada;
+  --card: #130404;
+  --accent: #ff3b3b;
+  --subtle: #d06f6f;
+  --border: #2c0c0c;
+}
+
+/* Toxic Lime */
+:root[data-theme='toxic-lime'] {
+  --bg: #0b1208;
+  --text: #e9ffe4;
+  --card: #121c0f;
+  --accent: #88ff00;
+  --subtle: #74a766;
+  --border: #1d2d14;
+}
+
+/* Solar Flare */
+:root[data-theme='solar-flare'] {
+  --bg: #0f0903;
+  --text: #ffe7c0;
+  --card: #1a1209;
+  --accent: #ffa133;
+  --subtle: #d29c66;
+  --border: #2c1e11;
+}
+
+/* Cyber Purple */
+:root[data-theme='cyber-purple'] {
+  --bg: #0d0712;
+  --text: #f6d9ff;
+  --card: #1a0f24;
+  --accent: #d451ff;
+  --subtle: #b58bcc;
+  --border: #2a1b3d;
+}
+
+/* =============================
+   PACK C — Pastel Aesthetic
+   ============================= */
+
+/* Pastel Blue */
+:root[data-theme='pastel-blue'] {
+  --bg: #eef5ff;
+  --text: #1c2330;
+  --card: #ffffff;
+  --accent: #6f9dff;
+  --subtle: #7f8ba3;
+  --border: #d8e3ff;
+}
+
+/* Pastel Rose */
+:root[data-theme='pastel-rose'] {
+  --bg: #f8eef1;
+  --text: #2e1e23;
+  --card: #ffffff;
+  --accent: #ff7ca3;
+  --subtle: #a2747f;
+  --border: #e8d9dd;
+}
+
+/* Mint Frost */
+:root[data-theme='mint-frost'] {
+  --bg: #e8fff2;
+  --text: #1d2b22;
+  --card: #ffffff;
+  --accent: #6affb3;
+  --subtle: #6f9180;
+  --border: #d2eedc;
+}
+
+/* Sandstone */
+:root[data-theme='sandstone'] {
+  --bg: #f2eee8;
+  --text: #2f2b26;
+  --card: #ffffff;
+  --accent: #d7a064;
+  --subtle: #8c7f73;
+  --border: #e4ddd4;
+}
+
+/* Lavender Haze */
+:root[data-theme='lavender'] {
+  --bg: #f3f0fa;
+  --text: #241f2c;
+  --card: #ffffff;
+  --accent: #b18cff;
+  --subtle: #91849e;
+  --border: #ded8ef;
+}
+
+/* =============================
+   PACK D — Deep Dark Collection
+   ============================= */
+
+/* Shadow */
+:root[data-theme='shadow'] {
+  --bg: #0d0d0e;
+  --text: #d8d8d8;
+  --card: #151516;
+  --accent: #4f6cff;
+  --subtle: #757575;
+  --border: #222;
+}
+
+/* Nightfall */
+:root[data-theme='nightfall'] {
+  --bg: #0b0b0c;
+  --text: #cfe7e9;
+  --card: #141415;
+  --accent: #47d6cc;
+  --subtle: #6fa7a2;
+  --border: #1f1f20;
+}
+
+/* Chrome Dark */
+:root[data-theme='chrome-dark'] {
+  --bg: #111213;
+  --text: #dcdcdc;
+  --card: #18191b;
+  --accent: #b5c7d9;
+  --subtle: #9ca6ad;
+  --border: #242628;
+}
+
+/* Royal Midnight */
+:root[data-theme='royal-midnight'] {
+  --bg: #070a14;
+  --text: #e8e6f4;
+  --card: #0f1523;
+  --accent: #e3b341;
+  --subtle: #a99a6a;
+  --border: #1c2539;
+}
+
+/* Obsidian Dark */
+:root[data-theme='obsidian-dark'] {
+  --bg: #000000;
+  --text: #ededed;
+  --card: #0b0b0b;
+  --accent: #a855f7;
+  --subtle: #8f8f8f;
+  --border: #1b1b1b;
+}
+
+/* =============================
+   PACK E — Premium Gold Themes
+   ============================= */
+
+/* Gold Noir */
+:root[data-theme='gold-noir'] {
+  --bg: #0c0c0c;
+  --text: #f6f6f6;
+  --card: #151515;
+  --accent: #ffd700;
+  --subtle: #c1a96f;
+  --border: #262626;
+}
+
+/* Ivory Gold */
+:root[data-theme='ivory-gold'] {
+  --bg: #f7f5ef;
+  --text: #1d1b18;
+  --card: #ffffff;
+  --accent: #e1b450;
+  --subtle: #947d59;
+  --border: #dfd9ce;
+}
+
+/* Monarch */
+:root[data-theme='monarch'] {
+  --bg: #0a0a0a;
+  --text: #fdf6d1;
+  --card: #141414;
+  --accent: #ffcc33;
+  --subtle: #c9b36f;
+  --border: #242424;
+}
+
+/* Amber Stone */
+:root[data-theme='amber-stone'] {
+  --bg: #1d1813;
+  --text: #ffe7cc;
+  --card: #261f18;
+  --accent: #ffb55a;
+  --subtle: #c79a72;
+  --border: #3a2f26;
+}
+
+/* ============================
+   Utilities
+   ============================ */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glass Mode Utility */
+.glass-panel {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.glass-on .glass-panel {
+  background-color: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+```

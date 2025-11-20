@@ -15,6 +15,8 @@ import {
     increment,
     deleteDoc,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../config/firebase";
 
 export interface User {
     id: string;
@@ -47,6 +49,7 @@ interface MessageState {
     subscribeToNotifications: () => () => void;
     markAsRead: (senderId: string) => Promise<void>;
     logout: () => Promise<void>;
+    uploadAvatar: (file: File) => Promise<string>;
 }
 
 export const useMessageStore = create<MessageState>()(
@@ -231,6 +234,76 @@ export const useMessageStore = create<MessageState>()(
                     messages: {},
                     notifications: {},
                 });
+            },
+
+            // ---------------------------------------------------
+            // UPLOAD AVATAR (Base64 workaround for CORS)
+            // ---------------------------------------------------
+            uploadAvatar: async (file: File) => {
+                const { currentUser } = get();
+                if (!currentUser) throw new Error("No user logged in");
+
+                // Helper to compress and convert to base64
+                const compressImage = (file: File): Promise<string> => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.src = event.target?.result as string;
+                            img.onload = () => {
+                                const canvas = document.createElement("canvas");
+                                const MAX_WIDTH = 256;
+                                const MAX_HEIGHT = 256;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                        height *= MAX_WIDTH / width;
+                                        width = MAX_WIDTH;
+                                    }
+                                } else {
+                                    if (height > MAX_HEIGHT) {
+                                        width *= MAX_HEIGHT / height;
+                                        height = MAX_HEIGHT;
+                                    }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext("2d");
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL("image/jpeg", 0.7)); // Compress to JPEG 70%
+                            };
+                            img.onerror = (err) => reject(err);
+                        };
+                        reader.onerror = (err) => reject(err);
+                    });
+                };
+
+                try {
+                    const base64Image = await compressImage(file);
+
+                    // Update Firestore with base64 string
+                    await setDoc(
+                        doc(db, "users", currentUser.id),
+                        { avatar: base64Image },
+                        { merge: true }
+                    );
+
+                    // Update local state
+                    set((state) => ({
+                        currentUser: state.currentUser
+                            ? { ...state.currentUser, avatar: base64Image }
+                            : null,
+                    }));
+
+                    return base64Image;
+                } catch (error) {
+                    console.error("Error processing image:", error);
+                    throw new Error("Failed to process image");
+                }
             },
         }),
         {

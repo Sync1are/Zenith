@@ -109,10 +109,18 @@ const ChatPage: React.FC = () => {
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
                                     transition={{ type: "spring", bounce: 0.4 }}
-                                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
                                 >
+                                    <img
+                                        src={
+                                            (isMe ? currentUser?.avatar : activeUser.avatar) ||
+                                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${isMe ? currentUser?.username : activeUser.username}`
+                                        }
+                                        alt="Avatar"
+                                        className="w-8 h-8 rounded-full bg-gray-700 object-cover mb-1"
+                                    />
                                     <div className={`
-                                        max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-sm
+                                        max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow-sm
                                         ${isMe
                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-900/20'
                                             : 'bg-[#27272a] text-gray-300 rounded-bl-none'}
