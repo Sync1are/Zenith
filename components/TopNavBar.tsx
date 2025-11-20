@@ -155,9 +155,13 @@ const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void
                             absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#18181b]
                             ${friend.status === "online"
                               ? "bg-green-500"
-                              : friend.status === "busy"
-                                ? "bg-red-500"
-                                : "bg-gray-500"
+                              : friend.status === "idle"
+                                ? "bg-yellow-500"
+                                : friend.status === "dnd"
+                                  ? "bg-red-500"
+                                  : friend.status === "invisible"
+                                    ? "bg-gray-700"
+                                    : "bg-gray-500"
                             }
                           `}
                         />

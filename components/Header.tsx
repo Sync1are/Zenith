@@ -16,11 +16,24 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
     acceptFriendRequest,
     rejectFriendRequest,
     markAsRead,
-    setActiveUser
+    setActiveUser,
+    updateStatus,
+    updateCustomStatus
   } = useMessageStore();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [customStatusText, setCustomStatusText] = useState(currentUser?.customStatus || "");
+  const [statusEmoji, setStatusEmoji] = useState(currentUser?.statusEmoji || "");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync local state with currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setCustomStatusText(currentUser.customStatus || "");
+      setStatusEmoji(currentUser.statusEmoji || "");
+    }
+  }, [currentUser?.customStatus, currentUser?.statusEmoji]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -208,11 +221,85 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
         </div>
 
         {currentUser && (
-          <img
-            src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`}
-            alt="User avatar"
-            className="h-10 w-10 rounded-full border-2 border-indigo-500 object-cover"
-          />
+          <div className="relative">
+            <img
+              src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`}
+              alt="User avatar"
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+              className="h-10 w-10 rounded-full border-2 border-indigo-500 object-cover cursor-pointer hover:border-indigo-400 transition-colors"
+            />
+
+            {/* Status Menu Dropdown */}
+            <AnimatePresence>
+              {showStatusMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-80 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[10001]"
+                >
+                  <div className="p-4 border-b border-white/5">
+                    <h3 className="text-sm font-semibold text-white mb-3">Set Status</h3>
+
+                    {/* Status Options */}
+                    <div className="space-y-2">
+                      {[
+                        { value: 'online', label: 'Online', color: 'bg-green-500' },
+                        { value: 'idle', label: 'Idle', color: 'bg-yellow-500' },
+                        { value: 'dnd', label: 'Do Not Disturb', color: 'bg-red-500' },
+                        { value: 'invisible', label: 'Invisible', color: 'bg-gray-500' },
+                      ].map((statusOption) => (
+                        <button
+                          key={statusOption.value}
+                          onClick={() => {
+                            updateStatus(statusOption.value as any);
+                            setShowStatusMenu(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors ${currentUser.status === statusOption.value ? 'bg-white/10' : ''
+                            }`}
+                        >
+                          <div className={`w-3 h-3 rounded-full ${statusOption.color}`} />
+                          <span className="text-sm text-white">{statusOption.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Status Section */}
+                  <div className="p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3">Custom Status</h3>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        placeholder="😀"
+                        value={statusEmoji}
+                        onChange={(e) => setStatusEmoji(e.target.value)}
+                        maxLength={2}
+                        className="w-12 bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-center text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="What's on your mind?"
+                        value={customStatusText}
+                        onChange={(e) => setCustomStatusText(e.target.value)}
+                        maxLength={50}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        updateCustomStatus(customStatusText, statusEmoji);
+                        setShowStatusMenu(false);
+                      }}
+                      className="w-full mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white text-sm font-medium transition-colors"
+                    >
+                      Save Status
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </div>
     </header>

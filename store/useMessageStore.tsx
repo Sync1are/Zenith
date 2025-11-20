@@ -45,7 +45,9 @@ export interface User {
     username: string;
     email?: string;
     avatar?: string;
-    status: "online" | "offline" | "busy";
+    status: "online" | "offline" | "idle" | "dnd" | "invisible";
+    customStatus?: string;
+    statusEmoji?: string;
     lastActive?: number;
     friendRequests?: string[];
     friends?: string[];
@@ -86,6 +88,8 @@ interface MessageState {
     subscribeToNotifications: () => () => void;
     markAsRead: (senderId: string) => Promise<void>;
     uploadAvatar: (file: File) => Promise<string>;
+    updateStatus: (status: "online" | "offline" | "idle" | "dnd" | "invisible") => Promise<void>;
+    updateCustomStatus: (customStatus: string, statusEmoji?: string) => Promise<void>;
 }
 
 export const useMessageStore = create<MessageState>()(
@@ -179,6 +183,30 @@ export const useMessageStore = create<MessageState>()(
                                     { status: "online", lastActive: Date.now() },
                                     { merge: true }
                                 );
+
+                                // Subscribe to current user's document for real-time updates (friend requests, etc.)
+                                const userDocUnsub = onSnapshot(userStatusDatabaseRef, (docSnap) => {
+                                    if (docSnap.exists()) {
+                                        const userData = docSnap.data();
+                                        const current = get().currentUser;
+                                        if (current) {
+                                            // Update current user with latest data
+                                            set({
+                                                currentUser: {
+                                                    ...current,
+                                                    friendRequests: userData.friendRequests || [],
+                                                    friends: userData.friends || [],
+                                                    customStatus: userData.customStatus,
+                                                    statusEmoji: userData.statusEmoji,
+                                                    status: userData.status || current.status,
+                                                }
+                                            });
+                                        }
+                                    }
+                                });
+
+                                // Store the unsubscribe function
+                                (window as any).__userDocUnsub = userDocUnsub;
 
                                 // Set up beforeunload as backup (though not reliable)
                                 const handleVisibilityChange = async () => {
@@ -494,6 +522,8 @@ export const useMessageStore = create<MessageState>()(
                                     data.avatar ||
                                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${docSnap.id}`,
                                 status: (data.status as User["status"]) || "offline",
+                                customStatus: data.customStatus,
+                                statusEmoji: data.statusEmoji,
                                 lastActive: typeof data.lastActive === "number" ? data.lastActive : 0,
                                 friends: data.friends || [],
                                 friendRequests: data.friendRequests || [],
@@ -629,6 +659,46 @@ export const useMessageStore = create<MessageState>()(
                     console.error("Error processing image:", error);
                     throw new Error("Failed to process image");
                 }
+            },
+
+            // UPDATE STATUS
+            updateStatus: async (status) => {
+                const { currentUser } = get();
+                if (!currentUser) throw new Error("Not logged in");
+
+                await setDoc(
+                    doc(db, "users", currentUser.id),
+                    { status, lastActive: Date.now() },
+                    { merge: true }
+                );
+
+                set((state) => ({
+                    currentUser: state.currentUser
+                        ? { ...state.currentUser, status }
+                        : null,
+                }));
+            },
+
+            // UPDATE CUSTOM STATUS
+            updateCustomStatus: async (customStatus, statusEmoji) => {
+                const { currentUser } = get();
+                if (!currentUser) throw new Error("Not logged in");
+
+                await setDoc(
+                    doc(db, "users", currentUser.id),
+                    {
+                        customStatus,
+                        statusEmoji: statusEmoji || "",
+                        lastActive: Date.now()
+                    },
+                    { merge: true }
+                );
+
+                set((state) => ({
+                    currentUser: state.currentUser
+                        ? { ...state.currentUser, customStatus, statusEmoji }
+                        : null,
+                }));
             },
         }),
         {

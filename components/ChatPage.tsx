@@ -68,13 +68,22 @@ const ChatPage: React.FC = () => {
                         />
                         <div className={`
                             absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#18181b]
-                            ${activeUser.status === 'online' ? 'bg-green-500' : 'bg-gray-500'}
+                            ${activeUser.status === 'online' ? 'bg-green-500' :
+                                activeUser.status === 'idle' ? 'bg-yellow-500' :
+                                    activeUser.status === 'dnd' ? 'bg-red-500' :
+                                        activeUser.status === 'invisible' ? 'bg-gray-700' : 'bg-gray-500'}
                         `} />
                     </motion.div>
                     <div>
                         <h2 className="text-sm font-medium text-white">{activeUser.username}</h2>
-                        <p className={`text-xs ${activeUser.status === 'online' ? 'text-green-400' : 'text-gray-500'}`}>
-                            {activeUser.status === 'online' ? 'Online' : 'Offline'}
+                        {activeUser.customStatus && (
+                            <p className="text-xs text-gray-400 mb-0.5">
+                                {activeUser.statusEmoji && <span className="mr-1">{activeUser.statusEmoji}</span>}
+                                {activeUser.customStatus}
+                            </p>
+                        )}
+                        <p className={`text-xs ${activeUser.status === 'online' ? 'text-green-400' : activeUser.status === 'idle' ? 'text-yellow-400' : activeUser.status === 'dnd' ? 'text-red-400' : 'text-gray-500'}`}>
+                            {activeUser.status === 'online' ? 'Online' : activeUser.status === 'idle' ? 'Idle' : activeUser.status === 'dnd' ? 'Do Not Disturb' : activeUser.status === 'invisible' ? 'Invisible' : 'Offline'}
                         </p>
                     </div>
                 </div>
