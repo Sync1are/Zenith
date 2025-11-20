@@ -45,7 +45,11 @@ const ChatPage: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.9, y: 20, filter: "blur(10px)" }}
             transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
-            className="fixed bottom-10 right-10 w-[400px] h-[600px] bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col z-[10000] overflow-hidden"
+            className="fixed bottom-4 right-4 md:bottom-10 md:right-10 
+                       w-[90vw] max-w-[400px] min-w-[320px]
+                       h-[70vh] max-h-[600px] min-h-[400px]
+                       bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl 
+                       shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col z-[10000] overflow-hidden"
         >
             {/* Header (Draggable Handle) */}
             <div
@@ -85,7 +89,7 @@ const ChatPage: React.FC = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={scrollRef}>
                 {currentMessages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-500 opacity-50">
                         <motion.div
@@ -99,35 +103,97 @@ const ChatPage: React.FC = () => {
                     </div>
                 ) : (
                     <AnimatePresence initial={false}>
-                        {currentMessages.map((msg) => {
+                        {currentMessages.map((msg, index) => {
                             const isMe = msg.senderId === currentUser?.id;
+                            const prevMsg = index > 0 ? currentMessages[index - 1] : null;
+
+                            // Check if we need a date separator
+                            const currentDate = new Date(msg.timestamp);
+                            const prevDate = prevMsg ? new Date(prevMsg.timestamp) : null;
+                            const needsDateSeparator = !prevDate ||
+                                currentDate.toDateString() !== prevDate.toDateString();
+
+                            // Check if we need to show timestamp (> 2 min gap or different sender)
+                            const timeDiff = prevMsg ? msg.timestamp - prevMsg.timestamp : Infinity;
+                            const differentSender = prevMsg ? msg.senderId !== prevMsg.senderId : true;
+                            const showTimestamp = differentSender || timeDiff > 2 * 60 * 1000; // 2 minutes
+
+                            // Format date separator
+                            const formatDateSeparator = (date: Date) => {
+                                const today = new Date();
+                                const yesterday = new Date(today);
+                                yesterday.setDate(yesterday.getDate() - 1);
+
+                                if (date.toDateString() === today.toDateString()) {
+                                    return "Today";
+                                } else if (date.toDateString() === yesterday.toDateString()) {
+                                    return "Yesterday";
+                                } else {
+                                    return date.toLocaleDateString('en-US', {
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+                                    });
+                                }
+                            };
+
                             return (
-                                <motion.div
-                                    key={msg.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-                                    transition={{ type: "spring", bounce: 0.4 }}
-                                    className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-                                >
-                                    <img
-                                        src={
-                                            (isMe ? currentUser?.avatar : activeUser.avatar) ||
-                                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${isMe ? currentUser?.username : activeUser.username}`
-                                        }
-                                        alt="Avatar"
-                                        className="w-8 h-8 rounded-full bg-gray-700 object-cover mb-1"
-                                    />
-                                    <div className={`
-                                        max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow-sm
-                                        ${isMe
-                                            ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-900/20'
-                                            : 'bg-[#27272a] text-gray-300 rounded-bl-none'}
-                                    `}>
-                                        {msg.text}
-                                    </div>
-                                </motion.div>
+                                <React.Fragment key={msg.id}>
+                                    {/* Date Separator */}
+                                    {needsDateSeparator && (
+                                        <div className="flex items-center gap-3 my-4">
+                                            <div className="flex-1 h-px bg-white/10" />
+                                            <span className="text-xs text-gray-500 font-medium px-3 py-1 bg-white/5 rounded-full">
+                                                {formatDateSeparator(currentDate)}
+                                            </span>
+                                            <div className="flex-1 h-px bg-white/10" />
+                                        </div>
+                                    )}
+
+                                    {/* Message */}
+                                    <motion.div
+                                        layout
+                                        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                                        transition={{ type: "spring", bounce: 0.4 }}
+                                        className={`flex items-start gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                                    >
+                                        {/* Avatar with timestamp below */}
+                                        {showTimestamp ? (
+                                            <div className="flex flex-col items-center gap-0.5 min-w-[32px]">
+                                                <img
+                                                    src={
+                                                        (isMe ? currentUser?.avatar : activeUser.avatar) ||
+                                                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${isMe ? currentUser?.username : activeUser.username}`
+                                                    }
+                                                    alt="Avatar"
+                                                    className="w-8 h-8 rounded-full bg-gray-700 object-cover"
+                                                />
+                                                <span className="text-[9px] text-gray-500 whitespace-nowrap">
+                                                    {new Date(msg.timestamp).toLocaleTimeString('en-US', {
+                                                        hour: 'numeric',
+                                                        minute: '2-digit',
+                                                        hour12: true
+                                                    })}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="w-8" /> // Spacer to maintain alignment
+                                        )}
+
+                                        <div className="flex flex-col gap-1 max-w-[70%]">
+                                            <div className={`
+                                                px-4 py-2 rounded-2xl text-sm shadow-sm
+                                                ${isMe
+                                                    ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-900/20'
+                                                    : 'bg-[#27272a] text-gray-300 rounded-bl-none'}
+                                            `}>
+                                                {msg.text}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </React.Fragment>
                             );
                         })}
                     </AnimatePresence>

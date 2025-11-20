@@ -16,6 +16,7 @@ import AnalyticsPage from "./components/AnalyticsPage";
 import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
 import LoginPage from "./components/LoginPage";
+import SignUpPage from "./components/SignUpPage";
 
 // Stores
 import { useAppStore } from "./store/useAppStore";
@@ -28,12 +29,15 @@ import { AnimatePresence } from "framer-motion";
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState("Dashboard");
+  const [isSignup, setIsSignup] = useState(false);
 
   // 🌙 Messaging store
   const currentUser = useMessageStore((s) => s.currentUser);
   const activeUserId = useMessageStore((s) => s.activeUserId);
   const subscribeToUsers = useMessageStore((s) => s.subscribeToUsers);
   const subscribeToMessages = useMessageStore((s) => s.subscribeToMessages);
+  const initAuth = useMessageStore((s) => s.initAuth);
+  const isLoading = useMessageStore((s) => s.isLoading);
 
   // 🌙 Mobile drawer
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -47,6 +51,23 @@ const App: React.FC = () => {
     const stop = settings.startSystemThemeSync();
     settings.applyThemeToDom();
     return () => stop();
+  }, []);
+
+  // Initialize Auth
+  useEffect(() => {
+    const unsub = initAuth();
+
+    // Safety timeout: if Firebase takes too long, stop loading
+    const timer = setTimeout(() => {
+      if (useMessageStore.getState().isLoading) {
+        useMessageStore.setState({ isLoading: false });
+      }
+    }, 4000);
+
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
   }, []);
 
   // Messaging Subscriptions
@@ -104,9 +125,26 @@ const App: React.FC = () => {
     }
   }, [activePage]);
 
-  // LOGIN FLOW
+  // LOADING STATE
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#111217]">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // AUTH FLOW
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={() => setActivePage("Dashboard")} />;
+    if (isSignup) {
+      return <SignUpPage onNavigateToLogin={() => setIsSignup(false)} />;
+    }
+    return (
+      <LoginPage
+        onLoginSuccess={() => setActivePage("Dashboard")}
+        onNavigateToSignup={() => setIsSignup(true)}
+      />
+    );
   }
 
   return (

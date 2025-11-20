@@ -1,59 +1,81 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LogoIcon } from './icons/IconComponents';
 import { useMessageStore } from '../store/useMessageStore';
 
-interface LoginPageProps {
-    onLoginSuccess: () => void;
-    onNavigateToSignup: () => void;
+interface SignUpPageProps {
+    onNavigateToLogin: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignup }) => {
+const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin }) => {
     const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [verificationSent, setVerificationSent] = useState(false);
     const [error, setError] = useState("");
 
-    // Selectively subscribe to store (efficient)
-    const login = useMessageStore((s) => s.login);
-    const currentUser = useMessageStore((s) => s.currentUser);
-
-    // Skip login if already logged in
-    useEffect(() => {
-        if (currentUser) {
-            onLoginSuccess();
-        }
-    }, [currentUser, onLoginSuccess]);
+    const signup = useMessageStore((s) => s.signup);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password || isLoading) return;
+        if (!email || !username || !password || isLoading) return;
 
         setIsLoading(true);
         setError("");
 
         try {
-            await login(email, password);
-        } catch (error: any) {
-            console.error("Login error:", error);
-            let msg = "Login failed.";
-            if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-                msg = "Invalid email or password.";
-            } else if (error.code === "auth/too-many-requests") {
-                msg = "Too many failed attempts. Please try again later.";
-            } else if (error.message) {
-                msg = error.message;
+            await signup(email, password, username);
+            setVerificationSent(true);
+        } catch (err: any) {
+            console.error("Signup error:", err);
+            if (err.code === 'auth/email-already-in-use') {
+                setError("Email already in use.");
+            } else if (err.code === 'auth/weak-password') {
+                setError("Password should be at least 6 characters.");
+            } else {
+                setError(err.message || "Signup failed.");
             }
-            setError(msg);
             setIsLoading(false);
         }
     };
+
+    if (verificationSent) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#111217] relative overflow-hidden">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative z-10 w-full max-w-md p-8"
+                >
+                    <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl text-center">
+                        <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Verify your email</h2>
+                        <p className="text-gray-400 mb-8">
+                            We've sent a verification link to <span className="text-white font-medium">{email}</span>.
+                            Please check your inbox and click the link to activate your account.
+                        </p>
+                        <button
+                            onClick={onNavigateToLogin}
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-colors"
+                        >
+                            Return to Login
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#111217] relative overflow-hidden">
             {/* Background Ambience */}
             <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px]" />
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -63,14 +85,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
             >
                 <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
                     <div className="flex flex-col items-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-orange-500/20">
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-purple-500/20">
                             <LogoIcon className="w-8 h-8 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-                        <p className="text-gray-400 text-sm mt-2">Enter your credentials to connect.</p>
+                        <h1 className="text-2xl font-bold text-white">Create Account</h1>
+                        <p className="text-gray-400 text-sm mt-2">Join Zenith today.</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider ml-1">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Display Name"
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white 
+                                           placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 
+                                           focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                disabled={isLoading}
+                            />
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider ml-1">
                                 Email
@@ -83,7 +121,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                                 className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white 
                                            placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 
                                            focus:ring-1 focus:ring-indigo-500/50 transition-all"
-                                autoFocus
                                 disabled={isLoading}
                             />
                         </div>
@@ -114,7 +151,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             type="submit"
-                            disabled={!email || !password || isLoading}
+                            disabled={isLoading}
                             className={`
                                 w-full font-medium py-3 rounded-xl shadow-lg transition-all mt-4
                                 ${isLoading
@@ -122,7 +159,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                                     : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'}
                             `}
                         >
-                            {isLoading ? "Connecting..." : "Enter System"}
+                            {isLoading ? "Creating Account..." : "Sign Up"}
                         </motion.button>
                     </form>
 
@@ -172,12 +209,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
 
                     <div className="mt-6 text-center">
                         <p className="text-gray-400 text-sm">
-                            Don't have an account?{" "}
+                            Already have an account?{" "}
                             <button
-                                onClick={onNavigateToSignup}
+                                onClick={onNavigateToLogin}
                                 className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
                             >
-                                Sign Up
+                                Log In
                             </button>
                         </p>
                     </div>
@@ -187,4 +224,4 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
     );
 };
 
-export default LoginPage;
+export default SignUpPage;
