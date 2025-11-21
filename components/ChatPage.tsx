@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMessageStore } from '../store/useMessageStore';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { SparklesIcon, CloseIcon } from './icons/IconComponents';
-import { getChatResponse, startSpeechRecognition } from '../services/studyBuddyService';
+import { getChatResponse } from '../services/studyBuddyService';
 import { useAppStore } from '../store/useAppStore';
 import { ChatMessage } from '../types';
 import ReactMarkdown from 'react-markdown';
@@ -16,20 +16,12 @@ const SendIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-const MicIcon = ({ className }: { className?: string }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-    </svg>
-);
-
 const ChatPage: React.FC = () => {
     const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser } = useMessageStore();
     const { tasks } = useAppStore();
     const [inputText, setInputText] = useState("");
     const [azeMessages, setAzeMessages] = useState<ChatMessage[]>([]);
     const [isAzeLoading, setIsAzeLoading] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const stopRecognition = useRef<(() => void) | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
 
@@ -108,34 +100,6 @@ const ChatPage: React.FC = () => {
             sendMessage(activeUserId, inputText);
             setInputText("");
         }
-    };
-
-    const handleVoiceInput = () => {
-        if (!isAzeChat) return;
-
-        if (isRecording) {
-            if (stopRecognition.current) {
-                stopRecognition.current();
-                stopRecognition.current = null;
-            }
-            setIsRecording(false);
-            return;
-        }
-
-        setIsRecording(true);
-        const stopFn = startSpeechRecognition(
-            (transcript) => {
-                setInputText(transcript);
-                setIsRecording(false);
-                stopRecognition.current = null;
-            },
-            (error) => {
-                console.error('Speech recognition error:', error);
-                setIsRecording(false);
-                stopRecognition.current = null;
-            }
-        );
-        stopRecognition.current = stopFn;
     };
 
     if (!activeUser && !isAzeChat) return null;
@@ -424,24 +388,6 @@ const ChatPage: React.FC = () => {
                         className="flex-1 bg-transparent border-none outline-none text-white px-3 py-2 text-sm placeholder-gray-600"
                         autoFocus
                     />
-
-                    {/* Voice Input (Aze only) */}
-                    {isAzeChat && (
-                        <motion.button
-                            type="button"
-                            onClick={handleVoiceInput}
-                            disabled={isAzeLoading}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`p-2 rounded-lg text-white transition-colors ${isRecording
-                                ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                                : 'bg-purple-600 hover:bg-purple-500'
-                                } disabled:opacity-50`}
-                            title={isRecording ? 'Stop recording' : 'Voice input'}
-                        >
-                            <MicIcon className="w-4 h-4" />
-                        </motion.button>
-                    )}
 
                     <motion.button
                         type="submit"

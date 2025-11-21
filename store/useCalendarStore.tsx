@@ -13,7 +13,7 @@ export interface CalendarEvent {
 
 interface CalendarStore {
   events: CalendarEvent[];
-  addEvent: (event: CalendarEvent) => void;
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => void;
   updateEvent: (id: number, updates: Partial<CalendarEvent>) => void;
   deleteEvent: (id: number) => void;
   markAsNotified: (id: number) => void;
@@ -23,11 +23,11 @@ export const useCalendarStore = create<CalendarStore>()(
   persist(
     (set) => ({
       events: [],
-      addEvent: (event) => set((state) => ({ 
-        events: [...state.events, event] 
+      addEvent: (event) => set((state) => ({
+        events: [...state.events, { ...event, id: Date.now() }]
       })),
       updateEvent: (id, updates) => set((state) => ({
-        events: state.events.map((e) => 
+        events: state.events.map((e) =>
           e.id === id ? { ...e, ...updates } : e
         )
       })),
@@ -35,7 +35,7 @@ export const useCalendarStore = create<CalendarStore>()(
         events: state.events.filter((e) => e.id !== id)
       })),
       markAsNotified: (id) => set((state) => ({
-        events: state.events.map((e) => 
+        events: state.events.map((e) =>
           e.id === id ? { ...e, notified: true } : e
         )
       })),

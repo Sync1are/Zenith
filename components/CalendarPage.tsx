@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Pencil, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { useCalendarStore } from '../store/useCalendarStore';
 
 // --- Types ---
@@ -9,7 +9,6 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   category: 'work' | 'personal' | 'meeting';
-  // Optional fields referenced in code:
   reminder?: number;
   notified?: boolean;
 }
@@ -22,6 +21,25 @@ const isSameDay = (d1: Date, d2: Date) =>
 
 const formatTime = (date: Date) =>
   date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+// Category colors - purple and orange theme
+const categoryColors = {
+  work: {
+    bg: '#9333ea', // Purple
+    bgLight: 'rgba(147, 51, 234, 0.1)',
+    border: '#9333ea',
+  },
+  personal: {
+    bg: '#f97316', // Orange
+    bgLight: 'rgba(249, 115, 22, 0.1)',
+    border: '#f97316',
+  },
+  meeting: {
+    bg: '#06b6d4', // Teal
+    bgLight: 'rgba(6, 182, 212, 0.1)',
+    border: '#06b6d4',
+  },
+};
 
 // --- Components ---
 
@@ -65,62 +83,95 @@ const EventModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-[var(--text)]">{editEvent ? 'Edit Event' : 'Add Event'}</h2>
-          <button onClick={onClose} className="text-[var(--subtle)] hover:text-[var(--text)]">
-            <X size={20} />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-xl"
+        style={{
+          backdropFilter: 'blur(20px)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: categoryColors[category].bg }}
+            >
+              <CalendarIcon size={20} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--text)]">{editEvent ? 'Edit Event' : 'New Event'}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[var(--subtle)] hover:text-[var(--text)] transition-colors"
+          >
+            <X size={22} />
           </button>
         </div>
 
         <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Event title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--text)] placeholder-[var(--subtle)] focus:outline-none focus:border-[var(--accent)]"
-          />
+          <div>
+            <label className="text-xs font-semibold text-[var(--subtle)] uppercase tracking-wide block mb-2">Event Title</label>
+            <input
+              type="text"
+              placeholder="Enter event title..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--subtle)] focus:outline-none focus:border-[var(--accent)] transition-all"
+            />
+          </div>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as any)}
-            className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
-          >
-            <option value="work">Work</option>
-            <option value="personal">Personal</option>
-            <option value="meeting">Meeting</option>
-          </select>
+          <div>
+            <label className="text-xs font-semibold text-[var(--subtle)] uppercase tracking-wide block mb-2">Category</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['work', 'personal', 'meeting'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className="px-4 py-3 rounded-xl font-medium capitalize transition-all"
+                  style={{
+                    backgroundColor: category === cat ? categoryColors[cat].bg : 'var(--bg)',
+                    color: category === cat ? 'white' : 'var(--text)',
+                    border: `2px solid ${category === cat ? categoryColors[cat].border : 'var(--border)'}`,
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-[var(--subtle)] block mb-1">Start Time</label>
+              <label className="text-xs font-semibold text-[var(--subtle)] uppercase tracking-wide block mb-2 flex items-center gap-1">
+                <Clock size={12} /> Start Time
+              </label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-all"
               />
             </div>
             <div>
-              <label className="text-sm text-[var(--subtle)] block mb-1">End Time</label>
+              <label className="text-xs font-semibold text-[var(--subtle)] uppercase tracking-wide block mb-2 flex items-center gap-1">
+                <Clock size={12} /> End Time
+              </label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-all"
               />
             </div>
           </div>
 
-          {/* Reminder */}
           <div>
-            <label className="text-sm text-[var(--subtle)] block mb-1">Reminder</label>
+            <label className="text-xs font-semibold text-[var(--subtle)] uppercase tracking-wide block mb-2">Reminder</label>
             <select
               value={reminder}
               onChange={(e) => setReminder(Number(e.target.value))}
-              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-all"
             >
               <option value={0}>No reminder</option>
               <option value={5}>5 minutes before</option>
@@ -134,13 +185,14 @@ const EventModal: React.FC<{
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-[var(--bg)] hover:bg-[var(--hover)] border border-[var(--border)] rounded-lg text-[var(--text)] transition"
+              className="flex-1 px-6 py-3 bg-[var(--bg)] hover:bg-[var(--hover)] border-2 border-[var(--border)] rounded-xl text-[var(--text)] font-medium transition-all"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 px-4 py-2 bg-[var(--accent)] hover:[filter:brightness(0.92)] rounded-lg text-white transition"
+              className="flex-1 px-6 py-3 rounded-xl text-white font-medium transition-all"
+              style={{ backgroundColor: categoryColors[category].bg }}
             >
               {editEvent ? 'Update' : 'Create'}
             </button>
@@ -172,49 +224,69 @@ const MonthlyCalendar: React.FC<{
     return days;
   }, [currentMonth]);
 
-  const eventsOnDate = (date: Date) => events.some(event => isSameDay(event.start, date));
+  const eventsOnDate = (date: Date) => events.filter(event => isSameDay(event.start, date));
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 text-[var(--text)]">
-      <div className="flex justify-between items-center mb-4">
+    <div
+      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 text-[var(--text)] flex-shrink-0"
+      style={{ backdropFilter: 'blur(20px)' }}
+    >
+      <div className="flex justify-between items-center mb-6">
         <button
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-          className="p-1 rounded-full hover:bg-[var(--hover)] transition-colors"
+          className="p-2 rounded-xl hover:bg-[var(--hover)] transition-colors text-[var(--text)]"
         >
           <ChevronLeft size={20} />
         </button>
-        <h3 className="font-semibold">
+        <h3 className="font-bold text-lg text-[var(--text)]">
           {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </h3>
         <button
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-          className="p-1 rounded-full hover:bg-[var(--hover)] transition-colors"
+          className="p-2 rounded-xl hover:bg-[var(--hover)] transition-colors text-[var(--text)]"
         >
           <ChevronRight size={20} />
         </button>
       </div>
-      <div className="grid grid-cols-7 text-center text-xs text-[var(--subtle)] mb-2">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => <div key={i}>{day}</div>)}
+
+      <div className="grid grid-cols-7 text-center text-xs font-semibold text-[var(--subtle)] mb-3 uppercase tracking-wider">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => <div key={i}>{day}</div>)}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+
+      <div className="grid grid-cols-7 gap-2">
         {daysInMonth.map((day, i) => {
           const isToday = isSameDay(day, new Date());
           const isSelected = isSameDay(day, selectedDate);
           const isOtherMonth = currentMonth.getMonth() !== day.getMonth();
+          const dayEvents = eventsOnDate(day);
+
           return (
             <button
               key={i}
               onClick={() => onDateSelect(day)}
-              className={`
-                relative w-full aspect-square flex items-center justify-center rounded-full text-sm transition-colors
-                ${isToday ? 'bg-[var(--accent)] text-white' : ''}
-                ${isSelected && !isToday ? 'bg-[var(--hover)]' : ''}
-                ${isOtherMonth ? 'text-[color:rgba(255,255,255,0.35)]' : 'hover:bg-[var(--hover)]'}
-              `}
-              style={isOtherMonth ? { color: 'var(--subtle)' } : undefined}
+              className="relative w-full aspect-square flex flex-col items-center justify-center rounded-xl text-sm transition-all"
+              style={{
+                backgroundColor: isToday
+                  ? 'var(--accent)'
+                  : isSelected
+                    ? 'var(--hover)'
+                    : 'transparent',
+                color: isToday ? 'white' : isOtherMonth ? 'var(--subtle)' : 'var(--text)',
+                opacity: isOtherMonth ? 0.4 : 1,
+              }}
             >
-              {day.getDate()}
-              {eventsOnDate(day) && <span className="absolute bottom-1.5 w-1 h-1 bg-[var(--accent)] rounded-full"></span>}
+              <span className="font-semibold">{day.getDate()}</span>
+              {dayEvents.length > 0 && (
+                <div className="flex gap-0.5 mt-1">
+                  {dayEvents.slice(0, 3).map((event, idx) => (
+                    <div
+                      key={idx}
+                      className="w-1 h-1 rounded-full"
+                      style={{ backgroundColor: categoryColors[event.category].border }}
+                    />
+                  ))}
+                </div>
+              )}
             </button>
           );
         })}
@@ -233,36 +305,60 @@ const UpcomingEvents: React.FC<{
     .filter(event => isSameDay(event.start, selectedDate))
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-  const categoryColors: Record<CalendarEvent['category'], string> = {
-    work: 'bg-[var(--accent)]',      // you can map categories to custom CSS variables if desired
-    personal: 'bg-[var(--accent)]',
-    meeting: 'bg-[var(--accent)]',
-  };
-
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 mt-6 text-[var(--text)] flex-1">
-      <h3 className="font-semibold mb-4">
+    <div
+      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 text-[var(--text)] flex-1 min-h-0"
+      style={{ backdropFilter: 'blur(20px)' }}
+    >
+      <h3 className="font-bold text-lg mb-4 text-[var(--text)]">
         Events for {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
       </h3>
-      <div className="space-y-3 max-h-48 overflow-y-auto">
+      <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-hide">
         {filteredEvents.length > 0 ? filteredEvents.map(event => (
-          <div key={event.id} className="flex items-center gap-3 group hover:bg-[var(--hover)] p-2 rounded-lg transition">
-            <div className={`w-2 h-10 rounded-full ${categoryColors[event.category]} flex-shrink-0`}></div>
+          <div
+            key={event.id}
+            className="flex items-center gap-3 group p-3 rounded-xl transition-all hover:bg-[var(--hover)] border border-[var(--border)]"
+          >
+            <div
+              className="w-1 h-12 rounded-full flex-shrink-0"
+              style={{ backgroundColor: categoryColors[event.category].bg }}
+            />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{event.title}</p>
-              <p className="text-xs text-[var(--subtle)]">{formatTime(event.start)} - {formatTime(event.end)}</p>
+              <p className="font-semibold text-sm text-[var(--text)] truncate">{event.title}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Clock size={12} className="text-[var(--subtle)]" />
+                <p className="text-xs text-[var(--subtle)]">{formatTime(event.start)} - {formatTime(event.end)}</p>
+              </div>
+              <span
+                className="inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium capitalize"
+                style={{
+                  backgroundColor: categoryColors[event.category].bgLight,
+                  color: categoryColors[event.category].border,
+                }}
+              >
+                {event.category}
+              </span>
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button onClick={() => onEdit(event)} className="p-1 hover:bg-[var(--hover)] rounded">
-                <Pencil size={14} className="text-[var(--subtle)]" />
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+                className="p-2 hover:bg-[var(--accent)]/20 rounded-lg transition-all"
+              >
+                <Pencil size={16} className="text-[var(--accent)]" />
               </button>
-              <button onClick={() => onDelete(event.id)} className="p-1 hover:bg-[rgba(239,68,68,0.15)] rounded">
-                <Trash2 size={14} className="text-[var(--accent)]" />
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(event.id); }}
+                className="p-2 hover:bg-red-500/20 rounded-lg transition-all"
+              >
+                <Trash2 size={16} className="text-red-400" />
               </button>
             </div>
           </div>
         )) : (
-          <p className="text-sm text-[var(--subtle)] text-center py-4">No events scheduled.</p>
+          <div className="text-center py-12">
+            <CalendarIcon size={48} className="mx-auto text-[var(--subtle)] opacity-30 mb-3" />
+            <p className="text-sm text-[var(--subtle)]">No events scheduled for this day</p>
+          </div>
         )}
       </div>
     </div>
@@ -301,15 +397,8 @@ const WeeklyView: React.FC<{
     });
   }, [selectedDate]);
 
-  const hours = Array.from({ length: 13 }).map((_, i) => i + 8);
-
-  const categoryStyles: Record<CalendarEvent['category'], string> = {
-    work: 'bg-[color:rgba(79,102,255,0.8)] border-l-4 border-[color:rgba(79,102,255,0.6)]',      // ties to --accent hue
-    personal: 'bg-[color:rgba(79,102,255,0.8)] border-l-4 border-[color:rgba(79,102,255,0.6)]',
-    meeting: 'bg-[color:rgba(79,102,255,0.8)] border-l-4 border-[color:rgba(79,102,255,0.6)]',
-  };
-
-  const topOffset = (currentTime.getHours() - 8 + currentTime.getMinutes() / 60) * 60;
+  const hours = Array.from({ length: 24 }).map((_, i) => i);
+  const topOffset = (currentTime.getHours() + currentTime.getMinutes() / 60) * 60;
 
   const handleResizeStart = (e: React.MouseEvent, id: number, direction: 'top' | 'bottom') => {
     e.stopPropagation();
@@ -334,7 +423,8 @@ const WeeklyView: React.FC<{
         const event = events.find(ev => ev.id === resizing.id);
         if (!event) return;
 
-        const deltaMinutes = Math.round((e.movementY / 60) * 60);
+        // Snap to 15-minute intervals for smoother resizing
+        const deltaMinutes = Math.round((e.movementY / 60) * 60 / 15) * 15;
 
         if (resizing.direction === 'bottom') {
           const newEnd = new Date(event.end);
@@ -357,14 +447,18 @@ const WeeklyView: React.FC<{
 
         const gridRect = gridRef.current.getBoundingClientRect();
         const dayWidth = gridRect.width / 7;
-
-        const deltaMinutes = Math.round(((e.clientY - dragging.startY) / 60) * 60);
         const duration = event.end.getTime() - event.start.getTime();
 
+        // Calculate new day based on mouse position
         const deltaX = e.clientX - dragging.startX;
         const dayDelta = Math.round(deltaX / dayWidth);
         const newDayIndex = Math.max(0, Math.min(6, dragging.dayIndex + dayDelta));
 
+        // Calculate time offset with 15-minute snapping for smoother placement
+        const deltaY = e.clientY - dragging.startY;
+        const deltaMinutes = Math.round((deltaY / 60) * 60 / 15) * 15;
+
+        // Create new date with original time plus delta
         const newDate = new Date(weekDays[newDayIndex]);
         const originalHours = dragging.startTime.getHours();
         const originalMinutes = dragging.startTime.getMinutes();
@@ -372,12 +466,13 @@ const WeeklyView: React.FC<{
         newDate.setHours(originalHours);
         newDate.setMinutes(originalMinutes + deltaMinutes);
 
+        // Ensure time stays within 24-hour bounds
+        newDate.setHours(Math.max(0, Math.min(23, newDate.getHours())));
+
         const newStart = newDate;
         const newEnd = new Date(newStart.getTime() + duration);
 
-        if (newStart.getHours() >= 8 && newEnd.getHours() <= 21) {
-          onUpdateEvent(event.id, { start: newStart, end: newEnd });
-        }
+        onUpdateEvent(event.id, { start: newStart, end: newEnd });
       }
     };
 
@@ -397,23 +492,37 @@ const WeeklyView: React.FC<{
   }, [resizing, dragging, events, onUpdateEvent, weekDays]);
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 h-full flex flex-col">
-      <div className="grid grid-cols-[auto_1fr] flex-shrink-0">
-        <div className="w-14"></div>
-        <div className="grid grid-cols-7">
+    <div
+      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 flex flex-col max-h-[100vh] overflow-y-auto"
+      style={{ backdropFilter: 'blur(20px)' }}
+    >
+      <div className="grid grid-cols-[auto_1fr] flex-shrink-0 mb-4">
+        <div className="w-20"></div>
+        <div className="grid grid-cols-7 gap-2">
           {weekDays.map(day => (
-            <div key={day.toISOString()} className="text-center pb-4">
-              <p className="text-xs text-[var(--subtle)]">{day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</p>
-              <p className={`text-2xl font-bold ${isSameDay(day, new Date()) ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>{day.getDate()}</p>
+            <div key={day.toISOString()} className="text-center">
+              <p className="text-xs text-[var(--subtle)] font-semibold uppercase tracking-wider mb-1">
+                {day.toLocaleDateString('en-US', { weekday: 'short' })}
+              </p>
+              <div
+                className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-all"
+                style={{
+                  backgroundColor: isSameDay(day, new Date()) ? 'var(--accent)' : 'var(--bg)',
+                  color: isSameDay(day, new Date()) ? 'white' : 'var(--text)',
+                }}
+              >
+                {day.getDate()}
+              </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="flex-grow overflow-y-auto relative">
-        <div className="grid grid-cols-[auto_1fr] h-full">
-          <div className="w-14 relative">
+
+      <div className="flex-grow overflow-y-auto relative" style={{ minHeight: '500px' }}>
+        <div className="grid grid-cols-[auto_1fr]" style={{ minHeight: '1440px' }}>
+          <div className="w-20 relative pr-3">
             {hours.map(hour => (
-              <div key={hour} className="h-[60px] text-right pr-2 text-xs text-[var(--subtle)] relative -top-2">
+              <div key={hour} className="h-[60px] text-right text-xs text-[var(--subtle)] relative -top-2 font-medium">
                 {hour % 12 === 0 ? 12 : hour % 12} {hour < 12 ? 'AM' : 'PM'}
               </div>
             ))}
@@ -427,10 +536,15 @@ const WeeklyView: React.FC<{
               <div key={hour} className="col-span-7 h-[60px] border-t border-[var(--border)]"></div>
             ))}
 
-            {weekDays.some(d => isSameDay(d, currentTime)) && (
-              <div className="absolute w-full flex items-center pointer-events-none" style={{ top: `${topOffset}px` }}>
-                <div className="w-2 h-2 rounded-full bg-[var(--accent)] -ml-1 z-10"></div>
-                <div className="w-full h-0.5 bg-[var(--accent)]"></div>
+            {isSameDay(weekDays.find(d => isSameDay(d, new Date())) || new Date(), new Date()) && (
+              <div
+                className="absolute left-0 right-0 z-10 pointer-events-none"
+                style={{ top: `${topOffset}px` }}
+              >
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--accent)' }}></div>
+                  <div className="flex-1 h-0.5" style={{ backgroundColor: 'var(--accent)' }}></div>
+                </div>
               </div>
             )}
 
@@ -442,40 +556,64 @@ const WeeklyView: React.FC<{
               const endHour = event.end.getHours() + event.end.getMinutes() / 60;
               const durationHours = endHour - startHour;
 
-              const top = (startHour - 8) * 60;
+              const top = startHour * 60;
               const height = durationHours * 60;
 
               const isDraggingThis = dragging?.id === event.id;
+              const isResizingThis = resizing?.id === event.id;
 
               return (
                 <div
                   key={event.id}
                   onMouseDown={(e) => handleDragStart(e, event)}
                   onDoubleClick={() => onEdit(event)}
-                  className={`absolute w-[calc(100%/7-4px)] p-2 rounded-lg text-white text-xs cursor-move select-none transition group ${categoryStyles[event.category]}
-                    ${isDraggingThis ? 'opacity-70 shadow-2xl scale-105' : 'hover:opacity-90'}
-                  `}
+                  className="absolute w-[calc(100%/7-6px)] p-3 rounded-xl text-white text-xs select-none group border-2"
                   style={{
-                    left: `calc((100% / 7) * ${eventDayIndex} + 2px)`,
+                    left: `calc((100% / 7) * ${eventDayIndex} + 3px)`,
                     top: `${top}px`,
-                    height: `${height}px`,
-                    zIndex: isDraggingThis ? 50 : 1,
+                    height: `${Math.max(height, 40)}px`,
+                    backgroundColor: categoryColors[event.category].bg,
+                    borderColor: categoryColors[event.category].border,
+                    opacity: isDraggingThis ? 0.7 : 1,
+                    zIndex: isDraggingThis || isResizingThis ? 30 : 10,
+                    cursor: isDraggingThis ? 'grabbing' : 'grab',
+                    boxShadow: isDraggingThis
+                      ? '0 8px 24px rgba(0, 0, 0, 0.3)'
+                      : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    transform: isDraggingThis ? 'scale(1.02)' : 'scale(1)',
+                    transition: isDraggingThis || isResizingThis
+                      ? 'none'
+                      : 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
-                  {/* Top Resize Handle */}
                   <div
-                    onMouseDown={(e) => handleResizeStart(e, event.id, 'top')}
-                    className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 hover:bg-white/20 rounded-t-lg"
-                  />
+                    className="absolute top-0 left-0 right-0 h-2 cursor-n-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                    onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'top'); }}
+                    style={{
+                      background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)'
+                    }}
+                  ></div>
 
-                  <p className="font-bold truncate pointer-events-none">{event.title}</p>
-                  <p className="opacity-80 text-[10px] pointer-events-none">{formatTime(event.start)} - {formatTime(event.end)}</p>
+                  <p className="font-semibold truncate mb-0.5">{event.title}</p>
+                  <p className="text-[10px] opacity-90">
+                    {formatTime(event.start)} - {formatTime(event.end)}
+                  </p>
+                  <span
+                    className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-medium capitalize"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    }}
+                  >
+                    {event.category}
+                  </span>
 
-                  {/* Bottom Resize Handle */}
                   <div
-                    onMouseDown={(e) => handleResizeStart(e, event.id, 'bottom')}
-                    className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 hover:bg-white/20 rounded-b-lg"
-                  />
+                    className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                    onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'bottom'); }}
+                    style={{
+                      background: 'linear-gradient(to top, rgba(255,255,255,0.3), transparent)'
+                    }}
+                  ></div>
                 </div>
               );
             })}
@@ -486,41 +624,38 @@ const WeeklyView: React.FC<{
   );
 };
 
-const CalendarPage = () => {
+const CalendarPage: React.FC = () => {
+  const { events, addEvent, updateEvent, deleteEvent } = useCalendarStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>();
 
-  const events = useCalendarStore(state => state.events).map(e => ({
+  const calendarEvents: CalendarEvent[] = events.map(e => ({
     ...e,
-    start: typeof e.start === 'string' ? new Date(e.start) : e.start,
-    end: typeof e.end === 'string' ? new Date(e.end) : e.end,
+    start: new Date(e.start),
+    end: new Date(e.end),
   }));
-  const addEventToStore = useCalendarStore(state => state.addEvent);
-  const updateEventInStore = useCalendarStore(state => state.updateEvent);
-  const deleteEventFromStore = useCalendarStore(state => state.deleteEvent);
 
   const handleAddEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
     if (editingEvent) {
-      updateEventInStore(editingEvent.id, eventData);
+      updateEvent(editingEvent.id, eventData);
       setEditingEvent(undefined);
     } else {
-      addEventToStore({ ...eventData, id: Date.now() });
+      addEvent(eventData);
     }
   };
 
   const handleUpdateEvent = (id: number, updates: Partial<CalendarEvent>) => {
-    updateEventInStore(id, updates);
+    updateEvent(id, updates);
   };
 
   const handleEditEvent = (event: CalendarEvent) => {
     setEditingEvent(event);
-    setSelectedDate(event.start);
     setIsModalOpen(true);
   };
 
   const handleDeleteEvent = (id: number) => {
-    deleteEventFromStore(id);
+    deleteEvent(id);
   };
 
   const handleModalClose = () => {
@@ -529,25 +664,30 @@ const CalendarPage = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-[var(--text)]">Calendar</h1>
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex justify-between items-center flex-shrink-0 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--accent)]">
+            <CalendarIcon size={24} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-[var(--text)]">Calendar</h1>
+        </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-[var(--accent)] hover:[filter:brightness(0.92)] rounded-lg text-white flex items-center gap-2 transition"
+          className="px-6 py-3 bg-[var(--accent)] hover:[filter:brightness(0.9)] rounded-xl text-white flex items-center gap-2 transition-all font-medium"
         >
-          <Plus size={18} />
+          <Plus size={20} />
           Add Event
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-180px)]">
-        <div className="lg:w-1/3 flex flex-col">
-          <MonthlyCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} events={events} />
-          <UpcomingEvents selectedDate={selectedDate} events={events} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
+        <div className="lg:w-1/3 flex flex-col gap-6 overflow-hidden">
+          <MonthlyCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} events={calendarEvents} />
+          <UpcomingEvents selectedDate={selectedDate} events={calendarEvents} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
         </div>
-        <div className="lg:w-2/3 h-full">
-          <WeeklyView selectedDate={selectedDate} events={events} onUpdateEvent={handleUpdateEvent} onEdit={handleEditEvent} />
+        <div className="lg:w-2/3 overflow-hidden">
+          <WeeklyView selectedDate={selectedDate} events={calendarEvents} onUpdateEvent={handleUpdateEvent} onEdit={handleEditEvent} />
         </div>
       </div>
 

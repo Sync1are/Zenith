@@ -1,0 +1,117 @@
+// Implementation code to add to studyBuddyService.ts after line 361 (before default case)
+
+            case "editTask":
+                if (!args.taskId) return "Error: taskId is required.";
+                const task = appStore.tasks.find(t => t.id === args.taskId);
+                if (!task) return `Error: Task ${args.taskId} not found.`;
+                const updates: any = {};
+                if (args.title) updates.title = args.title;
+                if (args.description !== undefined) updates.description = args.description;
+                if (args.status) updates.status = TaskStatus[args.status as keyof typeof TaskStatus];
+                if (args.priority) updates.priority = TaskPriority[args.priority as keyof typeof TaskPriority];
+                appStore.updateTask(args.taskId, updates);
+                return `Task updated.`;
+
+            case "deleteTask":
+                if (!args.taskId) return "Error: taskId required.";
+                const taskToDel = appStore.tasks.find(t => t.id === args.taskId);
+                if (!taskToDel) return `Error: Task ${args.taskId} not found.`;
+                appStore.deleteTask(args.taskId);
+                return `Task deleted.`;
+
+            case "getTasks":
+                const tasks = appStore.tasks;
+                if (tasks.length === 0) return "No tasks found.";
+                return `Tasks:\n${tasks.map(t => `[ID:${t.id}] ${t.title} - ${t.status}`).join('\n')}`;
+
+            case "createCalendarEvent":
+                const calStore = useCalendarStore.getState();
+                calStore.addEvent({
+                    id: Date.now(),
+                    title: args.title,
+                    start: new Date(args.start),
+                    end: new Date(args.end),
+                    category: args.category,
+                    reminder: args.reminder,
+                    notified: false
+                });
+                return `Event "${args.title}" created.`;
+
+            case "sendMessage":
+                if (!messageStore.currentUser) return "Error: Not logged in.";
+                const recip = messageStore.users.find(u => u.username.toLowerCase() === args.username.toLowerCase());
+                if (!recip) return `User "${args.username}" not found.`;
+                await messageStore.sendMessage(recip.id, args.message);
+                return `Message sent to ${args.username}.`;
+
+            case "scheduleBreak":
+                appStore.addTask({
+                    id: Date.now(),
+                    title: `Break (${args.duration}min)`,
+                    description: args.afterTask ? "After current task" : "Now",
+                    status: TaskStatus.TODO,
+                    priority: TaskPriority.LOW,
+                    category: "Break",
+                    duration: `${args.duration}min`,
+                    isCompleted: false,
+                    tags: ["break"],
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    subtasks: []
+                } as any);
+                return `Break scheduled for ${args.duration}min.`;
+
+            case "searchSpotifyTrack":
+                const spotStore = useSpotifyStore.getState();
+                const tok = await spotStore.ensureSpotifyAccessToken();
+                if (!tok) return "Spotify not connected.";
+                const sType = args.type || "track";
+                const lim = args.limit || 5;
+                const sRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(args.query)}&type=${sType}&limit=${lim}`, {
+                    headers: { Authorization: `Bearer ${tok}` }
+                });
+                if (!sRes.ok) return "Search failed.";
+                const sData = await sRes.json();
+                const its = sData[`${sType}s`]?.items || [];
+                if (its.length === 0) return `No ${sType}s found.`;
+                return `Found:\n${its.map((i: any, n: number) => `${n+1}. ${i.name}${i.artists ? ' by ' + i.artists[0].name : ''}`).join('\n')}`;
+
+            case "playSpotifyTrack":
+                const spotStore2 = useSpotifyStore.getState();
+                const tok2 = await spotStore2.ensureSpotifyAccessToken();
+                if (!tok2) return "Spotify not connected.";
+                let pUri = args.uri;
+                if (!args.uri.startsWith("spotify:")) {
+                    const sRes2 = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(args.uri)}&type=track&limit=1`, {
+                        headers: { Authorization: `Bearer ${tok2}` }
+                    });
+                    const sData2 = await sRes2.json();
+                    const trk = sData2.tracks?.items[0];
+                    if (!trk) return `No track found for "${args.uri}".`;
+                    pUri = trk.uri;
+                }
+                const pRes = await fetch("https://api.spotify.com/v1/me/player/play", {
+                    method: "PUT",
+                    headers: { Authorization: `Bearer ${tok2}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ uris: [pUri] })
+                });
+                if (pRes.status === 204) return "Now playing!";
+                if (pRes.status === 404) return "No active device. Open Spotify.";
+                return "Play failed.";
+
+            case "pauseSpotify":
+                const spotStore3 = useSpotifyStore.getState();
+                const res = await spotStore3.togglePlayback(false);
+                return res.ok ? "Paused." : res.note;
+
+            case "skipSpotifyTrack":
+                const spotStore4 = useSpotifyStore.getState();
+                const skipRes = await spotStore4.skipNext();
+                return skipRes.ok ? "Skipped." : skipRes.note;
+
+            case "getCurrentSpotifyTrack":
+                const spotStore5 = useSpotifyStore.getState();
+                const curr = await spotStore5.getCurrentlyPlaying();
+                if (!curr || !curr.item) return "Nothing playing.";
+                const trk = curr.item;
+                return `${curr.is_playing ? "Playing" : "Paused"}: "${trk.name}" by ${trk.artists.map((a: any) => a.name).join(', ')}`;

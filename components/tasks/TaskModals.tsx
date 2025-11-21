@@ -3,7 +3,7 @@ import { Task, TaskPriority, TaskStatus } from '../../types';
 import { SparklesIcon } from '../icons/IconComponents';
 
 // OpenRouter API key
-const API_KEY: string = "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";
+const API_KEY: string = "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";
 
 interface TaskModalProps {
     isOpen: boolean;
@@ -135,7 +135,7 @@ export const GeneratePlanModal: React.FC<GeneratePlanModalProps> = ({ isOpen, on
                     "X-Title": "Zenith AI Task Planner", // Optional, shows in rankings
                 },
                 body: JSON.stringify({
-                    model: "google/gemini-3-pro-preview", // Using Gemini 3 Pro via OpenRouter
+                    model: "x-ai/grok-2-1212", // Using Grok via OpenRouter
                     max_tokens: 2000, // Limit tokens to reduce costs
                     messages: [
                         {
