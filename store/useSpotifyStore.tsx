@@ -30,6 +30,7 @@ interface SpotifyState {
   getCurrentlyPlaying: () => Promise<any | null>;
   togglePlayback: (play: boolean) => Promise<{ ok: boolean; status: number; note: string }>;
   skipNext: () => Promise<{ ok: boolean; status: number; note: string }>;
+  skipPrevious: () => Promise<{ ok: boolean; status: number; note: string }>;
   getDevices: () => Promise<Device[] | null>;
   transferPlayback: (deviceId: string, play?: boolean) => Promise<{ ok: boolean; status: number; note: string }>;
 }
@@ -141,6 +142,19 @@ export const useSpotifyStore = create<SpotifyState>()(
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 204) return { ok: true, status: 204, note: "Skipped" };
+        if (res.status === 403) return { ok: false, status: 403, note: "Premium or scope missing" };
+        if (res.status === 404) return { ok: false, status: 404, note: "No active device" };
+        return { ok: res.ok, status: res.status, note: await res.text().catch(() => "Error") };
+      },
+
+      skipPrevious: async () => {
+        const token = await get().ensureSpotifyAccessToken();
+        if (!token) return { ok: false, status: 0, note: "Not connected" };
+        const res = await fetch("https://api.spotify.com/v1/me/player/previous", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 204) return { ok: true, status: 204, note: "Skipped Previous" };
         if (res.status === 403) return { ok: false, status: 403, note: "Premium or scope missing" };
         if (res.status === 404) return { ok: false, status: 404, note: "No active device" };
         return { ok: res.ok, status: res.status, note: await res.text().catch(() => "Error") };

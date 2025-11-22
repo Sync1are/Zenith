@@ -129,48 +129,48 @@ const SpotifyCard: React.FC = () => {
     setTimeout(refresh, 400);
   };
   const loadPlaylists = async () => {
-  const token = await ensureSpotifyAccessToken();
-  if (!token) return;
+    const token = await ensureSpotifyAccessToken();
+    if (!token) return;
 
-  // Fetch user's playlists
-  const res = await fetch("https://api.spotify.com/v1/me/playlists", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
+    // Fetch user's playlists
+    const res = await fetch("https://api.spotify.com/v1/me/playlists", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
 
-  // ✅ Custom featured playlists (public, pre-defined)
-  const featured = [
-    {
-      id: "lofi_radio",
-      name: "🌙 Lofi Radio",
-      uri: "spotify:playlist:6zCID88oNjNv9zx6puDHKj?si=b6397d1c50134651",
-      images: [
-        { url: "https://img.pastemagazine.com/wp-content/avuploads/2021/04/15033731/gi79ifbaoxccktwww6p2.jpg" },
-      ],
-      tracks: { total: "∞" },
-      type: "featured",
-    },
-    {
-      id: "focus_vibes",
-      name: "🧠 Focus Beats",
-      uri: "spotify:playlist:4oLvLtb980kEA0qt8QcvmQ", 
-      images: [
-        { url: "https://ichef.bbci.co.uk/images/ic/224x224/p0cjtr52.jpg.webp" },
-      ],
-      tracks: { total: 100 },
-      type: "featured",
-    },
-    
-  ];
+    // ✅ Custom featured playlists (public, pre-defined)
+    const featured = [
+      {
+        id: "lofi_radio",
+        name: "🌙 Lofi Radio",
+        uri: "spotify:playlist:6zCID88oNjNv9zx6puDHKj?si=b6397d1c50134651",
+        images: [
+          { url: "https://img.pastemagazine.com/wp-content/avuploads/2021/04/15033731/gi79ifbaoxccktwww6p2.jpg" },
+        ],
+        tracks: { total: "∞" },
+        type: "featured",
+      },
+      {
+        id: "focus_vibes",
+        name: "🧠 Focus Beats",
+        uri: "spotify:playlist:4oLvLtb980kEA0qt8QcvmQ",
+        images: [
+          { url: "https://ichef.bbci.co.uk/images/ic/224x224/p0cjtr52.jpg.webp" },
+        ],
+        tracks: { total: 100 },
+        type: "featured",
+      },
 
-  const userPlaylists = (data.items || []).map((p) => ({
-    ...p,
-    type: "user",
-  }));
+    ];
 
-  setPlaylists([...featured, ...userPlaylists]);
-  setShowPlaylists(true);
-};
+    const userPlaylists = (data.items || []).map((p) => ({
+      ...p,
+      type: "user",
+    }));
+
+    setPlaylists([...featured, ...userPlaylists]);
+    setShowPlaylists(true);
+  };
 
 
   const playSelected = async (uri: string) => {
@@ -213,7 +213,7 @@ const SpotifyCard: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30 backdrop-blur-2xl p-4 shadow-2xl mt-6 transition-all w-full max-w-2xl">
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30 backdrop-blur-2xl p-4 shadow-2xl mt-6 transition-all">
       <motion.div
         animate={controls}
         className="absolute inset-0 blur-3xl opacity-50"

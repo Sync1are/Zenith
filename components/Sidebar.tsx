@@ -215,12 +215,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         <aside
           className={`
             flex flex-col
-            bg-[#1C1C1E]/80 backdrop-blur-xl border border-[#2A2A2E]
-            shadow-[0_8px_30px_rgba(0,0,0,0.45)]
+            glass-panel
             rounded-xl p-4 transition-all duration-300
             ${isExpanded ? "w-64" : "w-20"}
           `}
         >
+          <style>{`
+            .glass-panel {
+              background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+              backdrop-filter: blur(10px) saturate(1.05);
+              border: 1px solid rgba(255,255,255,0.08);
+              box-shadow: 0 8px 30px rgba(15,12,30,0.5);
+            }
+          `}</style>
           {/* Logo as Toggle Button */}
           <div className={`flex items-center text-white mb-6 ${!isExpanded ? "justify-center px-0" : "px-2"}`}>
             <button
