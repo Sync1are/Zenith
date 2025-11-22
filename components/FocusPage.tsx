@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
-import { TaskStatus } from "../types";
+import { TaskStatus, TaskPriority } from "../types";
 import SpotifyCard from "../components/SpotifyCard";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
+import { TaskModal } from "./tasks/TaskModals";
 
 // ===============================
 // 1. Particle Background
@@ -158,7 +159,6 @@ const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
 };
 
 // --- Focus Timer (Handles Arc Animation) ---
-// --- Focus Timer (Handles Arc Animation) ---
 const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
   const focusMode = useAppStore((s) => s.focusMode);
   const timerRemaining = useAppStore((s) => s.timerRemaining);
@@ -288,7 +288,7 @@ const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
 };
 
 // --- Tasks Panel ---
-const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void }> = ({ onTaskSelect }) => {
+const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTask: () => void }> = ({ onTaskSelect, onAddTask }) => {
   const tasks = useAppStore((s) => s.tasks);
   const activeTaskId = useAppStore((s) => s.activeTaskId);
   const startTask = useAppStore((s) => s.startTask);
@@ -305,7 +305,7 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void }> = ({ 
   };
 
   return (
-    <div className="rounded-[22px] p-5 w-full bg-white/5 border border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] select-none flex flex-col">
+    <div className="rounded-[22px] p-5 w-full glass-panel select-none flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em]">Upcoming Tasks</h3>
         <button className="p-1.5 rounded-lg hover:bg-white/10 transition">
@@ -350,29 +350,60 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void }> = ({ 
         )}
       </div>
 
-      <button className="w-full py-4 mt-4 rounded-xl border border-dashed border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 hover:bg-white/5 transition text-xs font-bold tracking-wider uppercase">
+      <button
+        onClick={onAddTask}
+        className="w-full py-4 mt-4 rounded-xl border border-dashed border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 hover:bg-white/5 transition text-xs font-bold tracking-wider uppercase"
+      >
         + Add New Vector
       </button>
     </div>
   );
 };
 
-// --- Ambient Sounds Panel ---
-const AmbientSounds: React.FC = () => {
+// --- Session Environment Panel ---
+const SessionEnv: React.FC = () => {
   const [activeSound, setActiveSound] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const sounds = [
-    { name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500" },
-    { name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500" },
-    { name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500" },
-    { name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500" },
-    { name: "Café", icon: "☕", color: "from-amber-500 to-orange-500" },
-    { name: "Storm", icon: "⚡", color: "from-purple-500 to-indigo-500" },
+    { name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500", url: "https://cdn.pixabay.com/download/audio/2025/06/04/audio_df889d8576.mp3?filename=relaxing-ambient-music-rain-354479.mp3" },
+    { name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500", url: "https://cdn.pixabay.com/download/audio/2025/08/17/audio_7f0f710ebf.mp3?filename=ocean-vibes-391210.mp3" },
+    { name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500", url: "https://cdn.pixabay.com/download/audio/2025/07/16/audio_152c624e23.mp3?filename=ambient-forest-rain-375365.mp3" },
+    { name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500", url: "https://cdn.pixabay.com/download/audio/2025/03/30/audio_574326194d.mp3?filename=ambient-burning-castle-320841.mp3" },
+    { name: "Café", icon: "☕", color: "from-amber-500 to-orange-500", url: "https://cdn.pixabay.com/download/audio/2025/06/13/audio_14102ea978.mp3?filename=dreamy-cafe-music-347413.mp3" },
+    { name: "Storm", icon: "⚡", color: "from-purple-500 to-indigo-500", url: "https://cdn.pixabay.com/download/audio/2023/07/02/audio_7af7390007.mp3?filename=thunder-156423.mp3" },
   ];
 
+  useEffect(() => {
+    // Cleanup previous audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    if (activeSound) {
+      const sound = sounds.find(s => s.name === activeSound);
+      if (sound) {
+        const audio = new Audio(sound.url);
+        audio.loop = true;
+        audio.volume = 0.5; // Default volume
+        audio.play().catch(e => console.error("Audio play failed:", e));
+        audioRef.current = audio;
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [activeSound]);
+
   return (
-    <div className="rounded-[22px] p-6 bg-white/5 border border-white/10 w-full">
+    <div className="rounded-[22px] p-6 glass-panel w-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold">Audio Env</h3>
+        <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold">Session Env</h3>
         {activeSound && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
       </div>
       <div className="grid grid-cols-3 gap-3">
@@ -400,6 +431,8 @@ const AmbientSounds: React.FC = () => {
 const FocusPage: React.FC = () => {
   const [direction, setDirection] = useState(0);
   const lastIndex = useRef(0);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const addTask = useAppStore((s) => s.addTask);
 
   const handleTaskSelect = (newIndex: number) => {
     if (newIndex > lastIndex.current) {
@@ -408,6 +441,19 @@ const FocusPage: React.FC = () => {
       setDirection(-1); // Prev (CW motion)
     }
     lastIndex.current = newIndex;
+  };
+
+  const handleSaveTask = (taskData: any) => {
+    addTask({
+      id: Date.now(),
+      title: taskData.title,
+      category: taskData.category || "General",
+      priority: taskData.priority || TaskPriority.MEDIUM,
+      duration: taskData.duration || "25 min",
+      status: TaskStatus.TODO,
+      createdAt: Date.now(),
+    });
+    setIsAddTaskOpen(false);
   };
 
   return (
@@ -424,7 +470,7 @@ const FocusPage: React.FC = () => {
 
           {/* LEFT */}
           <div className="flex flex-col justify-center lg:-translate-y-4">
-            <FocusTaskCarousel onTaskSelect={handleTaskSelect} />
+            <FocusTaskCarousel onTaskSelect={handleTaskSelect} onAddTask={() => setIsAddTaskOpen(true)} />
           </div>
 
           {/* CENTER */}
@@ -435,11 +481,11 @@ const FocusPage: React.FC = () => {
 
           {/* RIGHT */}
           <div className="flex flex-col justify-center gap-6 lg:translate-y-4">
-            <div className="rounded-[22px] bg-white/5 border border-white/10 p-6 w-full">
+            <div className="rounded-[22px] glass-panel p-6 w-full">
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold mb-4 text-center">Session Duration (m)</h3>
               <DurationChips />
             </div>
-            <AmbientSounds />
+            <SessionEnv />
             <div className="w-full">
               <SpotifyCard />
             </div>
@@ -448,8 +494,21 @@ const FocusPage: React.FC = () => {
         </div>
       </div>
 
+      <TaskModal
+        isOpen={isAddTaskOpen}
+        onClose={() => setIsAddTaskOpen(false)}
+        onSave={handleSaveTask}
+      />
+
       {/* Styles & Keyframes */}
       <style>{`
+        .glass-panel {
+          background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+          backdrop-filter: blur(10px) saturate(1.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 8px 30px rgba(15,12,30,0.5);
+        }
+
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg);} }
         .animate-spin-slow { animation: spin-slow 30s linear infinite; }
 

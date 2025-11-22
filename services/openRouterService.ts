@@ -55,7 +55,7 @@ Format:
 
 User's goal: ${prompt}
 
-Generate 3-5 actionable subtasks with realistic durations.`
+Generate actionable subtasks as per required with realistic durations.`
                     }
                 ]
             })

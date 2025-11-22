@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import TitleBar from "./components/TitleBar";
-import Notifications from "./components/Notifications";
+import NotificationSystem from "./components/Notifications";
 import TopNavBar from "./components/TopNavBar";
 
 // Pages
@@ -12,7 +12,6 @@ import Dashboard from "./components/Dashboard";
 import Tasks from "./components/TasksPage";
 import CalendarPage from "./components/CalendarPage";
 import FocusPage from "./components/FocusPage";
-import AnalyticsPage from "./components/AnalyticsPage";
 import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
 import LoginPage from "./components/LoginPage";
@@ -154,7 +153,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#111217] text-white">
 
       <TitleBar />
-      <Notifications />
+      <NotificationSystem />
 
       {/* FIXED: TopNavBar now receives required props */}
       <TopNavBar

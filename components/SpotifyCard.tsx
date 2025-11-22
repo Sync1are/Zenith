@@ -213,7 +213,15 @@ const SpotifyCard: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30 backdrop-blur-2xl p-4 shadow-2xl mt-6 transition-all">
+    <div className="relative overflow-hidden rounded-3xl glass-panel p-4 mt-6 transition-all">
+      <style>{`
+        .glass-panel {
+          background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+          backdrop-filter: blur(10px) saturate(1.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 8px 30px rgba(15,12,30,0.5);
+        }
+      `}</style>
       <motion.div
         animate={controls}
         className="absolute inset-0 blur-3xl opacity-50"
