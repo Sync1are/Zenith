@@ -34,6 +34,7 @@ export const useWebRTC = (): UseWebRTCReturn => {
     const [error, setError] = useState<string | null>(null);
 
     const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+    const audioElements = useRef<Map<string, HTMLAudioElement>>(new Map());
     const currentSessionId = useRef<string | null>(null);
     const currentUserId = useRef<string | null>(null);
     const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -90,6 +91,8 @@ export const useWebRTC = (): UseWebRTCReturn => {
             // Handle incoming remote stream
             pc.ontrack = (event) => {
                 console.log('Received remote track from:', userId);
+                console.log('Remote stream:', event.streams[0]);
+
                 setParticipants((prev) => {
                     const updated = new Map(prev);
                     const participant = updated.get(userId) || { userId, isMicOn: true };
@@ -98,10 +101,26 @@ export const useWebRTC = (): UseWebRTCReturn => {
                     return updated;
                 });
 
-                // Play remote audio
-                const audio = new Audio();
+                // Play remote audio - create persistent audio element
+                let audio = audioElements.current.get(userId);
+                if (!audio) {
+                    audio = new Audio();
+                    audio.autoplay = true;
+                    audio.volume = 1.0;
+                    audioElements.current.set(userId, audio);
+                    console.log('Created new audio element for:', userId);
+                }
+
                 audio.srcObject = event.streams[0];
-                audio.play().catch((e) => console.error('Error playing remote audio:', e));
+                audio.play().then(() => {
+                    console.log('Successfully playing audio from:', userId);
+                }).catch((e) => {
+                    console.error('Error playing remote audio:', e);
+                    // Try again after user interaction
+                    setTimeout(() => {
+                        audio?.play().catch(console.error);
+                    }, 1000);
+                });
             };
 
             // Handle ICE candidates
@@ -281,6 +300,13 @@ export const useWebRTC = (): UseWebRTCReturn => {
         // Close all peer connections
         peerConnections.current.forEach((pc) => pc.close());
         peerConnections.current.clear();
+
+        // Stop and remove all audio elements
+        audioElements.current.forEach((audio) => {
+            audio.pause();
+            audio.srcObject = null;
+        });
+        audioElements.current.clear();
 
         // Leave session in Firebase
         if (currentSessionId.current && currentUserId.current) {
