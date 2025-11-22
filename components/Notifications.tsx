@@ -20,15 +20,15 @@ const Notification = () => {
   useEffect(() => {
     const checkEvents = () => {
       const now = new Date();
-      
+
       events.forEach(event => {
         const eventStart = typeof event.start === 'string' ? new Date(event.start) : event.start;
         const reminderTime = event.reminder || 5;
         const reminderDate = new Date(eventStart.getTime() - reminderTime * 60 * 1000);
 
         if (
-          now >= reminderDate && 
-          now < eventStart && 
+          now >= reminderDate &&
+          now < eventStart &&
           !event.notified
         ) {
           sendEventNotification(event);
@@ -47,7 +47,7 @@ const Notification = () => {
   useEffect(() => {
     const completedTasks = tasks.filter(t => t.status === TaskStatus.DONE);
     const currentCompletedIds = new Set(completedTasks.map(t => t.id));
-    
+
     // Find newly completed tasks
     completedTasks.forEach(task => {
       if (!lastCompletedTasksRef.current.has(task.id)) {
@@ -59,10 +59,24 @@ const Notification = () => {
     lastCompletedTasksRef.current = currentCompletedIds;
   }, [tasks]);
 
+  // Check for Overtime
+  const timerRemaining = useAppStore(state => state.timerRemaining);
+  const timerActive = useAppStore(state => state.timerActive);
+  const activeTaskId = useAppStore(state => state.activeTaskId);
+
+  useEffect(() => {
+    if (timerActive && activeTaskId && timerRemaining === 0) {
+      const task = tasks.find(t => t.id === activeTaskId);
+      if (task) {
+        sendOvertimeNotification(task);
+      }
+    }
+  }, [timerRemaining, timerActive, activeTaskId, tasks]);
+
   const sendEventNotification = (event: any) => {
     const eventStart = typeof event.start === 'string' ? new Date(event.start) : event.start;
     const timeStr = eventStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    
+
     playNotificationSound(800, 0.5); // Higher pitch for events
 
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -119,23 +133,50 @@ const Notification = () => {
     triggerConfetti();
   };
 
+  const sendOvertimeNotification = (task: any) => {
+    playNotificationSound(400, 1.0); // Distinct sound for overtime
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification('⚠️ Maximum Time Reached', {
+        body: `Maximum time reached now overtime: ${task.title}`,
+        icon: '/logo.png',
+        badge: '/logo.png',
+        tag: `overtime-${task.id}`,
+        requireInteraction: true,
+        vibrate: [300, 100, 300],
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
+
+    showInAppNotification({
+      title: '⚠️ Maximum Time Reached',
+      message: `Maximum time reached now overtime: ${task.title}`,
+      type: 'task', // Reusing 'task' type for icon
+      bgColor: 'bg-red-600'
+    });
+  };
+
   const playNotificationSound = (frequency: number, duration: number) => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContext();
-      
+
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.value = frequency;
       oscillator.type = 'sine';
-      
+
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-      
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + duration);
     } catch (error) {
@@ -161,7 +202,7 @@ const Notification = () => {
         <button class="text-white hover:text-gray-200 text-xl leading-none" onclick="this.parentElement.parentElement.remove()">×</button>
       </div>
     `;
-    
+
     document.body.appendChild(notification);
 
     setTimeout(() => {

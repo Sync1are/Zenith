@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Task, TaskPriority, TaskStatus } from '../../types';
+import { generateTaskPlan } from '../../services/openRouterService';
 import { SparklesIcon } from '../icons/IconComponents';
 
 // OpenRouter API key
-const API_KEY: string = "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";
+
 
 interface TaskModalProps {
     isOpen: boolean;
@@ -117,120 +118,16 @@ export const GeneratePlanModal: React.FC<GeneratePlanModalProps> = ({ isOpen, on
             return;
         }
 
-        if (!API_KEY) {
-            setError("⚠️ API Key not configured. Add your OpenRouter API key");
-            return;
-        }
-
         setLoading(true);
         setError("");
 
         try {
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${API_KEY}`,
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": window.location.origin, // Optional, for rankings
-                    "X-Title": "Zenith AI Task Planner", // Optional, shows in rankings
-                },
-                body: JSON.stringify({
-                    model: "x-ai/grok-2-1212", // Using Grok via OpenRouter
-                    max_tokens: 2000, // Limit tokens to reduce costs
-                    messages: [
-                        {
-                            role: "system",
-                            content: "You are a task planning assistant. Generate ONLY valid JSON with no markdown, explanations, or code blocks."
-                        },
-                        {
-                            role: "user",
-                            content: `Generate a structured task breakdown for the user's goal.
-
-Format:
-{
-  "task": {
-    "title": "Main task title",
-    "category": "Category name",
-    "priority": "HIGH or MEDIUM or LOW",
-    "subtasks": [
-      { "title": "Subtask 1", "duration": "30 min" },
-      { "title": "Subtask 2", "duration": "45 min" }
-    ]
-  }
-}
-
-User's goal: ${prompt}
-
-Generate 3-5 actionable subtasks with realistic durations.`
-                        }
-                    ]
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            let text = data.choices[0].message.content.trim();
-
-            // Remove markdown code blocks if present
-            text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-            // Try to find JSON in the response
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                text = jsonMatch[0];
-            }
-
-            const parsedData = JSON.parse(text);
-
-            if (!parsedData.task || !parsedData.task.title) {
-                throw new Error("Invalid response format");
-            }
-
-            // Calculate total duration from subtasks
-            const totalMinutes = parsedData.task.subtasks.reduce((sum: number, st: any) => {
-                const match = st.duration.match(/(\d+)\s*(min|hour)/i);
-                if (match) {
-                    const value = parseInt(match[1]);
-                    const unit = match[2].toLowerCase();
-                    return sum + (unit.includes('hour') ? value * 60 : value);
-                }
-                return sum;
-            }, 0);
-
-            const mainTask = {
-                id: Date.now(),
-                title: parsedData.task.title,
-                category: parsedData.task.category,
-                priority: parsedData.task.priority as TaskPriority,
-                duration: totalMinutes >= 60
-                    ? `${Math.floor(totalMinutes / 60)} hours ${totalMinutes % 60} min`
-                    : `${totalMinutes} min`,
-                status: TaskStatus.TODO,
-                isCompleted: false,
-                subtasks: parsedData.task.subtasks.map((st: any, index: number) => ({
-                    id: Date.now() + index,
-                    title: st.title,
-                    duration: st.duration,
-                    isCompleted: false
-                }))
-            };
-
-            // Cast to Task[] (assuming mainTask matches Task type)
-            onAddBatch([mainTask as any]);
+            const tasks = await generateTaskPlan(prompt);
+            onAddBatch(tasks);
             setPrompt("");
             onClose();
-
         } catch (err: any) {
-            console.error("AI Generation Error:", err);
-            setError(
-                err.message?.includes("API")
-                    ? "⚠️ API Error: Check your API key and quota"
-                    : "⚠️ Could not generate tasks. Try rephrasing your prompt."
-            );
+            setError(err.message);
         }
 
         setLoading(false);

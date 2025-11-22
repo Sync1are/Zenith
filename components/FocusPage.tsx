@@ -135,8 +135,11 @@ const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
   const timerActive = useAppStore((s) => s.timerActive);
 
   const activeTaskTitle = useMemo(() => tasks.find((t) => t.id === taskId)?.title || "—", [tasks, taskId]);
-  const minutes = Math.floor(timerRemaining / 60).toString().padStart(2, "0");
-  const seconds = (timerRemaining % 60).toString().padStart(2, "0");
+
+  const isOvertime = timerRemaining < 0;
+  const absRemaining = Math.abs(timerRemaining);
+  const minutes = Math.floor(absRemaining / 60).toString().padStart(2, "0");
+  const seconds = (absRemaining % 60).toString().padStart(2, "0");
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
@@ -144,11 +147,11 @@ const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
       <p className="mt-2 text-sm lg:text-base text-white/80 font-medium max-w-[16rem] truncate text-center px-4">
         {activeTaskTitle}
       </p>
-      <div className="mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black text-white tracking-tighter font-mono">
-        {minutes}:{seconds}
+      <div className={`mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black tracking-tighter font-mono ${isOvertime ? "text-red-500 animate-pulse" : "text-white"}`}>
+        {isOvertime ? "+" : ""}{minutes}:{seconds}
       </div>
-      <p className="mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] text-white/40">
-        {timerActive ? "Focus Interval" : "Ready"}
+      <p className={`mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] ${isOvertime ? "text-red-400 font-bold" : "text-white/40"}`}>
+        {isOvertime ? "OVERTIME" : (timerActive ? "Focus Interval" : "Ready")}
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 // Aze Study Buddy AI Service - Simple Version
 // Basic AI chat for study tips and motivation
 
-const OPENROUTER_API_KEY = (import.meta as any).env.VITE_OPENROUTER_API_KEY || "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";
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || "";
 
 export interface ChatMessage {
     id: number;

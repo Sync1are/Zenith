@@ -387,40 +387,26 @@ export const useAppStore = create<AppState>()(
       tick: () => {
         const { timerRemaining, timerActive, activeTaskId, tasks, lastStartRemaining, logSession } =
           get();
-        if (!timerActive || timerRemaining <= 0) return;
+        if (!timerActive) return;
 
         const newRemaining = timerRemaining - 1;
 
         // Update the active task’s remaining time each tick
-        let shouldFinish = false;
         const newTasks = tasks.map((t) => {
           if (t.id !== activeTaskId) return t;
-          const taskRemaining = Math.max(0, (t.remainingTime ?? newRemaining) - 1);
-          if (newRemaining <= 0 || taskRemaining <= 0) {
-            shouldFinish = true;
-            return {
-              ...t,
-              remainingTime: 0,
-              status: TaskStatus.DONE,
-              isCompleted: true,
-              completedAt: Date.now(),
-            };
-          }
-          return { ...t, remainingTime: newRemaining };
+          // Allow negative values for overtime
+          const taskRemaining = (t.remainingTime ?? newRemaining) - 1;
+          return { ...t, remainingTime: taskRemaining };
         });
 
-        // When the session finishes, log the whole run
-        if (shouldFinish && lastStartRemaining != null) {
-          const spentSeconds = Math.max(0, lastStartRemaining); // we ran down to 0
-          if (spentSeconds > 0) logSession(Math.round(spentSeconds / 60));
-        }
+        // Log session if we just crossed zero or are in overtime? 
+        // Actually, let's keep logging simple: log when pausing or finishing.
+        // If we are in overtime, we are still "active".
 
         set({
           timerRemaining: newRemaining,
           tasks: newTasks,
-          timerActive: shouldFinish ? false : timerActive,
-          activeTaskId: shouldFinish ? null : activeTaskId,
-          lastStartRemaining: shouldFinish ? null : lastStartRemaining,
+          // timerActive stays true
         });
       },
 
