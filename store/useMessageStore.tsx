@@ -59,6 +59,10 @@ export interface Message {
     text: string;
     // Keeping number for UI sorting, but we store serverTimestamp in Firestore too.
     timestamp: number;
+    // Study session invitation metadata
+    type?: 'text' | 'study_session_invite';
+    sessionCode?: string;
+    sessionId?: string;
 }
 
 interface MessageState {

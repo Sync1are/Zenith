@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SearchIcon, BellIcon } from './icons/IconComponents';
 import { useMessageStore } from '../store/useMessageStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import StudySessionModal from './StudySessionModal';
 
 interface HeaderProps {
   currentPage: string;
@@ -24,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showAzeChat, setShowAzeChat] = useState(false);
+  const [isStudySessionOpen, setIsStudySessionOpen] = useState(false);
   const [customStatusText, setCustomStatusText] = useState(currentUser?.customStatus || "");
   const [statusEmoji, setStatusEmoji] = useState(currentUser?.statusEmoji || "");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -95,6 +97,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
 
 
       <div className="flex items-center space-x-6">
+        <button
+          onClick={() => setIsStudySessionOpen(true)}
+          className="text-gray-400 hover:text-white transition-colors"
+          title="Study Session"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </button>
         <SearchIcon className="h-6 w-6 text-gray-400 hover:text-white cursor-pointer transition-colors" />
 
         {/* NOTIFICATION BELL */}
@@ -303,6 +314,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
           </div>
         )}
       </div>
+
+      <StudySessionModal isOpen={isStudySessionOpen} onClose={() => setIsStudySessionOpen(false)} />
     </header>
   );
 };

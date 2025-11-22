@@ -25,6 +25,7 @@ import { useMessageStore } from "./store/useMessageStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 
 import { AnimatePresence } from "framer-motion";
+import AnalyticsPage from "./components/AnalyticsPage";
 
 const App: React.FC = () => {
   // 🌙 Navigation
