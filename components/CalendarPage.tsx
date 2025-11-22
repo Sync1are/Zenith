@@ -533,89 +533,71 @@ const WeeklyView: React.FC<{
               <div key={i} className="absolute top-0 bottom-0 w-px bg-[var(--border)]" style={{ left: `calc((100%/7)*${i + 1})` }}></div>
             ))}
             {hours.slice(1).map(hour => (
-              <div key={hour} className="col-span-7 h-[60px] border-t border-[var(--border)]"></div>
-            ))}
-
-            {isSameDay(weekDays.find(d => isSameDay(d, new Date())) || new Date(), new Date()) && (
-              <div
-                className="absolute left-0 right-0 z-10 pointer-events-none"
-                style={{ top: `${topOffset}px` }}
-              >
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--accent)' }}></div>
-                  <div className="flex-1 h-0.5" style={{ backgroundColor: 'var(--accent)' }}></div>
-                </div>
-              </div>
-            )}
-
-            {events.map(event => {
-              const eventDayIndex = weekDays.findIndex(d => isSameDay(d, event.start));
-              if (eventDayIndex === -1) return null;
 
               const startHour = event.start.getHours() + event.start.getMinutes() / 60;
-              const endHour = event.end.getHours() + event.end.getMinutes() / 60;
-              const durationHours = endHour - startHour;
+            const endHour = event.end.getHours() + event.end.getMinutes() / 60;
+            const durationHours = endHour - startHour;
 
-              const top = startHour * 60;
-              const height = durationHours * 60;
+            const top = startHour * 60;
+            const height = durationHours * 60;
 
-              const isDraggingThis = dragging?.id === event.id;
-              const isResizingThis = resizing?.id === event.id;
+            const isDraggingThis = dragging?.id === event.id;
+            const isResizingThis = resizing?.id === event.id;
 
-              return (
-                <div
-                  key={event.id}
-                  onMouseDown={(e) => handleDragStart(e, event)}
-                  onDoubleClick={() => onEdit(event)}
-                  className="absolute w-[calc(100%/7-6px)] p-3 rounded-xl text-white text-xs select-none group border-2"
-                  style={{
-                    left: `calc((100% / 7) * ${eventDayIndex} + 3px)`,
-                    top: `${top}px`,
-                    height: `${Math.max(height, 40)}px`,
-                    backgroundColor: categoryColors[event.category].bg,
-                    borderColor: categoryColors[event.category].border,
-                    opacity: isDraggingThis ? 0.7 : 1,
-                    zIndex: isDraggingThis || isResizingThis ? 30 : 10,
-                    cursor: isDraggingThis ? 'grabbing' : 'grab',
-                    boxShadow: isDraggingThis
-                      ? '0 8px 24px rgba(0, 0, 0, 0.3)'
-                      : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    transform: isDraggingThis ? 'scale(1.02)' : 'scale(1)',
-                    transition: isDraggingThis || isResizingThis
-                      ? 'none'
-                      : 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                >
-                  <div
-                    className="absolute top-0 left-0 right-0 h-2 cursor-n-resize opacity-0 group-hover:opacity-100 transition-opacity"
-                    onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'top'); }}
-                    style={{
-                      background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)'
-                    }}
-                  ></div>
+            return (
+            <div
+              key={event.id}
+              onMouseDown={(e) => handleDragStart(e, event)}
+              onDoubleClick={() => onEdit(event)}
+              className="absolute w-[calc(100%/7-6px)] p-3 rounded-xl text-white text-xs select-none group border-2"
+              style={{
+                left: `calc((100% / 7) * ${eventDayIndex} + 3px)`,
+                top: `${top}px`,
+                height: `${Math.max(height, 40)}px`,
+                backgroundColor: categoryColors[event.category].bg,
+                borderColor: categoryColors[event.category].border,
+                opacity: isDraggingThis ? 0.7 : 1,
+                zIndex: isDraggingThis || isResizingThis ? 30 : 10,
+                cursor: isDraggingThis ? 'grabbing' : 'grab',
+                boxShadow: isDraggingThis
+                  ? '0 8px 24px rgba(0, 0, 0, 0.3)'
+                  : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                transform: isDraggingThis ? 'scale(1.02)' : 'scale(1)',
+                transition: isDraggingThis || isResizingThis
+                  ? 'none'
+                  : 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <div
+                className="absolute top-0 left-0 right-0 h-2 cursor-n-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'top'); }}
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)'
+                }}
+              ></div>
 
-                  <p className="font-semibold truncate mb-0.5">{event.title}</p>
-                  <p className="text-[10px] opacity-90">
-                    {formatTime(event.start)} - {formatTime(event.end)}
-                  </p>
-                  <span
-                    className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-medium capitalize"
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    }}
-                  >
-                    {event.category}
-                  </span>
+              <p className="font-semibold truncate mb-0.5">{event.title}</p>
+              <p className="text-[10px] opacity-90">
+                {formatTime(event.start)} - {formatTime(event.end)}
+              </p>
+              <span
+                className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-medium capitalize"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                {event.category}
+              </span>
 
-                  <div
-                    className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 transition-opacity"
-                    onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'bottom'); }}
-                    style={{
-                      background: 'linear-gradient(to top, rgba(255,255,255,0.3), transparent)'
-                    }}
-                  ></div>
-                </div>
-              );
+              <div
+                className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, event.id, 'bottom'); }}
+                style={{
+                  background: 'linear-gradient(to top, rgba(255,255,255,0.3), transparent)'
+                }}
+              ></div>
+            </div>
+            );
             })}
           </div>
         </div>

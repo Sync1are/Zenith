@@ -223,7 +223,7 @@ const ChatPage: React.FC = () => {
                                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-2' : 'order-1'}`}>
-                                            <div className={`px-4 py-2 rounded-2xl text-sm ${msg.role === 'user'
+                                            <div className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words overflow-hidden ${msg.role === 'user'
                                                 ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-br-none'
                                                 : 'bg-gradient-to-br from-indigo-600/30 to-purple-600/30 text-gray-100 border border-indigo-500/30 rounded-bl-none'
                                                 }`}>
@@ -233,7 +233,8 @@ const ChatPage: React.FC = () => {
                                                     components={{
                                                         p: ({ node, ...props }) => <p className="mb-1 last:mb-0" {...props} />,
                                                         a: ({ node, ...props }) => <a className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                                                        code: ({ node, ...props }) => <code className="bg-black/30 rounded px-1 py-0.5 font-mono text-xs" {...props} />
+                                                        code: ({ node, ...props }) => <code className="bg-black/30 rounded px-1 py-0.5 font-mono text-xs break-all" {...props} />,
+                                                        pre: ({ node, ...props }) => <pre className="bg-black/30 rounded p-2 overflow-x-auto my-2" {...props} />
                                                     }}
                                                 >
                                                     {msg.content}
@@ -356,7 +357,7 @@ const ChatPage: React.FC = () => {
 
                                                 <div className="flex flex-col gap-1 max-w-[70%]">
                                                     <div className={`
-                                                px-4 py-2 rounded-2xl text-sm shadow-sm
+                                                px-4 py-2 rounded-2xl text-sm shadow-sm break-words overflow-hidden
                                                 ${isMe
                                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-900/20'
                                                             : 'bg-[#27272a] text-gray-300 rounded-bl-none'}

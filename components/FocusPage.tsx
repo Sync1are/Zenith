@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { PlayIcon, PauseIcon } from "./icons/IconComponents";
+import { motion } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { TaskStatus } from "../types";
-import { AnimatePresence, motion } from "framer-motion";
 import SpotifyCard from "../components/SpotifyCard";
-
+import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 
 // ===============================
-// Particle Background (soft stars)
+// 1. Particle Background
 // ===============================
 const ParticleBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -67,41 +66,36 @@ const ParticleBackground: React.FC = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none opacity-30" />;
 };
 
-// ======================================================
-// WaveCanvas: shimmering wave background for the *timer*
-// (Don't change the timer element — used as-is below)
-// ======================================================
-
-
-// =============================================
-// FocusTimer (kept exactly as your latest block)
-// =============================================
-
-
+// ===============================
+// 2. Config & Constants
+// ===============================
 const FOCUS_MODES = [
-  { name: "Pomodoro", duration: 25 * 60, color: "from-orange-500 to-red-500", emoji: "🍅" },
-  { name: "Deep Work", duration: 50 * 60, color: "from-purple-500 to-indigo-500", emoji: "🧠" },
-  { name: "Short Break", duration: 5 * 60, color: "from-green-500 to-emerald-500", emoji: "☕" },
-  { name: "Long Break", duration: 15 * 60, color: "from-blue-500 to-cyan-500", emoji: "🌴" },
+  { name: "Pomodoro", duration: 25 * 60, color: "from-orange-500 to-red-500", emoji: "🍅", stops: ["#F97316", "#EF4444"] },
+  { name: "Deep Work", duration: 50 * 60, color: "from-purple-500 to-indigo-500", emoji: "🧠", stops: ["#A855F7", "#6366F1"] },
+  { name: "Short Break", duration: 5 * 60, color: "from-green-500 to-emerald-500", emoji: "☕", stops: ["#22C55E", "#10B981"] },
+  { name: "Long Break", duration: 15 * 60, color: "from-blue-500 to-cyan-500", emoji: "🌴", stops: ["#3B82F6", "#06B6D4"] },
 ];
 
-// Mode selector buttons component
+// ===============================
+// 3. Sub-Components
+// ===============================
+
 const ModeSelector: React.FC = () => {
-  const focusMode = useAppStore(state => state.focusMode);
-  const setFocusMode = useAppStore(state => state.setFocusMode);
-  const timerActive = useAppStore(state => state.timerActive);
+  const focusMode = useAppStore((s) => s.focusMode);
+  const setFocusMode = useAppStore((s) => s.setFocusMode);
+  const timerActive = useAppStore((s) => s.timerActive);
 
   return (
-    <div className="flex justify-center gap-3 flex-nowrap">
+    <div className="flex justify-center gap-2.5 lg:gap-3 flex-nowrap">
       {FOCUS_MODES.map((mode) => (
         <button
           key={mode.name}
           onClick={() => setFocusMode(mode.name as typeof focusMode)}
           disabled={timerActive}
-          className={`px-6 py-3 rounded-full font-semibold transition-all transform hover:scale-105 whitespace-nowrap ${focusMode === mode.name
-            ? `bg-gradient-to-r ${mode.color} text-white shadow-2xl`
-            : 'bg-white/10 text-gray-300 hover:bg-white/20 backdrop-blur-lg'
-            } ${timerActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`px-4 py-2 rounded-full border backdrop-blur-md transition-all ${focusMode === mode.name
+            ? `bg-white/10 border-white/30 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.06)_inset]`
+            : `bg-white/5 border-white/15 text-white/70 hover:bg-white/10`
+            } ${timerActive ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           <span className="mr-2">{mode.emoji}</span>
           {mode.name}
@@ -111,79 +105,178 @@ const ModeSelector: React.FC = () => {
   );
 };
 
-// Timer display component (without mode buttons)
-const FocusTimer: React.FC = () => {
-  const focusMode = useAppStore(state => state.focusMode);
-  const timerRemaining = useAppStore(state => state.timerRemaining);
-  const timerActive = useAppStore(state => state.timerActive);
-  const setTimerActive = useAppStore(state => state.setTimerActive);
-  const resetTimer = useAppStore(state => state.resetTimer);
+const DurationChips = () => {
+  const setFocusMode = useAppStore(s => s.setFocusMode);
+  const setTimerRemaining = useAppStore(s => s.setTimerRemaining);
+  const options = [15, 25, 50, 90];
 
-  // Calculate time display and progress
+  return (
+    <div className="flex items-center justify-center gap-3 flex-wrap">
+      {options.map(m => (
+        <button
+          key={m}
+          onClick={() => {
+            setFocusMode("Deep Work" as any);
+            setTimerRemaining(m * 60);
+          }}
+          className="w-10 h-10 rounded-xl grid place-items-center text-sm font-semibold bg-white/5 border border-white/15 text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          {m}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// --- Timer Content (The part that swoops in/out) ---
+const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
+  const tasks = useAppStore((s) => s.tasks);
+  const timerRemaining = useAppStore((s) => s.timerRemaining);
+  const timerActive = useAppStore((s) => s.timerActive);
+
+  const activeTaskTitle = useMemo(() => tasks.find((t) => t.id === taskId)?.title || "—", [tasks, taskId]);
   const minutes = Math.floor(timerRemaining / 60).toString().padStart(2, "0");
   const seconds = (timerRemaining % 60).toString().padStart(2, "0");
 
-  const modeData = FOCUS_MODES.find(m => m.name === focusMode) || FOCUS_MODES[0];
+  return (
+    <div className="flex flex-col items-center justify-center w-full h-full">
+      <p className="uppercase tracking-[0.2em] text-[10px] lg:text-xs text-white/50 font-medium">Current task</p>
+      <p className="mt-2 text-sm lg:text-base text-white/80 font-medium max-w-[16rem] truncate text-center px-4">
+        {activeTaskTitle}
+      </p>
+      <div className="mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black text-white tracking-tighter font-mono">
+        {minutes}:{seconds}
+      </div>
+      <p className="mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] text-white/40">
+        {timerActive ? "Focus Interval" : "Ready"}
+      </p>
+    </div>
+  );
+};
+
+// --- Focus Timer (Handles Arc Animation) ---
+// --- Focus Timer (Handles Arc Animation) ---
+const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
+  const focusMode = useAppStore((s) => s.focusMode);
+  const timerRemaining = useAppStore((s) => s.timerRemaining);
+  const timerActive = useAppStore((s) => s.timerActive);
+  const setTimerActive = useAppStore((s) => s.setTimerActive);
+  const resetTimer = useAppStore((s) => s.resetTimer);
+  const activeTaskId = useAppStore((s) => s.activeTaskId);
+
+  const modeData = FOCUS_MODES.find((m) => m.name === focusMode) || FOCUS_MODES[0];
   const progress = ((modeData.duration - timerRemaining) / modeData.duration) * 100;
 
+  // --- Arc Transition State Logic ---
+  const [displayTaskId, setDisplayTaskId] = useState(activeTaskId);
+  const [exitingTaskId, setExitingTaskId] = useState<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync activeTaskId changes to our internal transition state
+  useEffect(() => {
+    if (activeTaskId !== displayTaskId) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      setExitingTaskId(displayTaskId);
+      setDisplayTaskId(activeTaskId);
+
+      // Matches the CSS animation duration (600ms)
+      timeoutRef.current = setTimeout(() => {
+        setExitingTaskId(null);
+      }, 550);
+    }
+  }, [activeTaskId, displayTaskId]);
+
+  // Helper for classes
+  const getAnimClass = (type: 'enter' | 'exit') => {
+    if (direction >= 0) {
+      return type === 'enter' ? 'animate-arc-in-next' : 'animate-arc-out-next';
+    } else {
+      return type === 'enter' ? 'animate-arc-in-prev' : 'animate-arc-out-prev';
+    }
+  };
+
   return (
-    <div className="relative">
-      {/* Timer Circle */}
-      <div className="relative w-80 h-80 mx-auto">
-        <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${modeData.color} opacity-20 blur-3xl animate-pulse`}></div>
+    <div className="relative flex flex-col items-center">
+      {/* Static Ring Container */}
+      <div className={`relative w-[22rem] h-[22rem] lg:w-[26rem] lg:h-[26rem] xl:w-[30rem] xl:h-[30rem] mx-auto transition-transform duration-700 ${timerActive ? "animate-oscillate" : ""}`}>
+        {/* Halos */}
+        <div className="absolute inset-0 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute inset-6 rounded-full bg-white/5 blur-xl" />
+        <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${modeData.color} opacity-15 blur-3xl`} />
+
+        {/* SVG Ring (Static) */}
         <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-          <circle cx="160" cy="160" r="140" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
+          <circle cx="50%" cy="50%" r="42%" stroke="rgba(255,255,255,0.08)" strokeWidth="12" fill="none" />
           <circle
-            cx="160"
-            cy="160"
-            r="140"
+            cx="50%"
+            cy="50%"
+            r="42%"
             stroke="url(#gradient)"
             strokeWidth="12"
             fill="none"
-            strokeDasharray={2 * Math.PI * 140}
-            strokeDashoffset={2 * Math.PI * 140 * (1 - progress / 100)}
+            strokeDasharray={2 * Math.PI * 180}
+            pathLength={100}
+            strokeDashoffset={100 - progress}
             strokeLinecap="round"
-            className="transition-all duration-1000"
+            className="transition-all duration-1000 ease-linear"
           />
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F97316" />
-              <stop offset="100%" stopColor="#EF4444" />
+              <stop offset="0%" stopColor={modeData.stops?.[0] || "#A855F7"} />
+              <stop offset="100%" stopColor={modeData.stops?.[1] || "#6366F1"} />
             </linearGradient>
           </defs>
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-7xl font-bold text-white font-mono tracking-tight">
-            {minutes}:{seconds}
+
+        {/* 
+           STACKING CONTEXT FOR ANIMATION 
+           Changed: Removed 'rounded-full' and 'overflow-hidden'
+           Added: 'pointer-events-none' so floating text doesn't block clicks if it flies far
+        */}
+        <div className="absolute inset-[-100px] grid grid-cols-1 grid-rows-1 items-center justify-center pointer-events-none">
+          {/* Exiting Item */}
+          {exitingTaskId && (
+            <div className={`col-start-1 row-start-1 w-full h-full flex items-center justify-center ${getAnimClass('exit')}`}>
+              <TimerContent taskId={exitingTaskId} />
+            </div>
+          )}
+
+          {/* Entering Item */}
+          <div
+            key={displayTaskId}
+            className={`col-start-1 row-start-1 w-full h-full flex items-center justify-center ${exitingTaskId ? getAnimClass('enter') : ''}`}
+          >
+            <TimerContent taskId={displayTaskId} />
           </div>
-          <p className="text-gray-400 text-sm mt-2">{timerActive ? 'Stay focused' : 'Ready to start?'}</p>
         </div>
       </div>
 
-      {/* Control Buttons */}
-      <div className="flex justify-center gap-4 mt-8">
+      {/* Controls */}
+      <div className="flex justify-center gap-4 mt-8 lg:mt-10 relative z-20">
         <button
           onClick={resetTimer}
-          className="p-4 bg-white/10 rounded-full hover:bg-white/20 transition-all backdrop-blur-lg"
+          className="p-4 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all backdrop-blur-md group"
+          aria-label="Reset"
         >
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-white/60 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
         <button
           onClick={() => setTimerActive(!timerActive)}
-          className={`px-8 py-4 rounded-full font-bold text-white shadow-2xl transform hover:scale-105 transition-all bg-gradient-to-r ${modeData.color}`}
+          className={`px-8 py-4 rounded-full font-bold text-white shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(0,0,0,0.4)] hover:scale-105 transition-all bg-gradient-to-r ${modeData.color} flex items-center gap-3`}
         >
           {timerActive ? (
-            <div className="flex items-center gap-2">
-              <PauseIcon className="w-6 h-6" />
-              <span>Pause</span>
-            </div>
+            <>
+              <PauseIcon className="w-5 h-5" />
+              <span>Pause Session</span>
+            </>
           ) : (
-            <div className="flex items-center gap-2">
-              <PlayIcon className="w-6 h-6" />
-              <span>Start</span>
-            </div>
+            <>
+              <PlayIcon className="w-5 h-5" />
+              <span>Initiate Task</span>
+            </>
           )}
         </button>
       </div>
@@ -191,38 +284,27 @@ const FocusTimer: React.FC = () => {
   );
 };
 
+// --- Tasks Panel ---
+const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void }> = ({ onTaskSelect }) => {
+  const tasks = useAppStore((s) => s.tasks);
+  const activeTaskId = useAppStore((s) => s.activeTaskId);
+  const startTask = useAppStore((s) => s.startTask);
+  const timerActive = useAppStore((s) => s.timerActive);
+  const setTimerActive = useAppStore((s) => s.setTimerActive);
 
-// ======================================================
-// Gesture hook for swipe left/right (mouse & touch)
-// ======================================================
+  const available = useMemo(() => tasks.filter((t) => t.status !== TaskStatus.DONE), [tasks]);
 
-
-// ======================================================
-// Upcoming Tasks - Vertical List
-// ======================================================
-const FocusTaskCarousel: React.FC = () => {
-  const tasks = useAppStore(state => state.tasks);
-  const activeTaskId = useAppStore(state => state.activeTaskId);
-  const startTask = useAppStore(state => state.startTask);
-  const timerActive = useAppStore(state => state.timerActive);
-  const setTimerActive = useAppStore(state => state.setTimerActive);
-
-  const available = useMemo(() => tasks.filter(t => t.status !== TaskStatus.DONE), [tasks]);
-
-  const handleTaskClick = (taskId: string) => {
-    if (activeTaskId === taskId && timerActive) {
-      // Already active, do nothing or pause
-      return;
-    }
+  const handleTaskClick = (taskId: string, idx: number) => {
+    if (activeTaskId === taskId && timerActive) return;
     startTask(taskId);
     setTimerActive(true);
+    onTaskSelect(idx);
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-2xl select-none w-full max-w-sm">
-      {/* Header */}
+    <div className="rounded-[22px] p-5 w-full bg-white/5 border border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] select-none flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">Upcoming Tasks</h3>
+        <h3 className="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em]">Upcoming Tasks</h3>
         <button className="p-1.5 rounded-lg hover:bg-white/10 transition">
           <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -230,55 +312,34 @@ const FocusTaskCarousel: React.FC = () => {
         </button>
       </div>
 
-      {/* Task List */}
-      <div className="space-y-3 mb-6">
+      <div className="space-y-3">
         {available.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-sm">No tasks available</p>
-          </div>
+          <div className="text-center py-8 text-white/40 text-sm">No tasks available</div>
         ) : (
           available.slice(0, 5).map((task, idx) => {
-            const isActive = activeTaskId === task.id && timerActive;
+            const isActive = activeTaskId === task.id;
             return (
               <motion.button
                 key={task.id}
-                onClick={() => handleTaskClick(task.id)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full text-left p-4 rounded-2xl border transition-all ${isActive
-                  ? 'bg-white/15 border-white/30'
-                  : 'bg-white/5 border-white/10 hover:bg-white/10'
+                onClick={() => handleTaskClick(task.id, idx)}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`w-full text-left p-4 rounded-2xl border transition-all relative group ${isActive ? "bg-white/10 border-white/30" : "bg-white/5 border-white/10 hover:bg-white/10"
                   }`}
               >
-                <div className="flex items-center gap-3">
-                  {/* Task Number/Icon */}
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${isActive ? 'bg-orange-500/30 text-orange-300 border border-orange-500/50' : 'bg-white/10 text-white/40'
-                    }`}>
-                    {String(idx + 1).padStart(2, '0')}
+                {isActive && (
+                  <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-orange-500" />
+                )}
+                <div className="flex items-center gap-3 pl-2">
+                  <div className={`text-sm font-mono font-bold ${isActive ? "text-white" : "text-white/30"}`}>
+                    {String(idx + 1).padStart(2, "0")}
                   </div>
-
-                  {/* Task Title */}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold truncate ${isActive ? 'text-white' : 'text-white/80'}`}>
+                    <p className={`font-medium truncate ${isActive ? "text-white" : "text-white/70 group-hover:text-white/90"}`}>
                       {task.title}
                     </p>
-                    {task.category && (
-                      <p className="text-xs text-white/40 mt-0.5">{task.category}</p>
-                    )}
                   </div>
-
-                  {/* Status Icon */}
-                  <div className="flex-shrink-0">
-                    {isActive ? (
-                      <div className="w-6 h-6 rounded-full bg-green-500/30 border border-green-500/50 flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full border-2 border-white/20" />
-                    )}
-                  </div>
+                  {isActive && <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.6)]" />}
                 </div>
               </motion.button>
             );
@@ -286,43 +347,43 @@ const FocusTaskCarousel: React.FC = () => {
         )}
       </div>
 
-      {/* Add New Task Button */}
-      <button className="w-full py-3 rounded-xl border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/30 transition text-sm font-medium">
-        + ADD NEW TASK
+      <button className="w-full py-4 mt-4 rounded-xl border border-dashed border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 hover:bg-white/5 transition text-xs font-bold tracking-wider uppercase">
+        + Add New Vector
       </button>
     </div>
   );
 };
 
-
-// =============================
-// Ambient Sounds (unchanged UI)
-// =============================
+// --- Ambient Sounds Panel ---
 const AmbientSounds: React.FC = () => {
   const [activeSound, setActiveSound] = useState<string | null>(null);
-
   const sounds = [
     { name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500" },
     { name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500" },
     { name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500" },
-    { name: "Fireplace", icon: "🔥", color: "from-orange-500 to-red-500" },
+    { name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500" },
     { name: "Café", icon: "☕", color: "from-amber-500 to-orange-500" },
-    { name: "Thunder", icon: "⚡", color: "from-purple-500 to-indigo-500" },
+    { name: "Storm", icon: "⚡", color: "from-purple-500 to-indigo-500" },
   ];
 
   return (
-    <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-2xl mt-6">
-      <h3 className="text-xl font-bold text-white mb-4">🎵 Ambient Sounds</h3>
+    <div className="rounded-[22px] p-6 bg-white/5 border border-white/10 w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold">Audio Env</h3>
+        {activeSound && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
+      </div>
       <div className="grid grid-cols-3 gap-3">
         {sounds.map((s) => (
           <button
             key={s.name}
             onClick={() => setActiveSound(activeSound === s.name ? null : s.name)}
-            className={`p-4 rounded-2xl transition-all transform hover:scale-105 ${activeSound === s.name ? `bg-gradient-to-br ${s.color} shadow-lg` : "bg-white/10 hover:bg-white/20"
+            className={`p-3 rounded-xl transition-all flex flex-col items-center gap-2 ${activeSound === s.name
+              ? `bg-gradient-to-br ${s.color} shadow-lg text-white`
+              : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80"
               }`}
           >
-            <div className="text-3xl mb-1">{s.icon}</div>
-            <p className="text-xs text-white font-medium">{s.name}</p>
+            <span className="text-2xl filter drop-shadow-md">{s.icon}</span>
+            <span className="text-[10px] font-medium uppercase tracking-wide">{s.name}</span>
           </button>
         ))}
       </div>
@@ -330,50 +391,99 @@ const AmbientSounds: React.FC = () => {
   );
 };
 
-// ======================
-// Main Focus Page Layout
-// ======================
+// ===============================
+// 4. Main Page Layout
+// ===============================
 const FocusPage: React.FC = () => {
-  return (
-    <div className="relative h-full w-full overflow-hidden bg-[#111217] ">
-      {/* Gradient aura behind everything */}
-      <div className="absolute inset-0 -z-20">
-        <div className="absolute inset-0 rounded-full blur-3xl opacity-60 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.35),transparent_60%)]" />
-        <div className="absolute inset-[-16px] rounded-full opacity-50 animate-spin-slow bg-[conic-gradient(from_0deg, rgba(147,51,234,0.15), rgba(59,130,246,0.25), rgba(236,72,153,0.2), rgba(147,51,234,0.15))]" />
-      </div>
+  const [direction, setDirection] = useState(0);
+  const lastIndex = useRef(0);
 
+  const handleTaskSelect = (newIndex: number) => {
+    if (newIndex > lastIndex.current) {
+      setDirection(1); // Next (CCW motion)
+    } else if (newIndex < lastIndex.current) {
+      setDirection(-1); // Prev (CW motion)
+    }
+    lastIndex.current = newIndex;
+  };
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[#111217] text-white font-sans selection:bg-purple-500/30">
+
+      <div className="absolute inset-0 -z-20">
+        <div className="absolute inset-0 rounded-full blur-3xl opacity-40 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.15),transparent_70%)]" />
+        <div className="absolute inset-[-20px] opacity-30 animate-spin-slow bg-[conic-gradient(from_0deg,transparent,rgba(147,51,234,0.1),transparent)]" />
+      </div>
       <ParticleBackground />
 
-      <div className="relative z-10 h-full w-full px-12 py-8 flex items-center">
-        {/* Main Layout: Tasks (Left) | Timer (Center) | Ambient+Spotify (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-20 w-full">
-          {/* LEFT: Tasks - aligned to left */}
-          <div className="flex flex-col items-start justify-center">
-            <FocusTaskCarousel />
+      <div className="relative z-10 h-full w-full flex items-center justify-center p-6 lg:p-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(500px,1fr)_380px] gap-8 lg:gap-12 w-full max-w-[1600px] items-center">
+
+          {/* LEFT */}
+          <div className="flex flex-col justify-center lg:-translate-y-4">
+            <FocusTaskCarousel onTaskSelect={handleTaskSelect} />
           </div>
 
-          {/* CENTER: Mode Buttons + Timer - stay centered */}
-          <div className="flex flex-col items-center justify-center gap-8">
+          {/* CENTER */}
+          <div className="flex flex-col items-center justify-center gap-8 lg:gap-10">
             <ModeSelector />
-            <FocusTimer />
+            <FocusTimer direction={direction} />
           </div>
 
-          {/* RIGHT: Ambient Sounds + Spotify - aligned to right */}
-          <div className="flex flex-col items-end justify-center gap-6">
+          {/* RIGHT */}
+          <div className="flex flex-col justify-center gap-6 lg:translate-y-4">
+            <div className="rounded-[22px] bg-white/5 border border-white/10 p-6 w-full">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold mb-4 text-center">Session Duration (m)</h3>
+              <DurationChips />
+            </div>
             <AmbientSounds />
-            <SpotifyCard />
+            <div className="w-full">
+              <SpotifyCard />
+            </div>
           </div>
+
         </div>
       </div>
 
-      {/* slow conic spin helper */}
+      {/* Styles & Keyframes */}
       <style>{`
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg);} }
-        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+        .animate-spin-slow { animation: spin-slow 30s linear infinite; }
+
+        /* ARC ANIMATIONS (Swoop Effect) */
+        .animate-arc-in-next { animation: arcInNext 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-arc-out-next { animation: arcOutNext 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-arc-in-prev { animation: arcInPrev 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-arc-out-prev { animation: arcOutPrev 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        @keyframes arcInNext {
+          0% { transform: translate(100%, 20%) rotate(15deg) scale(0.8); opacity: 0; }
+          100% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+        }
+        @keyframes arcOutNext {
+          0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+          100% { transform: translate(-100%, -20%) rotate(-15deg) scale(0.8); opacity: 0; }
+        }
+        @keyframes arcInPrev {
+          0% { transform: translate(-100%, 20%) rotate(-15deg) scale(0.8); opacity: 0; }
+          100% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+        }
+        @keyframes arcOutPrev {
+          0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+          100% { transform: translate(100%, -20%) rotate(15deg) scale(0.8); opacity: 0; }
+        }
+
+        /* Slow Oscillation (Floating) */
+        @keyframes oscillate {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .animate-oscillate {
+          animation: oscillate 6s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );
 };
-
 
 export default FocusPage;
