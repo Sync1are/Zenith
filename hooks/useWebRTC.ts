@@ -151,11 +151,9 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 const stream = await getLocalStream();
                 await studySessionService.createSession(sessionId, userId);
 
-                // Listen to session
                 const unsubscribe = studySessionService.listenToSession(sessionId, async (sessionData) => {
                     const participantIds = Object.keys(sessionData.participants || {}).filter((id) => id !== userId);
 
-                    // Create offers for new participants
                     for (const participantId of participantIds) {
                         if (!peerConnections.current.has(participantId)) {
                             const pc = createPeerConnection(participantId, stream);
@@ -165,21 +163,26 @@ export const useWebRTC = (): UseWebRTCReturn => {
                         }
                     }
 
-                    // Handle answers from participants
+                    // Handle answers
                     if (sessionData.signaling?.[userId]) {
                         for (const [participantId, signalingData] of Object.entries(sessionData.signaling[userId])) {
                             const pc = peerConnections.current.get(participantId);
                             const data = signalingData as any;
 
                             if (pc) {
-                                if (data.answer && !pc.currentRemoteDescription) {
+                                // FIX: Check signalingState before setting remote answer
+                                if (data.answer && pc.signalingState === 'have-local-offer') {
+                                    console.log('✅ Setting remote answer from', participantId);
                                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                                 }
-                                if (data.iceCandidates) {
+
+                                // Add ICE candidates only if remote description is set
+                                if (data.iceCandidates && pc.remoteDescription) {
                                     for (const candidate of data.iceCandidates) {
-                                        // Only add candidate if remote description is set, else queue it (simplified here)
-                                        if (pc.remoteDescription) {
-                                            pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn(e));
+                                        try {
+                                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                        } catch (e) {
+                                            console.warn("Duplicate or invalid candidate ignored");
                                         }
                                     }
                                 }
@@ -189,7 +192,6 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 });
 
                 unsubscribeRef.current = unsubscribe;
-                setConnectionStatus('connected');
             } catch (err: any) {
                 console.error('Error initializing call:', err);
                 setConnectionStatus('failed');
