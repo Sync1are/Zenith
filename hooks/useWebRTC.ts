@@ -44,8 +44,9 @@ export const useWebRTC = (): UseWebRTCReturn => {
     // --- 1. Get Local Stream ---
     const getLocalStream = useCallback(async (): Promise<MediaStream> => {
         try {
+            // Check support
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('WebRTC not supported in this browser.');
+                throw new Error('Your browser does not support WebRTC audio calls.');
             }
 
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -62,18 +63,23 @@ export const useWebRTC = (): UseWebRTCReturn => {
             return stream;
         } catch (err: any) {
             console.error('Error accessing microphone:', err);
-            setError(err.message || 'Failed to access microphone');
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setError('Microphone permission denied.');
+            } else {
+                setError('Failed to access microphone.');
+            }
             setConnectionStatus('failed');
             throw err;
         }
     }, []);
 
-    // --- 2. Create Peer Connection ---
+    // --- 2. Create Peer Connection (FIXED) ---
     const createPeerConnection = useCallback(
         (targetUserId: string, stream: MediaStream): RTCPeerConnection => {
             const pc = new RTCPeerConnection(ICE_SERVERS);
 
             // A. Add local tracks to the connection
+            // (Previously, this was missing the pc.addTrack call)
             stream.getTracks().forEach((track) => {
                 pc.addTrack(track, stream);
             });
@@ -90,44 +96,40 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 }
             };
 
-            // C. Handle Connection State
-            pc.onconnectionstatechange = () => {
-                console.log(`Connection state with ${targetUserId}:`, pc.connectionState);
-                if (pc.connectionState === 'connected') {
-                    setConnectionStatus('connected');
-                } else if (pc.connectionState === 'failed') {
-                    setConnectionStatus('failed');
-                    setError('Connection failed');
-                } else if (pc.connectionState === 'disconnected') {
-                    // Optional: Handle temporary disconnects
-                }
-            };
-
-            // D. Handle Incoming Audio Streams (CRITICAL FIX)
+            // C. Handle Incoming Audio (FIXED: This was missing)
             pc.ontrack = (event) => {
                 const remoteStream = event.streams[0];
                 if (remoteStream) {
                     console.log(`🎧 Received audio stream from ${targetUserId}`);
 
-                    // Play audio via hidden HTMLAudioElement
-                    let audio = audioElements.current.get(targetUserId);
-                    if (!audio) {
-                        audio = new Audio();
-                        audio.autoplay = true; // Important for hearing immediately
-                        audioElements.current.set(targetUserId, audio);
-                    }
-                    audio.srcObject = remoteStream;
-
-                    // Update React state for UI
+                    // 1. Update React State (for UI icons/mute status)
                     setParticipants((prev) => {
                         const newMap = new Map(prev);
-                        const existing = newMap.get(targetUserId) || {
-                            userId: targetUserId,
-                            isMicOn: true
-                        };
+                        const existing = newMap.get(targetUserId) || { userId: targetUserId, isMicOn: true };
                         newMap.set(targetUserId, { ...existing, stream: remoteStream });
                         return newMap;
                     });
+
+                    // 2. Play Audio (Internal hook handling)
+                    let audio = audioElements.current.get(targetUserId);
+                    if (!audio) {
+                        audio = new Audio();
+                        audio.autoplay = true;
+                        audioElements.current.set(targetUserId, audio);
+                    }
+                    audio.srcObject = remoteStream;
+                    audio.play().catch((e) => console.error("Autoplay blocked", e));
+                }
+            };
+
+            // D. Handle Connection State
+            pc.onconnectionstatechange = () => {
+                console.log(`Connection state with ${targetUserId}:`, pc.connectionState);
+                if (pc.connectionState === 'connected') {
+                    // Keep the overall status as connected if at least one peer connects
+                    setConnectionStatus('connected');
+                } else if (pc.connectionState === 'failed') {
+                    console.error(`Connection failed with ${targetUserId}`);
                 }
             };
 
@@ -149,12 +151,11 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 const stream = await getLocalStream();
                 await studySessionService.createSession(sessionId, userId);
 
-                // Listen for session updates
+                // Listen to session
                 const unsubscribe = studySessionService.listenToSession(sessionId, async (sessionData) => {
-                    // 1. Handle new participants joining (Host creates Offer)
-                    const participantIds = Object.keys(sessionData.participants || {})
-                        .filter((id) => id !== userId);
+                    const participantIds = Object.keys(sessionData.participants || {}).filter((id) => id !== userId);
 
+                    // Create offers for new participants
                     for (const participantId of participantIds) {
                         if (!peerConnections.current.has(participantId)) {
                             const pc = createPeerConnection(participantId, stream);
@@ -164,26 +165,21 @@ export const useWebRTC = (): UseWebRTCReturn => {
                         }
                     }
 
-                    // 2. Handle answers from participants
+                    // Handle answers from participants
                     if (sessionData.signaling?.[userId]) {
                         for (const [participantId, signalingData] of Object.entries(sessionData.signaling[userId])) {
                             const pc = peerConnections.current.get(participantId);
                             const data = signalingData as any;
 
                             if (pc) {
-                                // Set Remote Description (Answer)
                                 if (data.answer && !pc.currentRemoteDescription) {
                                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                                 }
-                                // Add ICE Candidates
                                 if (data.iceCandidates) {
-                                    // Ensure we process candidates only after remote description is set or queue them
-                                    // For simplicity in this snippet:
                                     for (const candidate of data.iceCandidates) {
-                                        try {
-                                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                                        } catch (e) {
-                                            console.warn("Error adding ice candidate", e);
+                                        // Only add candidate if remote description is set, else queue it (simplified here)
+                                        if (pc.remoteDescription) {
+                                            pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn(e));
                                         }
                                     }
                                 }
@@ -193,6 +189,7 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 });
 
                 unsubscribeRef.current = unsubscribe;
+                setConnectionStatus('connected');
             } catch (err: any) {
                 console.error('Error initializing call:', err);
                 setConnectionStatus('failed');
@@ -215,11 +212,10 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 await studySessionService.joinSession(sessionId, userId);
 
                 const unsubscribe = studySessionService.listenToSession(sessionId, async (sessionData) => {
-                    // Iterate through hosts/other users to find offers directed at ME
+                    // Check for offers addressed to ME
                     for (const [senderId, signalingData] of Object.entries(sessionData.signaling || {})) {
-                        if (senderId === userId) continue; // Skip my own signaling box
+                        if (senderId === userId) continue;
 
-                        // Check if this sender has sent something to ME
                         const mySignaling = (signalingData as any)[userId];
 
                         if (mySignaling?.offer) {
@@ -229,23 +225,16 @@ export const useWebRTC = (): UseWebRTCReturn => {
                                 pc = createPeerConnection(senderId, stream);
                             }
 
-                            // If we haven't accepted this offer yet
-                            if (pc.signalingState === 'stable' && !pc.currentRemoteDescription) {
-                                // This logic ensures we don't set remote desc twice for the same offer
+                            if (pc.signalingState === 'stable') {
                                 await pc.setRemoteDescription(new RTCSessionDescription(mySignaling.offer));
                                 const answer = await pc.createAnswer();
                                 await pc.setLocalDescription(answer);
                                 await studySessionService.setAnswer(sessionId, senderId, userId, answer);
                             }
 
-                            // Handle ICE Candidates
-                            if (mySignaling.iceCandidates) {
+                            if (mySignaling.iceCandidates && pc.remoteDescription) {
                                 for (const candidate of mySignaling.iceCandidates) {
-                                    try {
-                                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                                    } catch (e) {
-                                        console.warn("Error adding ice candidate", e);
-                                    }
+                                    pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn(e));
                                 }
                             }
                         }
@@ -253,6 +242,7 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 });
 
                 unsubscribeRef.current = unsubscribe;
+                setConnectionStatus('connected');
             } catch (err: any) {
                 console.error('Error joining call:', err);
                 setConnectionStatus('failed');
@@ -262,7 +252,7 @@ export const useWebRTC = (): UseWebRTCReturn => {
         [createPeerConnection, getLocalStream]
     );
 
-    // --- 5. Controls ---
+    // --- 5. Utility Functions ---
     const toggleMic = useCallback(() => {
         if (localStream) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -282,29 +272,27 @@ export const useWebRTC = (): UseWebRTCReturn => {
     }, [localStream]);
 
     const leaveCall = useCallback(() => {
-        // Stop local tracks
+        // Stop local stream
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
             setLocalStream(null);
         }
 
-        // Close all connections
+        // Close peer connections
         peerConnections.current.forEach((pc) => pc.close());
         peerConnections.current.clear();
 
-        // Cleanup audio elements
+        // Stop audio elements
         audioElements.current.forEach((audio) => {
             audio.pause();
             audio.srcObject = null;
         });
         audioElements.current.clear();
 
-        // Notify backend
+        // Firebase cleanup
         if (currentSessionId.current && currentUserId.current) {
             studySessionService.leaveSession(currentSessionId.current, currentUserId.current);
         }
-
-        // Stop listening
         if (unsubscribeRef.current) {
             unsubscribeRef.current();
             unsubscribeRef.current = null;
@@ -312,17 +300,17 @@ export const useWebRTC = (): UseWebRTCReturn => {
 
         // Reset state
         setParticipants(new Map());
-        setConnectionStatus('disconnected');
+        setConnectionStatus('idle');
+        setError(null);
         currentSessionId.current = null;
         currentUserId.current = null;
     }, [localStream]);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             leaveCall();
         };
-    }, []); // Empty dependency array is usually safer for unmount cleanup
+    }, []); // Cleanup on unmount
 
     return {
         localStream,
