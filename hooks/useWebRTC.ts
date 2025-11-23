@@ -192,6 +192,7 @@ export const useWebRTC = (): UseWebRTCReturn => {
                 });
 
                 unsubscribeRef.current = unsubscribe;
+                setConnectionStatus('connected');
             } catch (err: any) {
                 console.error('Error initializing call:', err);
                 setConnectionStatus('failed');
