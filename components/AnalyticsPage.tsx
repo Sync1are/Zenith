@@ -1,130 +1,350 @@
 import React, { useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Task, TaskPriority, TaskStatus } from '../types';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-// Types
-export type KpiData = {
+// ===============================
+// Background Particle Animation
+// ===============================
+const ParticleBackground: React.FC = () => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const DPR = window.devicePixelRatio || 1;
+    const resize = () => {
+      canvas.width = Math.floor(window.innerWidth * DPR);
+      canvas.height = Math.floor(window.innerHeight * DPR);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+    };
+    resize();
+
+    const particles: Array<{ x: number; y: number; r: number; dx: number; dy: number; o: number }> = [];
+    const count = 50;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: (Math.random() * 2 + 1) * DPR,
+        dx: (Math.random() - 0.5) * 0.3 * DPR,
+        dy: (Math.random() - 0.5) * 0.3 * DPR,
+        o: Math.random() * 0.5 + 0.2,
+      });
+    }
+
+    let raf = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(139,92,246,${p.o})`;
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+
+    window.addEventListener('resize', resize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none opacity-20" />;
+};
+
+// ===============================
+// Helper Functions
+// ===============================
+const parseDurationToSeconds = (duration: string | undefined): number => {
+  if (!duration) return 0;
+  let totalSeconds = 0;
+  const hourMatch = duration.match(/(\d+)\s*hours?/);
+  const minMatch = duration.match(/(\d+)\s*min/);
+  if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
+  if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
+  if (totalSeconds === 0) {
+    const num = parseInt(duration);
+    if (!isNaN(num)) {
+      if (duration.includes("hour")) return num * 3600;
+      if (duration.includes("min")) return num * 60;
+    }
+  }
+  return totalSeconds;
+};
+
+const calculateChange = (current: number, previous: number): { change: string, changeType: 'increase' | 'decrease' } => {
+  if (previous === 0) {
+    return current > 0 ? { change: '100%', changeType: 'increase' } : { change: '0%', changeType: 'increase' };
+  }
+  const diff = ((current - previous) / previous) * 100;
+  return {
+    change: `${Math.abs(diff).toFixed(1)}%`,
+    changeType: diff >= 0 ? 'increase' : 'decrease',
+  };
+};
+
+const CATEGORY_COLORS = ['#8B5CF6', '#F97316', '#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#14B8A6'];
+const categoryColorMap: { [key: string]: string } = {};
+let colorIndex = 0;
+const getCategoryColor = (category: string) => {
+  if (!categoryColorMap[category]) {
+    categoryColorMap[category] = CATEGORY_COLORS[colorIndex % CATEGORY_COLORS.length];
+    colorIndex++;
+  }
+  return categoryColorMap[category];
+};
+
+// ===============================
+// KPI Card Component
+// ===============================
+interface KPICardProps {
   title: string;
   value: string;
   change: string;
   changeType: 'increase' | 'decrease';
-  icon: React.ReactNode;
-};
+  gradient: string;
+  icon: string;
+}
 
-export type ProductivityData = {
-  label: string;
-  value: number;
-  color: string;
-};
-
-// Icons
-const CheckBadgeIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[var(--subtle)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-    </svg>
-);
-
-const ClockIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[var(--subtle)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const FireIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[var(--subtle)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A8 8 0 0117.657 18.657z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 12.5l3 3" />
-  </svg>
-);
-
-const CheckCircleIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-  </svg>
-);
-
-// --- Helper Functions ---
-const parseDurationToSeconds = (duration: string | undefined): number => {
-    if (!duration) return 0;
-    let totalSeconds = 0;
-    const hourMatch = duration.match(/(\d+)\s*hours?/);
-    const minMatch = duration.match(/(\d+)\s*min/);
-    if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
-    if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
-    if (totalSeconds === 0) {
-        const num = parseInt(duration);
-        if (!isNaN(num)) {
-            if (duration.includes("hour")) return num * 3600;
-            if (duration.includes("min")) return num * 60;
-        }
-    }
-    return totalSeconds;
-};
-
-const calculateChange = (current: number, previous: number): { change: string, changeType: 'increase' | 'decrease' } => {
-    if (previous === 0) {
-        return current > 0 ? { change: '100%', changeType: 'increase' } : { change: '0%', changeType: 'increase' };
-    }
-    const diff = ((current - previous) / previous) * 100;
-    return {
-        change: `${Math.abs(diff).toFixed(1)}%`,
-        changeType: diff >= 0 ? 'increase' : 'decrease',
-    };
-};
-
-const CATEGORY_COLORS = ['#6B5AFA', '#3696F8', '#F47456', '#58B878', '#FACC15', '#EC4899', '#22D3EE'];
-const categoryColorMap: { [key: string]: string } = {};
-let colorIndex = 0;
-const getCategoryColor = (category: string) => {
-    if (!categoryColorMap[category]) {
-        categoryColorMap[category] = CATEGORY_COLORS[colorIndex % CATEGORY_COLORS.length];
-        colorIndex++;
-    }
-    return categoryColorMap[category];
-};
-
-// --- Child Components ---
-const KPICard: React.FC<KpiData> = ({ title, value, change, changeType, icon }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, change, changeType, gradient, icon }) => {
   const isIncrease = changeType === 'increase';
-  const changeColor = isIncrease ? 'text-green-500' : 'text-red-500';
+
+  // Determine animation class based on icon
+  const getIconAnimation = () => {
+    if (icon === '⏱') return 'group-hover:animate-spin-once';
+    if (icon === '🔥') return 'group-hover:animate-shake';
+    if (icon === '✓') return 'group-hover:animate-bounce-once';
+    return '';
+  };
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] p-6 rounded-2xl flex flex-col justify-between">
-      <div className="flex justify-between items-start mb-4">
-        <span className="text-[var(--subtle)]">{title}</span>
-        <div className="text-[var(--subtle)]">{icon}</div>
-      </div>
-      <div>
-        <h3 className="text-3xl font-bold text-[var(--text)] mb-1">{value}</h3>
-        <div className="flex items-center gap-1 text-sm">
-          <span className={changeColor}>{isIncrease ? '▲' : '▼'} {change}</span>
-          <span className="text-[var(--subtle)]">vs last month</span>
+    <div className="glass-panel p-6 rounded-2xl hover:scale-[1.02] transition-transform duration-300 group relative overflow-hidden">
+      {/* Gradient overlay */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-white/50 text-sm uppercase tracking-wider mb-1">{title}</p>
+            <h3 className="text-4xl font-black text-white">{value}</h3>
+          </div>
+          <div className={`text-4xl opacity-30 group-hover:opacity-50 transition-opacity ${getIconAnimation()}`}>
+            {icon}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-bold ${isIncrease ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+            }`}>
+            {isIncrease ? '↗' : '↘'} {change}
+          </span>
+          <span className="text-white/40 text-xs">vs last month</span>
         </div>
       </div>
     </div>
   );
 };
 
-const ProductivityDoughnutChart: React.FC<{ data: ProductivityData[]; totalHours: number }> = ({ data, totalHours }) => {
-  const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
-  const radius = 80;
-  const circumference = 2 * Math.PI * radius;
-  let accPct = 0;
+// ===============================
+// Weekly Focus Time Chart
+// ===============================
+const WeeklyFocusChart: React.FC = () => {
+  const tasks = useAppStore(state => state.tasks);
+
+  const chartData = useMemo(() => {
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const weekData: { name: string, minutes: number }[] = dayNames.map(name => ({ name, minutes: 0 }));
+
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const completedThisWeek = tasks.filter(task =>
+      task.status === TaskStatus.DONE &&
+      task.completedAt &&
+      task.completedAt >= startOfWeek.getTime()
+    );
+
+    completedThisWeek.forEach(task => {
+      if (task.duration && task.completedAt) {
+        const completedDate = new Date(task.completedAt);
+        const dayIndex = completedDate.getDay();
+        const durationSeconds = parseDurationToSeconds(task.duration);
+        // Adjust index: Sunday is 0, but we want Mon-Sun order
+        const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+        weekData[adjustedIndex].minutes += durationSeconds / 60;
+      }
+    });
+
+    return weekData.map(d => ({
+      ...d,
+      minutes: Math.round(d.minutes)
+    }));
+  }, [tasks]);
+
+  const totalMinutes = chartData.reduce((a, b) => a + b.minutes, 0);
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 h-full flex flex-col">
-      <h2 className="text-xl font-semibold text-[var(--text)] mb-4">Time Allocation</h2>
+    <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-white">Weekly Focus Time</h2>
+        <div className="text-sm font-bold text-white/60">
+          {totalMinutes} min total
+        </div>
+      </div>
 
-      <div className="flex-grow flex items-center justify-center flex-wrap gap-6">
-        <div className="relative w-48 h-48 flex-shrink-0">
-          <svg className="w-full h-full" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r={radius} fill="none" stroke="var(--border)" strokeWidth="20" />
+      <div className="flex-1 min-h-[250px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+            <defs>
+              <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
 
-            {data.map(item => {
-              const pct = (item.value / total) * 100;
-              const dash = (pct / 100) * circumference;
-              const offset = circumference - (accPct / 100) * circumference;
-              accPct += pct;
+            <Tooltip
+              formatter={(v) => `${v} min`}
+              contentStyle={{
+                background: 'rgba(28, 28, 30, 0.95)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '0.75rem',
+                backdropFilter: 'blur(10px)',
+                color: '#fff'
+              }}
+              labelStyle={{ color: '#fff' }}
+            />
+
+            <XAxis
+              dataKey="name"
+              tick={{ fill: 'rgba(255,255,255,0.5)' }}
+              fontSize={12}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: 'rgba(255,255,255,0.5)' }}
+              fontSize={12}
+              axisLine={false}
+              tickLine={false}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="minutes"
+              stroke="#8B5CF6"
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorFocus)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+// ===============================
+// Enhanced Bar Chart  
+// ===============================
+interface BarChartProps {
+  data: { label: string; value: number }[];
+}
+
+const EnhancedBarChart: React.FC<BarChartProps> = ({ data }) => {
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+
+  return (
+    <div className="glass-panel p-6 rounded-2xl">
+      <h2 className="text-xl font-bold text-white mb-6">Daily Completions (Last 7 Days)</h2>
+
+      <div className="flex items-end justify-around gap-3 h-64">
+        {data.map((d, idx) => {
+          const height = (d.value / maxValue) * 100;
+          return (
+            <div key={d.label} className="flex flex-col items-center flex-1 h-full group">
+              <div className="w-full h-full flex items-end justify-center">
+                <div
+                  className="w-full rounded-t-xl relative overflow-hidden transition-all duration-500 hover:scale-105"
+                  style={{
+                    height: `${height}%`,
+                    background: 'rgba(139, 92, 246, 0.8)',
+                    boxShadow: height > 0 ? '0 0 20px rgba(139, 92, 246, 0.4)' : 'none'
+                  }}
+                >
+                  {/* Glow effect */}
+                  {height > 0 && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20" />
+                  )}
+
+                  {/* Value label */}
+                  {d.value > 0 && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      {d.value}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs text-white/60 mt-3 font-medium">{d.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ===============================
+// Radial Progress Chart
+// ===============================
+interface RadialChartProps {
+  data: { label: string; value: number; color: string }[];
+  totalHours: number;
+}
+
+const RadialProgressChart: React.FC<RadialChartProps> = ({ data, totalHours }) => {
+  const radius = 90;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedPct = 0;
+
+  return (
+    <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
+      <h2 className="text-xl font-bold text-white mb-6">Time Allocation</h2>
+
+      <div className="flex-1 flex items-center justify-center gap-8 flex-wrap">
+        {/* Radial SVG */}
+        <div className="relative w-56 h-56">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
+            {/* Background circle */}
+            <circle
+              cx="100"
+              cy="100"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth="20"
+            />
+
+            {/* Segments */}
+            {data.map((item, idx) => {
+              const pct = item.value;
+              const segmentLength = (pct / 100) * circumference;
+              const offset = circumference - (accumulatedPct / 100) * circumference;
+              accumulatedPct += pct;
+
               return (
                 <circle
                   key={item.label}
@@ -134,27 +354,37 @@ const ProductivityDoughnutChart: React.FC<{ data: ProductivityData[]; totalHours
                   fill="none"
                   stroke={item.color}
                   strokeWidth="20"
-                  strokeDasharray={`${dash} ${circumference}`}
+                  strokeDasharray={`${segmentLength} ${circumference}`}
                   strokeDashoffset={offset}
-                  transform="rotate(-90 100 100)"
-                  className="transition-all duration-500"
+                  className="transition-all duration-700"
+                  style={{
+                    filter: `drop-shadow(0 0 8px ${item.color}90)`
+                  }}
                 />
               );
             })}
           </svg>
 
+          {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-[var(--text)]">{totalHours.toFixed(1)}</span>
-            <span className="text-sm text-[var(--subtle)]">hours</span>
+            <span className="text-5xl font-black text-white">{totalHours.toFixed(1)}</span>
+            <span className="text-sm text-white/50 uppercase tracking-wider">hours</span>
           </div>
         </div>
 
+        {/* Legend */}
         <div className="flex flex-col gap-3">
-          {data.map(item => (
-            <div key={item.label} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-sm text-[var(--subtle)]">{item.label}</span>
-              <span className="text-sm font-semibold text-[var(--text)] ml-auto">{item.value.toFixed(0)}%</span>
+          {data.map((item) => (
+            <div key={item.label} className="flex items-center gap-3 group hover:scale-105 transition-transform">
+              <div
+                className="w-4 h-4 rounded-full"
+                style={{
+                  backgroundColor: item.color,
+                  boxShadow: `0 0 12px ${item.color}80`
+                }}
+              />
+              <span className="text-white/70 text-sm min-w-[100px]">{item.label}</span>
+              <span className="text-white font-bold text-sm">{item.value.toFixed(0)}%</span>
             </div>
           ))}
         </div>
@@ -163,26 +393,50 @@ const ProductivityDoughnutChart: React.FC<{ data: ProductivityData[]; totalHours
   );
 };
 
-const RecentTasks: React.FC<{ tasks: Task[] }> = ({ tasks }) => {
-  return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 h-full flex flex-col">
-      <h2 className="text-xl font-semibold text-[var(--text)] mb-4">Recent Activity</h2>
+// ===============================
+// Recent Activity
+// ===============================
+interface RecentActivityProps {
+  tasks: Task[];
+}
 
-      <div className="flex-grow space-y-3 pr-2 -mr-2 overflow-y-auto">
-        {tasks.map(task => (
-          <div key={task.id} className="bg-[var(--bg)]/30 border border-[var(--border)] p-3 rounded-lg flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="text-[var(--accent)] flex-shrink-0"><CheckCircleIcon /></div>
-              <div className="overflow-hidden">
-                <p className="text-[var(--text)] font-medium text-sm truncate">{task.title}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(task.category) }} />
-                  <span className="text-[var(--subtle)] text-xs">{task.category}</span>
+const RecentActivity: React.FC<RecentActivityProps> = ({ tasks }) => {
+  return (
+    <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
+      <h2 className="text-xl font-bold text-white mb-6">Recent Completions</h2>
+
+      <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+        {tasks.map((task, idx) => (
+          <div
+            key={task.id}
+            className="bg-white/5 border border-white/10 p-4 rounded-xl hover:bg-white/10 transition-all group"
+            style={{
+              animation: `slideIn 0.3s ease-out ${idx * 0.1}s both`
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                <div className="text-green-400 flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="overflow-hidden flex-1">
+                  <p className="text-white font-medium text-sm truncate">{task.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: getCategoryColor(task.category),
+                        boxShadow: `0 0 6px ${getCategoryColor(task.category)}`
+                      }}
+                    />
+                    <span className="text-white/50 text-xs">{task.category}</span>
+                  </div>
                 </div>
               </div>
+              <span className="text-white/40 font-mono text-sm whitespace-nowrap">{task.duration}</span>
             </div>
-
-            <span className="text-[var(--subtle)] font-mono text-sm whitespace-nowrap">{task.duration}</span>
           </div>
         ))}
       </div>
@@ -190,133 +444,212 @@ const RecentTasks: React.FC<{ tasks: Task[] }> = ({ tasks }) => {
   );
 };
 
-// MAIN PAGE
+// ===============================
+// Main Analytics Page
+// ===============================
 const AnalyticsPage: React.FC = () => {
-    const tasks = useAppStore(state => state.tasks);
-    const completedTasks = useMemo(() => tasks.filter(t => t.status === TaskStatus.DONE && t.completedAt), [tasks]);
+  const tasks = useAppStore(state => state.tasks);
+  const completedTasks = useMemo(() => tasks.filter(t => t.status === TaskStatus.DONE && t.completedAt), [tasks]);
 
-    const kpiData = useMemo<KpiData[]>(() => {
-        const now = new Date();
-        const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  // KPI Calculations
+  const kpiData = useMemo(() => {
+    const now = new Date();
+    const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-        const tasksThisMonth = completedTasks.filter(t => t.completedAt! >= firstDayCurrentMonth.getTime());
-        const tasksLastMonth = completedTasks.filter(t => t.completedAt! >= firstDayLastMonth.getTime() && t.completedAt! < firstDayCurrentMonth.getTime());
+    const tasksThisMonth = completedTasks.filter(t => t.completedAt! >= firstDayCurrentMonth.getTime());
+    const tasksLastMonth = completedTasks.filter(t => t.completedAt! >= firstDayLastMonth.getTime() && t.completedAt! < firstDayCurrentMonth.getTime());
 
-        const completedThisMonthCount = tasksThisMonth.length;
-        const completedLastMonthCount = tasksLastMonth.length;
-        const completedChange = calculateChange(completedThisMonthCount, completedLastMonthCount);
+    const completedThisMonthCount = tasksThisMonth.length;
+    const completedLastMonthCount = tasksLastMonth.length;
+    const completedChange = calculateChange(completedThisMonthCount, completedLastMonthCount);
 
-        const focusHoursThisMonth = tasksThisMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
-        const focusHoursLastMonth = tasksLastMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
-        const focusChange = calculateChange(focusHoursThisMonth, focusHoursLastMonth);
+    const focusHoursThisMonth = tasksThisMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
+    const focusHoursLastMonth = tasksLastMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
+    const focusChange = calculateChange(focusHoursThisMonth, focusHoursLastMonth);
 
-        const highPriorityThisMonth = tasksThisMonth.filter(t => t.priority === TaskPriority.HIGH).length;
-        const highPriorityLastMonth = tasksLastMonth.filter(t => t.priority === TaskPriority.HIGH).length;
-        const priorityChange = calculateChange(highPriorityThisMonth, highPriorityLastMonth);
+    const highPriorityThisMonth = tasksThisMonth.filter(t => t.priority === TaskPriority.HIGH).length;
+    const highPriorityLastMonth = tasksLastMonth.filter(t => t.priority === TaskPriority.HIGH).length;
+    const priorityChange = calculateChange(highPriorityThisMonth, highPriorityLastMonth);
 
-        return [
-            { title: 'Completed Tasks', value: completedThisMonthCount.toString(), ...completedChange, icon: <CheckBadgeIcon /> },
-            { title: 'Focus Hours', value: `${focusHoursThisMonth.toFixed(1)}h`, ...focusChange, icon: <ClockIcon /> },
-            { title: 'High Priority Done', value: highPriorityThisMonth.toString(), ...priorityChange, icon: <FireIcon /> },
-        ];
-    }, [completedTasks]);
+    return [
+      {
+        title: 'Completed Tasks',
+        value: completedThisMonthCount.toString(),
+        ...completedChange,
+        gradient: 'from-violet-500 to-purple-600',
+        icon: '✓'
+      },
+      {
+        title: 'Focus Hours',
+        value: `${focusHoursThisMonth.toFixed(1)}h`,
+        ...focusChange,
+        gradient: 'from-orange-500 to-red-500',
+        icon: '⏱'
+      },
+      {
+        title: 'High Priority',
+        value: highPriorityThisMonth.toString(),
+        ...priorityChange,
+        gradient: 'from-pink-500 to-rose-600',
+        icon: '🔥'
+      },
+    ];
+  }, [completedTasks]);
 
-    const chartData = useMemo(() => {
-        const days = Array.from({ length: 7 }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            return d;
-        }).reverse();
+  // Chart Data
+  const chartData = useMemo(() => {
+    const days = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d;
+    }).reverse();
 
-        return days.map(day => {
-            const count = completedTasks.filter(t => {
-                const completedDate = new Date(t.completedAt!);
-                return completedDate.getDate() === day.getDate() &&
-                       completedDate.getMonth() === day.getMonth() &&
-                       completedDate.getFullYear() === day.getFullYear();
-            }).length;
-            return {
-                label: day.toLocaleDateString('en-US', { weekday: 'short' }),
-                value: count,
-            };
-        });
-    }, [completedTasks]);
+    return days.map(day => {
+      const count = completedTasks.filter(t => {
+        const completedDate = new Date(t.completedAt!);
+        return completedDate.getDate() === day.getDate() &&
+          completedDate.getMonth() === day.getMonth() &&
+          completedDate.getFullYear() === day.getFullYear();
+      }).length;
+      return {
+        label: day.toLocaleDateString('en-US', { weekday: 'short' }),
+        value: count,
+      };
+    });
+  }, [completedTasks]);
 
-    const maxChartValue = useMemo(() => Math.max(...chartData.map(d => d.value), 1), [chartData]);
-    
-    const { productivityData, totalFocusHours } = useMemo(() => {
-        const categoryTimes: { [key: string]: number } = {};
-        completedTasks.forEach(task => {
-            const seconds = parseDurationToSeconds(task.duration);
-            categoryTimes[task.category] = (categoryTimes[task.category] || 0) + seconds;
-        });
+  // Productivity Data
+  const { productivityData, totalFocusHours } = useMemo(() => {
+    const categoryTimes: { [key: string]: number } = {};
+    completedTasks.forEach(task => {
+      const seconds = parseDurationToSeconds(task.duration);
+      categoryTimes[task.category] = (categoryTimes[task.category] || 0) + seconds;
+    });
 
-        const totalSeconds = Object.values(categoryTimes).reduce((sum, s) => sum + s, 0);
-        const totalHours = totalSeconds / 3600;
+    const totalSeconds = Object.values(categoryTimes).reduce((sum, s) => sum + s, 0);
+    const totalHours = totalSeconds / 3600;
 
-        const data = Object.entries(categoryTimes).map(([category, seconds]) => ({
-            label: category,
-            value: totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0,
-            color: getCategoryColor(category),
-        })).sort((a,b) => b.value - a.value);
+    const data = Object.entries(categoryTimes).map(([category, seconds]) => ({
+      label: category,
+      value: totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0,
+      color: getCategoryColor(category),
+    })).sort((a, b) => b.value - a.value);
 
-        return { productivityData: data, totalFocusHours: totalHours };
-    }, [completedTasks]);
+    return { productivityData: data, totalFocusHours: totalHours };
+  }, [completedTasks]);
 
-    const recentCompletedTasks = useMemo(() => {
-        return [...completedTasks].sort((a, b) => b.completedAt! - a.completedAt!).slice(0, 5);
-    }, [completedTasks]);
-    
-    if (completedTasks.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-[var(--card)] rounded-2xl border border-[var(--border)]">
-                <h2 className="text-2xl font-bold text-[var(--text)] mb-2">No Analytics Data Yet</h2>
-                <p className="text-[var(--subtle)] max-w-md">
-                    Complete some tasks to see your productivity analytics here. Your journey to peak performance starts now! 🚀
-                </p>
-            </div>
-        );
-    }
+  const recentCompletedTasks = useMemo(() => {
+    return [...completedTasks].sort((a, b) => b.completedAt! - a.completedAt!).slice(0, 6);
+  }, [completedTasks]);
 
+  // Empty State
+  if (completedTasks.length === 0) {
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {kpiData.map(kpi => (
-                    <KPICard key={kpi.title} {...kpi} />
-                ))}
-            </div>
-
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 flex flex-col min-h-[300px]">
-                <h2 className="text-xl font-semibold text-[var(--text)] mb-4">Daily Completions (Last 7 Days)</h2>
-
-                <div className="flex-1 flex items-end justify-around gap-2">
-                    {chartData.map((d) => (
-                        <div key={d.label} className="flex flex-col items-center flex-1 h-full">
-                            <div className="w-full h-full flex items-end justify-center">
-                                <div
-                                    className="w-3/4 rounded-t-md transition-all duration-500 ease-in-out bg-[var(--accent)]"
-                                    style={{ height: `${(d.value / maxChartValue) * 100}%` }}
-                                    title={`${d.label}: ${d.value} tasks`}
-                                />
-                            </div>
-                            <span className="text-xs text-[var(--subtle)] mt-2">{d.label}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-2">
-                    <ProductivityDoughnutChart data={productivityData} totalHours={totalFocusHours} />
-                </div>
-
-                <div className="lg:col-span-3">
-                    <RecentTasks tasks={recentCompletedTasks} />
-                </div>
-            </div>
+      <div className="relative h-full w-full overflow-hidden bg-[#111217] p-8">
+        <ParticleBackground />
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center glass-panel p-12 rounded-3xl max-w-2xl mx-auto">
+          <div className="text-6xl mb-6">📊</div>
+          <h2 className="text-3xl font-black text-white mb-4">No Data Yet</h2>
+          <p className="text-white/60 text-lg max-w-md">
+            Complete some tasks to unlock your productivity insights. Your analytics journey begins with your first completed task! 🚀
+          </p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#111217] p-6 pb-12">
+      {/* Animated Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.15),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(249,115,22,0.1),transparent_50%)]" />
+        <div className="absolute inset-[-100px] opacity-20 animate-spin-slow bg-[conic-gradient(from_0deg,transparent,rgba(139,92,246,0.15),transparent)]" />
+      </div>
+      <ParticleBackground />
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-black text-white mb-2">Analytics</h1>
+          <p className="text-white/50">Track your productivity and focus patterns</p>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {kpiData.map(kpi => (
+            <KPICard key={kpi.title} {...kpi} />
+          ))}
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <EnhancedBarChart data={chartData} />
+          <WeeklyFocusChart />
+        </div>
+
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2">
+            <RadialProgressChart data={productivityData} totalHours={totalFocusHours} />
+          </div>
+          <div className="lg:col-span-3">
+            <RecentActivity tasks={recentCompletedTasks} />
+          </div>
+        </div>
+      </div>
+
+      {/* Keyframes */}
+      <style>{`
+                .glass-panel {
+                    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+                    backdrop-filter: blur(12px) saturate(1.1);
+                    border: 1px solid rgba(255,255,255,0.10);
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                }
+
+                @keyframes spin-slow {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin-slow { animation: spin-slow 30s linear infinite; }
+
+                /* Icon Animations */
+                @keyframes spin-once {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin-once { animation: spin-once 0.6s ease-in-out; }
+
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+                    20%, 40%, 60%, 80% { transform: translateX(2px); }
+                }
+                .animate-shake { animation: shake 0.5s ease-in-out; }
+
+                @keyframes bounce-once {
+                    0%, 100% { transform: translateY(0); }
+                    25% { transform: translateY(-8px); }
+                    50% { transform: translateY(0); }
+                    75% { transform: translateY(-4px); }
+                }
+                .animate-bounce-once { animation: bounce-once 0.6s ease-in-out; }
+
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
+    </div>
+  );
 };
 
 export default AnalyticsPage;

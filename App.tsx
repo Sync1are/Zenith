@@ -16,6 +16,7 @@ import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
+import AnalyticsPage from "./components/AnalyticsPage";
 
 // Stores
 import { useAppStore } from "./store/useAppStore";
@@ -24,8 +25,8 @@ import { useSpotifyStore } from "./store/useSpotifyStore";
 import { useMessageStore } from "./store/useMessageStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 
-import { AnimatePresence } from "framer-motion";
-import AnalyticsPage from "./components/AnalyticsPage";
+// Animations
+import { AnimatePresence, motion } from "framer-motion";
 
 const App: React.FC = () => {
   // 🌙 Navigation
@@ -156,7 +157,7 @@ const App: React.FC = () => {
       <TitleBar />
       <NotificationSystem />
 
-      {/* FIXED: TopNavBar now receives required props */}
+      {/* TopNavBar */}
       <TopNavBar
         activeServer={activeServerId}
         onSelect={(id) => setActiveServerId(id)}
@@ -182,7 +183,27 @@ const App: React.FC = () => {
               setSidebarOpen={setIsMobileDrawerOpen}
             />
 
-            {renderContent()}
+            {/* 🚀 ANIMATED PAGE TRANSITION START */}
+            {/* 🍃 NATURAL / SUBTLE DRIFT */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activePage}
+                initial={{ opacity: 0, y: 8 }}   // Starts 8px down, invisible
+                animate={{ opacity: 1, y: 0 }}   // Floats up to natural position
+                exit={{ opacity: 0, y: -8 }}     // Floats up and vanishes
+                transition={{
+                  duration: 0.2,
+                  ease: "easeOut"                // Natural deceleration
+                }}
+                className="w-full h-full"
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
+
+
+            {/* 🚀 ANIMATED PAGE TRANSITION END */}
+
           </div>
         </main>
 

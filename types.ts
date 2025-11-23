@@ -32,6 +32,7 @@ export interface Task {
   elapsedTime?: number;
   remainingTime?: number;
   completedAt?: number; // timestamp
+  createdAt?: number; // timestamp when task was created
 }
 
 
