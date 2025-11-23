@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
+import { useFocusStore } from "../store/useFocusStore";
 import { TaskStatus, TaskPriority } from "../types";
 import SpotifyCard from "../components/SpotifyCard";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
@@ -362,16 +363,17 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
 
 // --- Session Environment Panel ---
 const SessionEnv: React.FC = () => {
-  const [activeSound, setActiveSound] = useState<string | null>(null);
+  const environment = useFocusStore((s) => s.environment);
+  const setEnvironment = useFocusStore((s) => s.setEnvironment);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const sounds = [
-    { name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500", url: "https://cdn.pixabay.com/download/audio/2025/06/04/audio_df889d8576.mp3?filename=relaxing-ambient-music-rain-354479.mp3" },
-    { name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500", url: "https://cdn.pixabay.com/download/audio/2025/08/17/audio_7f0f710ebf.mp3?filename=ocean-vibes-391210.mp3" },
-    { name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500", url: "https://cdn.pixabay.com/download/audio/2025/07/16/audio_152c624e23.mp3?filename=ambient-forest-rain-375365.mp3" },
-    { name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500", url: "https://cdn.pixabay.com/download/audio/2025/03/30/audio_574326194d.mp3?filename=ambient-burning-castle-320841.mp3" },
-    { name: "Café", icon: "☕", color: "from-amber-500 to-orange-500", url: "https://cdn.pixabay.com/download/audio/2025/06/13/audio_14102ea978.mp3?filename=dreamy-cafe-music-347413.mp3" },
-    { name: "Storm", icon: "⚡", color: "from-purple-500 to-indigo-500", url: "https://cdn.pixabay.com/download/audio/2023/07/02/audio_7af7390007.mp3?filename=thunder-156423.mp3" },
+  const environments = [
+    { id: "rain", name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500", url: "https://cdn.pixabay.com/download/audio/2025/06/04/audio_df889d8576.mp3?filename=relaxing-ambient-music-rain-354479.mp3" },
+    { id: "ocean", name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500", url: "https://cdn.pixabay.com/download/audio/2025/08/17/audio_7f0f710ebf.mp3?filename=ocean-vibes-391210.mp3" },
+    { id: "forest", name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500", url: "https://cdn.pixabay.com/download/audio/2025/07/16/audio_152c624e23.mp3?filename=ambient-forest-rain-375365.mp3" },
+    { id: "fireplace", name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500", url: "https://cdn.pixabay.com/download/audio/2025/03/30/audio_574326194d.mp3?filename=ambient-burning-castle-320841.mp3" },
+    { id: "cafe", name: "Café", icon: "☕", color: "from-amber-500 to-orange-500", url: "https://cdn.pixabay.com/download/audio/2025/06/13/audio_14102ea978.mp3?filename=dreamy-cafe-music-347413.mp3" },
+    { id: "space", name: "Starry Night", icon: "🌌", color: "from-purple-500 to-indigo-500", url: "https://cdn.pixabay.com/download/audio/2022/03/24/audio_07969e45f9.mp3?filename=space-chillout-14194.mp3" },
   ];
 
   useEffect(() => {
@@ -381,10 +383,10 @@ const SessionEnv: React.FC = () => {
       audioRef.current = null;
     }
 
-    if (activeSound) {
-      const sound = sounds.find(s => s.name === activeSound);
-      if (sound) {
-        const audio = new Audio(sound.url);
+    if (environment !== "none") {
+      const env = environments.find(e => e.id === environment);
+      if (env) {
+        const audio = new Audio(env.url);
         audio.loop = true;
         audio.volume = 0.5; // Default volume
         audio.play().catch(e => console.error("Audio play failed:", e));
@@ -398,26 +400,26 @@ const SessionEnv: React.FC = () => {
         audioRef.current = null;
       }
     };
-  }, [activeSound]);
+  }, [environment]);
 
   return (
     <div className="rounded-[22px] p-6 glass-panel w-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold">Session Env</h3>
-        {activeSound && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
+        {environment !== "none" && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {sounds.map((s) => (
+        {environments.map((env) => (
           <button
-            key={s.name}
-            onClick={() => setActiveSound(activeSound === s.name ? null : s.name)}
-            className={`p-3 rounded-xl transition-all flex flex-col items-center gap-2 ${activeSound === s.name
-              ? `bg-gradient-to-br ${s.color} shadow-lg text-white`
+            key={env.id}
+            onClick={() => setEnvironment(environment === env.id ? "none" : env.id as any)}
+            className={`p-3 rounded-xl transition-all flex flex-col items-center gap-2 ${environment === env.id
+              ? `bg-gradient-to-br ${env.color} shadow-lg text-white`
               : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80"
               }`}
           >
-            <span className="text-2xl filter drop-shadow-md">{s.icon}</span>
-            <span className="text-[10px] font-medium uppercase tracking-wide">{s.name}</span>
+            <span className="text-2xl filter drop-shadow-md">{env.icon}</span>
+            <span className="text-[10px] font-medium uppercase tracking-wide">{env.name}</span>
           </button>
         ))}
       </div>
@@ -457,7 +459,7 @@ const FocusPage: React.FC = () => {
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#111217] text-white font-sans selection:bg-purple-500/30">
+    <div className="relative h-full w-full overflow-hidden text-white font-sans selection:bg-purple-500/30">
 
       <div className="absolute inset-0 -z-20">
         <div className="absolute inset-0 rounded-full blur-3xl opacity-40 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.15),transparent_70%)]" />

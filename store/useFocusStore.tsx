@@ -1,4 +1,5 @@
-import {create} from "zustand";
+
+import { create } from "zustand";
 
 export type Priority = "HIGH" | "MEDIUM" | "LOW";
 export type TaskStatus = "IDLE" | "RUNNING" | "DONE";
@@ -15,12 +16,15 @@ export interface Task {
 
 export type FocusMode = "Pomodoro" | "Deep Work" | "Short Break" | "Long Break";
 
+export type EnvironmentId = "none" | "cafe" | "rain" | "forest" | "space" | "ocean" | "library" | "fireplace";
+
 interface FocusStore {
   tasks: Task[];
   activeTaskId: number | null;
   focusMode: FocusMode;
   timerRemaining: number; // seconds
   timerActive: boolean;
+  environment: EnvironmentId; // New state
 
   // Actions
   setTasks: (tasks: Task[]) => void;
@@ -33,6 +37,7 @@ interface FocusStore {
   setTimerRemaining: (seconds: number) => void;
   toggleTimerActive: () => void;
   resetTimer: () => void;
+  setEnvironment: (env: EnvironmentId) => void; // New action
 }
 
 // Default durations by focus mode (seconds)
@@ -49,6 +54,7 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
   focusMode: "Pomodoro",
   timerRemaining: DURATIONS["Pomodoro"],
   timerActive: false,
+  environment: "none", // Default environment
 
   setTasks: (tasks) => set({ tasks }),
 
@@ -93,4 +99,6 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
     const mode = get().focusMode;
     set({ timerRemaining: DURATIONS[mode], timerActive: false });
   },
+
+  setEnvironment: (env) => set({ environment: env }),
 }));

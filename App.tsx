@@ -28,6 +28,8 @@ import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 // Animations
 import { AnimatePresence, motion } from "framer-motion";
 
+import LiveBackground from "./components/LiveBackground";
+
 const App: React.FC = () => {
   // 🌙 Navigation
   const activePage = useAppStore((s) => s.activePage);
@@ -152,67 +154,71 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#111217] text-white">
+    <div className="min-h-screen flex flex-col text-white relative">
 
-      <TitleBar />
-      <NotificationSystem />
+      {/* 🌿 Live Environment Background (Fixed z-0) */}
+      <LiveBackground />
 
-      {/* TopNavBar */}
-      <TopNavBar
-        activeServer={activeServerId}
-        onSelect={(id) => setActiveServerId(id)}
-      />
+      {/* Content Wrapper (z-10) */}
+      <div className="relative z-10 flex flex-col h-full min-h-screen">
+        <TitleBar />
+        <NotificationSystem />
 
-      <div className="flex flex-1 overflow-hidden pt-4 relative">
-
-        {/* Sidebar */}
-        <Sidebar
-          activeItem={activePage}
-          onSelect={(page) => {
-            setActivePage(page);
-            setIsMobileDrawerOpen(false);
-          }}
-          isMobileDrawerOpen={isMobileDrawerOpen}
-          setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+        {/* TopNavBar */}
+        <TopNavBar
+          activeServer={activeServerId}
+          onSelect={(id) => setActiveServerId(id)}
         />
 
-        <main className="flex-1 overflow-y-auto w-full">
-          <div className="max-w-full px-6 lg:px-10 py-6 md:pl-24">
-            <Header
-              currentPage={activePage}
-              setSidebarOpen={setIsMobileDrawerOpen}
-            />
+        <div className="flex flex-1 overflow-hidden pt-4 relative">
 
-            {/* 🚀 ANIMATED PAGE TRANSITION START */}
-            {/* 🍃 NATURAL / SUBTLE DRIFT */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activePage}
-                initial={{ opacity: 0, y: 8 }}   // Starts 8px down, invisible
-                animate={{ opacity: 1, y: 0 }}   // Floats up to natural position
-                exit={{ opacity: 0, y: -8 }}     // Floats up and vanishes
-                transition={{
-                  duration: 0.2,
-                  ease: "easeOut"                // Natural deceleration
-                }}
-                className="w-full h-full"
-              >
-                {renderContent()}
-              </motion.div>
-            </AnimatePresence>
+          {/* Sidebar */}
+          <Sidebar
+            activeItem={activePage}
+            onSelect={(page) => {
+              setActivePage(page);
+              setIsMobileDrawerOpen(false);
+            }}
+            isMobileDrawerOpen={isMobileDrawerOpen}
+            setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+          />
 
+          <main className="flex-1 overflow-y-auto w-full">
+            <div className="max-w-full px-6 lg:px-10 py-6 md:pl-24">
+              <Header
+                currentPage={activePage}
+                setSidebarOpen={setIsMobileDrawerOpen}
+              />
 
-            {/* 🚀 ANIMATED PAGE TRANSITION END */}
+              {/* 🚀 ANIMATED PAGE TRANSITION START */}
+              {/* 🍃 NATURAL / SUBTLE DRIFT */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activePage}
+                  initial={{ opacity: 0, y: 8 }}   // Starts 8px down, invisible
+                  animate={{ opacity: 1, y: 0 }}   // Floats up to natural position
+                  exit={{ opacity: 0, y: -8 }}     // Floats up and vanishes
+                  transition={{
+                    duration: 0.2,
+                    ease: "easeOut"                // Natural deceleration
+                  }}
+                  className="w-full h-full"
+                >
+                  {renderContent()}
+                </motion.div>
+              </AnimatePresence>
+              {/* 🚀 ANIMATED PAGE TRANSITION END */}
 
-          </div>
-        </main>
+            </div>
+          </main>
 
+        </div>
+
+        {/* Chat overlay */}
+        <AnimatePresence>
+          {activeUserId && <ChatPage />}
+        </AnimatePresence>
       </div>
-
-      {/* Chat overlay */}
-      <AnimatePresence>
-        {activeUserId && <ChatPage />}
-      </AnimatePresence>
     </div>
   );
 };
