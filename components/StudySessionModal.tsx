@@ -44,7 +44,7 @@ const StudySessionModal: React.FC = () => {
         } else {
             // Auto-start if in active mode with a code (e.g. from "Call" button)
             if (mode === 'active' && code && currentUser?.id) {
-                if (connectionStatus === 'disconnected' || connectionStatus === 'failed') {
+                if (connectionStatus === 'disconnected' || connectionStatus === 'failed' || connectionStatus === 'idle') {
                     // Check if session exists to decide whether to join or create
                     studySessionService.sessionExists(code).then(exists => {
                         if (exists) {
