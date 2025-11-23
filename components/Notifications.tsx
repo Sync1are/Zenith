@@ -22,6 +22,7 @@ const NotificationSystem: React.FC = () => {
   const activeTaskId = useAppStore(state => state.activeTaskId);
 
   const lastCompletedTasksRef = useRef<Set<number>>(new Set());
+  const isFirstRun = useRef(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Helper to add notification
@@ -76,6 +77,12 @@ const NotificationSystem: React.FC = () => {
   useEffect(() => {
     const completedTasks = tasks.filter(t => t.status === TaskStatus.DONE);
     const currentCompletedIds = new Set(completedTasks.map(t => t.id));
+
+    if (isFirstRun.current) {
+      lastCompletedTasksRef.current = currentCompletedIds;
+      isFirstRun.current = false;
+      return;
+    }
 
     completedTasks.forEach(task => {
       if (!lastCompletedTasksRef.current.has(task.id)) {
@@ -172,14 +179,14 @@ const NotificationSystem: React.FC = () => {
           >
             {/* Accent Line */}
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${n.type === 'success' ? 'bg-green-500' :
-                n.type === 'warning' ? 'bg-red-500' :
-                  'bg-indigo-500'
+              n.type === 'warning' ? 'bg-red-500' :
+                'bg-indigo-500'
               }`} />
 
             {/* Icon */}
             <div className={`mt-1 p-2 rounded-full ${n.type === 'success' ? 'bg-green-500/20 text-green-400' :
-                n.type === 'warning' ? 'bg-red-500/20 text-red-400' :
-                  'bg-indigo-500/20 text-indigo-400'
+              n.type === 'warning' ? 'bg-red-500/20 text-red-400' :
+                'bg-indigo-500/20 text-indigo-400'
               }`}>
               {n.type === 'success' ? <CheckCircle size={20} /> :
                 n.type === 'warning' ? <AlertTriangle size={20} /> :
@@ -202,8 +209,8 @@ const NotificationSystem: React.FC = () => {
 
             {/* Glow Effect */}
             <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none ${n.type === 'success' ? 'bg-green-500' :
-                n.type === 'warning' ? 'bg-red-500' :
-                  'bg-indigo-500'
+              n.type === 'warning' ? 'bg-red-500' :
+                'bg-indigo-500'
               }`} />
           </motion.div>
         ))}
