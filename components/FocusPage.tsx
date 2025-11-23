@@ -366,6 +366,7 @@ const SessionEnv: React.FC = () => {
   const environment = useFocusStore((s) => s.environment);
   const setEnvironment = useFocusStore((s) => s.setEnvironment);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [volume, setVolume] = useState(0.5);
 
   const environments = [
     { id: "rain", name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500", url: "https://cdn.pixabay.com/download/audio/2025/06/04/audio_df889d8576.mp3?filename=relaxing-ambient-music-rain-354479.mp3" },
@@ -388,7 +389,7 @@ const SessionEnv: React.FC = () => {
       if (env) {
         const audio = new Audio(env.url);
         audio.loop = true;
-        audio.volume = 0.5; // Default volume
+        audio.volume = volume;
         audio.play().catch(e => console.error("Audio play failed:", e));
         audioRef.current = audio;
       }
@@ -401,6 +402,13 @@ const SessionEnv: React.FC = () => {
       }
     };
   }, [environment]);
+
+  // Update volume when slider changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   return (
     <div className="rounded-[22px] p-6 glass-panel w-full">
@@ -423,6 +431,48 @@ const SessionEnv: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* Volume Slider */}
+      {environment !== "none" && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <div className="flex-1 relative group">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer outline-none
+                  [&::-webkit-slider-thumb]:appearance-none 
+                  [&::-webkit-slider-thumb]:w-3.5 
+                  [&::-webkit-slider-thumb]:h-3.5 
+                  [&::-webkit-slider-thumb]:rounded-full 
+                  [&::-webkit-slider-thumb]:bg-white
+                  [&::-webkit-slider-thumb]:shadow-lg
+                  [&::-webkit-slider-thumb]:transition-transform
+                  [&::-webkit-slider-thumb]:hover:scale-110
+                  [&::-webkit-slider-thumb]:active:scale-95
+                  [&::-moz-range-thumb]:w-3.5 
+                  [&::-moz-range-thumb]:h-3.5 
+                  [&::-moz-range-thumb]:rounded-full 
+                  [&::-moz-range-thumb]:bg-white
+                  [&::-moz-range-thumb]:border-0
+                  [&::-moz-range-thumb]:shadow-lg
+                  hover:bg-white/15 transition-colors"
+                style={{
+                  background: `linear-gradient(to right, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) ${volume * 100}%, rgba(255,255,255,0.1) ${volume * 100}%, rgba(255,255,255,0.1) 100%)`
+                }}
+              />
+            </div>
+            <span className="text-[10px] font-mono text-white/40 w-8 text-right">{Math.round(volume * 100)}%</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
