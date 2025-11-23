@@ -7,7 +7,8 @@ import {
     onSnapshot,
     Timestamp,
     arrayUnion,
-    getDoc
+    getDoc,
+    deleteDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -47,6 +48,26 @@ class StudySessionService {
     // Join an existing session
     async joinSession(sessionId: string, userId: string): Promise<void> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
+
+        // Check for expiration first
+        const sessionDoc = await getDoc(sessionRef);
+        if (sessionDoc.exists()) {
+            const data = sessionDoc.data();
+            if (data.expiresAt) {
+                const now = Timestamp.now();
+                if (now.toMillis() > data.expiresAt.toMillis()) {
+                    // Expired - delete and throw
+                    await deleteDoc(sessionRef);
+                    throw new Error('Session has expired.');
+                } else {
+                    // Valid - revive session (remove expiresAt)
+                    await updateDoc(sessionRef, {
+                        expiresAt: deleteField()
+                    });
+                }
+            }
+        }
+
         await updateDoc(sessionRef, {
             [`participants.${userId}`]: {
                 joinedAt: Timestamp.now(),
@@ -77,6 +98,14 @@ class StudySessionService {
                     if (otherId !== userId) {
                         updates[`signaling.${otherId}.${userId}`] = deleteField();
                     }
+                }
+
+                // Check if session is empty
+                const remainingParticipants = Object.keys(data.participants || {}).filter(id => id !== userId);
+                if (remainingParticipants.length === 0) {
+                    // Last user left - set expiration to 30 seconds from now
+                    const expiresAt = Timestamp.fromMillis(Date.now() + 30000);
+                    updates['expiresAt'] = expiresAt;
                 }
 
                 if (Object.keys(updates).length > 0) {
@@ -163,7 +192,20 @@ class StudySessionService {
     async sessionExists(sessionId: string): Promise<boolean> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
         const sessionDoc = await getDoc(sessionRef);
-        return sessionDoc.exists();
+
+        if (!sessionDoc.exists()) return false;
+
+        const data = sessionDoc.data();
+        if (data.expiresAt) {
+            const now = Timestamp.now();
+            if (now.toMillis() > data.expiresAt.toMillis()) {
+                // Expired - delete it lazily
+                await deleteDoc(sessionRef);
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
