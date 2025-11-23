@@ -100,7 +100,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ sessionCode }) => {
     }, [editor, sessionCode, currentUser]);
 
     return (
-        <div className="w-full h-full relative bg-white rounded-xl overflow-hidden">
+        <div className="absolute inset-0 w-full h-full bg-white rounded-xl overflow-hidden">
             <Tldraw
                 onMount={setEditor}
                 persistenceKey={`zenith-whiteboard-${sessionCode}`} // LocalStorage backup
