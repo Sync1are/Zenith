@@ -120,6 +120,19 @@ interface AppState {
   activePage: string;
   setActivePage: (page: string) => void;
 
+  // Study Session
+  studySession: {
+    isOpen: boolean;
+    mode: 'menu' | 'create' | 'join' | 'active' | 'incoming';
+    code: string | null;
+    callerId?: string;
+  };
+  setStudySessionOpen: (isOpen: boolean) => void;
+  startStudySession: (code?: string) => void;
+  joinStudySession: (code: string) => void;
+  handleIncomingCall: (code: string, callerId: string) => void;
+  rejectCall: () => void;
+
   // Ticker
   tick: () => void;
 }
@@ -142,6 +155,24 @@ export const useAppStore = create<AppState>()(
       // Navigation
       activePage: "Dashboard",
       setActivePage: (page) => set({ activePage: page }),
+
+      // Study Session
+      studySession: { isOpen: false, mode: 'menu', code: null },
+      setStudySessionOpen: (isOpen) => set((state) => ({
+        studySession: { ...state.studySession, isOpen, mode: isOpen ? 'menu' : 'menu' }
+      })),
+      startStudySession: (code) => set((state) => ({
+        studySession: { ...state.studySession, isOpen: true, mode: 'active', code: code || null }
+      })),
+      joinStudySession: (code) => set((state) => ({
+        studySession: { ...state.studySession, isOpen: true, mode: 'active', code }
+      })),
+      handleIncomingCall: (code, callerId) => set((state) => ({
+        studySession: { ...state.studySession, isOpen: true, mode: 'incoming', code, callerId }
+      })),
+      rejectCall: () => set((state) => ({
+        studySession: { isOpen: false, mode: 'menu', code: null, callerId: undefined }
+      })),
 
       // Legacy single token (implicit flow) — consider migrating to spotify.{...}
       spotifyToken: null,

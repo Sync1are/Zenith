@@ -60,7 +60,7 @@ export interface Message {
     // Keeping number for UI sorting, but we store serverTimestamp in Firestore too.
     timestamp: number;
     // Study session invitation metadata
-    type?: 'text' | 'study_session_invite';
+    type?: 'text' | 'call_invite';
     sessionCode?: string;
     sessionId?: string;
 }
@@ -86,7 +86,7 @@ interface MessageState {
     acceptFriendRequest: (senderId: string) => Promise<void>;
     rejectFriendRequest: (senderId: string) => Promise<void>;
 
-    sendMessage: (receiverId: string, text: string) => Promise<void>;
+    sendMessage: (receiverId: string, text: string, type?: 'text' | 'call_invite', metadata?: { sessionCode?: string }) => Promise<void>;
     subscribeToUsers: () => () => void;
     subscribeToMessages: (partnerId: string) => () => void;
     subscribeToNotifications: () => () => void;
@@ -472,12 +472,12 @@ export const useMessageStore = create<MessageState>()(
             },
 
             // SEND MESSAGE
-            sendMessage: async (receiverId, text) => {
+            sendMessage: async (receiverId, text, type = 'text', metadata = {}) => {
                 const { currentUser } = get();
                 if (!currentUser) return;
 
                 const trimmed = text.trim();
-                if (!trimmed) return;
+                if (!trimmed && type === 'text') return; // Allow empty text for system messages if needed, but usually we want text
 
                 const chatId = [currentUser.id, receiverId].sort().join("_");
                 const msgRef = collection(db, "chats", chatId, "messages");
@@ -488,6 +488,8 @@ export const useMessageStore = create<MessageState>()(
                     text: trimmed,
                     createdAt: serverTimestamp(), // Firestore native timestamp
                     timestamp: Date.now(), // local fallback
+                    type,
+                    ...metadata
                 });
 
                 await setDoc(
@@ -575,6 +577,8 @@ export const useMessageStore = create<MessageState>()(
                             text: string;
                             timestamp?: number;
                             createdAt?: Timestamp | null;
+                            type?: 'text' | 'call_invite';
+                            sessionCode?: string;
                         };
                         const ts =
                             typeof data.timestamp === "number"
@@ -586,6 +590,8 @@ export const useMessageStore = create<MessageState>()(
                             senderId: data.senderId,
                             text: data.text,
                             timestamp: ts,
+                            type: data.type,
+                            sessionCode: data.sessionCode
                         });
                     });
 

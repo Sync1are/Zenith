@@ -29,11 +29,17 @@ import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { AnimatePresence, motion } from "framer-motion";
 
 import LiveBackground from "./components/LiveBackground";
+import StudySessionModal from './components/StudySessionModal';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from './config/firebase';
 
 const App: React.FC = () => {
   // 🌙 Navigation
   const activePage = useAppStore((s) => s.activePage);
   const setActivePage = useAppStore((s) => s.setActivePage);
+
+  // Study Session State
+  const { studySession, setStudySessionOpen, handleIncomingCall } = useAppStore();
 
   const [isSignup, setIsSignup] = useState(false);
 
@@ -100,6 +106,43 @@ const App: React.FC = () => {
       return () => unsub();
     }
   }, [currentUser]);
+
+  // 4. Listen for incoming calls (Global)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // We listen to a specific document for incoming calls
+    // This requires a backend trigger or client-side write to `users/{userId}/incoming_call`
+    // Since we implemented `sendMessage` with `call_invite` type, we can listen to that?
+    // But `sendMessage` writes to `chats/{chatId}/messages`.
+
+    // Ideally, we should have a separate listener for "invites".
+    // For now, let's assume the `StudySessionModal` handles the "active" state.
+    // But for "ringing", we need to know when someone calls us.
+
+    // If we rely on `call_invite` messages, the user has to be in the chat to see it.
+    // To make it global, we need a global listener.
+
+    // Let's implement a simple listener on the user's profile for a "currentCall" field?
+    // Or just rely on the chat message notification?
+
+    // Given the constraints, let's stick to the chat message for now.
+    // If the user gets a message with type 'call_invite', we could trigger the modal?
+    // But we don't have a global message listener for ALL chats.
+
+    // Let's add a listener to `users/{userId}/incoming_call/active`
+    const callRef = doc(db, "users", currentUser.id, "incoming_call", "active");
+    const unsub = onSnapshot(callRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && data.sessionCode && !studySession.isOpen) {
+          handleIncomingCall(data.sessionCode, data.callerId);
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [currentUser, studySession.isOpen]);
 
   // Tick timer
   useEffect(() => {
@@ -217,6 +260,9 @@ const App: React.FC = () => {
           <AnimatePresence>
             {activeUserId && <ChatPage />}
           </AnimatePresence>
+
+          {/* Study Session Modal (Global) */}
+          <StudySessionModal />
         </div>
       )}
     </div>

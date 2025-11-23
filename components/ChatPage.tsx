@@ -9,6 +9,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const SendIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -17,8 +19,8 @@ const SendIcon = ({ className }: { className?: string }) => (
 );
 
 const ChatPage: React.FC = () => {
-    const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser } = useMessageStore();
-    const { tasks } = useAppStore();
+    const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser, subscribeToMessages } = useMessageStore();
+    const { tasks, startStudySession } = useAppStore();
     const [inputText, setInputText] = useState("");
     const [azeMessages, setAzeMessages] = useState<ChatMessage[]>([]);
     const [isAzeLoading, setIsAzeLoading] = useState(false);
@@ -58,6 +60,14 @@ const ChatPage: React.FC = () => {
             localStorage.setItem('aze-chat-history', JSON.stringify(azeMessages));
         }
     }, [azeMessages, isAzeChat]);
+
+    // Subscribe to messages for active user
+    useEffect(() => {
+        if (activeUserId && !isAzeChat) {
+            const unsub = subscribeToMessages(activeUserId);
+            return () => unsub();
+        }
+    }, [activeUserId, isAzeChat]);
 
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -99,6 +109,26 @@ const ChatPage: React.FC = () => {
             // Regular chat
             sendMessage(activeUserId, inputText);
             setInputText("");
+        }
+    };
+
+    const handleCall = async () => {
+        if (!activeUserId || !currentUser) return;
+        const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        startStudySession(newCode);
+
+        // Send invite message (for history/fallback)
+        sendMessage(activeUserId, "📞 Incoming Call...", 'call_invite', { sessionCode: newCode });
+
+        // Trigger "Ring" on receiver's end
+        try {
+            await setDoc(doc(db, "users", activeUserId, "incoming_call", "active"), {
+                sessionCode: newCode,
+                callerId: currentUser.id,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.error("Error triggering call:", error);
         }
     };
 
@@ -181,14 +211,27 @@ const ChatPage: React.FC = () => {
                         )}
                     </div>
                 </div>
-                <motion.button
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => { e.stopPropagation(); setActiveUser(null); }}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white cursor-pointer"
-                >
-                    <CloseIcon className="w-5 h-5" />
-                </motion.button>
+                <div className="flex items-center gap-2">
+                    {!isAzeChat && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleCall(); }}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-indigo-400 hover:text-white cursor-pointer"
+                            title="Start Study Call"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                            </svg>
+                        </button>
+                    )}
+                    <motion.button
+                        whileHover={{ scale: 1.1, rotate: 90 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => { e.stopPropagation(); setActiveUser(null); }}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white cursor-pointer"
+                    >
+                        <CloseIcon className="w-5 h-5" />
+                    </motion.button>
+                </div>
             </div>
 
             {/* Messages Area */}
@@ -283,87 +326,52 @@ const ChatPage: React.FC = () => {
                                     // Check if we need a date separator
                                     const currentDate = new Date(msg.timestamp);
                                     const prevDate = prevMsg ? new Date(prevMsg.timestamp) : null;
-                                    const needsDateSeparator = !prevDate ||
-                                        currentDate.toDateString() !== prevDate.toDateString();
-
-                                    // Check if we need to show timestamp (> 2 min gap or different sender)
-                                    const timeDiff = prevMsg ? msg.timestamp - prevMsg.timestamp : Infinity;
-                                    const differentSender = prevMsg ? msg.senderId !== prevMsg.senderId : true;
-                                    const showTimestamp = differentSender || timeDiff > 2 * 60 * 1000; // 2 minutes
-
-                                    // Format date separator
-                                    const formatDateSeparator = (date: Date) => {
-                                        const today = new Date();
-                                        const yesterday = new Date(today);
-                                        yesterday.setDate(yesterday.getDate() - 1);
-
-                                        if (date.toDateString() === today.toDateString()) {
-                                            return "Today";
-                                        } else if (date.toDateString() === yesterday.toDateString()) {
-                                            return "Yesterday";
-                                        } else {
-                                            return date.toLocaleDateString('en-US', {
-                                                month: 'long',
-                                                day: 'numeric',
-                                                year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-                                            });
-                                        }
-                                    };
+                                    const showDateSeparator = !prevDate || currentDate.toDateString() !== prevDate.toDateString();
 
                                     return (
                                         <React.Fragment key={msg.id}>
-                                            {/* Date Separator */}
-                                            {needsDateSeparator && (
-                                                <div className="flex items-center gap-3 my-4">
-                                                    <div className="flex-1 h-px bg-white/10" />
-                                                    <span className="text-xs text-gray-500 font-medium px-3 py-1 bg-white/5 rounded-full">
-                                                        {formatDateSeparator(currentDate)}
+                                            {showDateSeparator && (
+                                                <div className="flex justify-center my-4">
+                                                    <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-2 py-1 rounded-full">
+                                                        {currentDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
                                                     </span>
-                                                    <div className="flex-1 h-px bg-white/10" />
                                                 </div>
                                             )}
-
-                                            {/* Message */}
                                             <motion.div
-                                                layout
-                                                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-                                                transition={{ type: "spring", bounce: 0.4 }}
-                                                className={`flex items-start gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                                                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                {/* Avatar with timestamp below */}
-                                                {showTimestamp ? (
-                                                    <div className="flex flex-col items-center gap-0.5 min-w-[32px]">
-                                                        <img
-                                                            src={
-                                                                (isMe ? currentUser?.avatar : activeUser.avatar) ||
-                                                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${isMe ? currentUser?.username : activeUser.username}`
-                                                            }
-                                                            alt="Avatar"
-                                                            className="w-8 h-8 rounded-full bg-gray-700 object-cover"
-                                                        />
-                                                        <span className="text-[9px] text-gray-500 whitespace-nowrap">
-                                                            {new Date(msg.timestamp).toLocaleTimeString('en-US', {
-                                                                hour: 'numeric',
-                                                                minute: '2-digit',
-                                                                hour12: true
-                                                            })}
-                                                        </span>
+                                                <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>
+                                                    <div
+                                                        className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words ${isMe
+                                                            ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-br-none'
+                                                            : 'bg-white/10 text-gray-100 border border-white/10 rounded-bl-none'
+                                                            }`}
+                                                    >
+                                                        {msg.type === 'call_invite' ? (
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+                                                                    📞
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-bold">Incoming Call...</div>
+                                                                    <div className="text-xs opacity-80">Click to join</div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => msg.sessionCode && startStudySession(msg.sessionCode)}
+                                                                    className="px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors"
+                                                                >
+                                                                    JOIN
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            msg.text
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div className="w-8" /> // Spacer to maintain alignment
-                                                )}
-
-                                                <div className="flex flex-col gap-1 max-w-[70%]">
-                                                    <div className={`
-                                                px-4 py-2 rounded-2xl text-sm shadow-sm break-words overflow-hidden
-                                                ${isMe
-                                                            ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-900/20'
-                                                            : 'bg-[#27272a] text-gray-300 rounded-bl-none'}
-                                            `}>
-                                                        {msg.text}
-                                                    </div>
+                                                    <p className={`text-[9px] text-gray-500 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
+                                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
                                                 </div>
                                             </motion.div>
                                         </React.Fragment>
@@ -376,31 +384,26 @@ const ChatPage: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-4">
-                <form
-                    onSubmit={handleSend}
-                    className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-xl p-1 focus-within:border-white/10 transition-colors"
-                >
+            <form onSubmit={handleSend} className="p-4 border-t border-white/5 bg-white/5">
+                <div className="relative flex items-center gap-2">
                     <input
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder={isAzeChat ? "Ask Aze anything..." : "Message..."}
-                        className="flex-1 bg-transparent border-none outline-none text-white px-3 py-2 text-sm placeholder-gray-600"
-                        autoFocus
+                        placeholder="Type a message..."
+                        className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50 focus:bg-black/30 transition-all"
                     />
-
                     <motion.button
-                        type="submit"
-                        disabled={!inputText.trim() || isAzeLoading}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-white transition-colors"
+                        type="submit"
+                        disabled={!inputText.trim() || (isAzeChat && isAzeLoading)}
+                        className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
                     >
-                        <SendIcon className="w-4 h-4" />
+                        <SendIcon className="w-5 h-5" />
                     </motion.button>
-                </form>
-            </div>
+                </div>
+            </form>
         </motion.div>
     );
 };

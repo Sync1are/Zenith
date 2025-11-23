@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SearchIcon, BellIcon } from './icons/IconComponents';
+import { useAppStore } from '../store/useAppStore';
 import { useMessageStore } from '../store/useMessageStore';
-import { motion, AnimatePresence } from 'framer-motion';
-import StudySessionModal from './StudySessionModal';
+// ✅ FIX: Added missing import
+import { AnimatePresence, motion } from "framer-motion";
 
 interface HeaderProps {
   currentPage: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
+  const { setStudySessionOpen } = useAppStore();
   const {
     currentUser,
     users,
@@ -24,11 +26,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [showAzeChat, setShowAzeChat] = useState(false);
-  const [isStudySessionOpen, setIsStudySessionOpen] = useState(false);
   const [customStatusText, setCustomStatusText] = useState(currentUser?.customStatus || "");
   const [statusEmoji, setStatusEmoji] = useState(currentUser?.statusEmoji || "");
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ✅ FIX: Added specific refs for both dropdowns to handle "click outside" properly
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
 
   // Sync local state with currentUser changes
   useEffect(() => {
@@ -38,20 +41,28 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
     }
   }, [currentUser?.customStatus, currentUser?.statusEmoji]);
 
-  // Close dropdown when clicking outside
+  // ✅ FIX: Unified "Click Outside" handler for both menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      // Close Notifications if clicked outside
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
         setShowNotifications(false);
       }
+
+      // Close Status Menu if clicked outside
+      if (statusMenuRef.current && !statusMenuRef.current.contains(target)) {
+        setShowStatusMenu(false);
+      }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const friendRequests = currentUser?.friendRequests || [];
   const notificationEntries = Object.entries(notifications).filter(([_, count]) => count > 0);
-
   const totalNotifications = friendRequests.length + notificationEntries.reduce((acc, [_, c]) => acc + c, 0);
 
   const handleAccept = async (senderId: string) => {
@@ -69,7 +80,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
   };
 
   const handleClearNotifications = async () => {
-    // Mark all messages as read
     for (const [senderId] of notificationEntries) {
       await markAsRead(senderId);
     }
@@ -95,10 +105,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
         </div>
       </div>
 
-
       <div className="flex items-center space-x-6">
         <button
-          onClick={() => setIsStudySessionOpen(true)}
+          onClick={() => setStudySessionOpen(true)}
           className="text-gray-400 hover:text-white transition-colors"
           title="Study Session"
         >
@@ -109,7 +118,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
         <SearchIcon className="h-6 w-6 text-gray-400 hover:text-white cursor-pointer transition-colors" />
 
         {/* NOTIFICATION BELL */}
-        <div className="relative" ref={dropdownRef}>
+        {/* ✅ FIX: Attached notificationRef here */}
+        <div className="relative" ref={notificationRef}>
           <div
             className="relative cursor-pointer"
             onClick={() => setShowNotifications(!showNotifications)}
@@ -233,7 +243,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
         </div>
 
         {currentUser && (
-          <div className="relative">
+          // ✅ FIX: Attached statusMenuRef here so clicking outside closes this menu too
+          <div className="relative" ref={statusMenuRef}>
             <img
               src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`}
               alt="User avatar"
@@ -314,8 +325,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
           </div>
         )}
       </div>
-
-      <StudySessionModal isOpen={isStudySessionOpen} onClose={() => setIsStudySessionOpen(false)} />
     </header>
   );
 };

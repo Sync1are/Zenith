@@ -54,7 +54,7 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
   focusMode: "Pomodoro",
   timerRemaining: DURATIONS["Pomodoro"],
   timerActive: false,
-  environment: "none", // Default environment
+  environment: "fireplace", // Default environment
 
   setTasks: (tasks) => set({ tasks }),
 

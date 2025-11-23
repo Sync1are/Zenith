@@ -86,4 +86,4 @@ const LiveBackground: React.FC = () => {
     );
 };
 
-export default LiveBackground;
+export default React.memo(LiveBackground);
