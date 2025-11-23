@@ -546,7 +546,7 @@ const AnalyticsPage: React.FC = () => {
   // Empty State
   if (completedTasks.length === 0) {
     return (
-      <div className="relative h-full w-full overflow-hidden bg-[#111217] p-8">
+      <div className="relative h-full w-full overflow-hidden p-8">
         <ParticleBackground />
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center glass-panel p-12 rounded-3xl max-w-2xl mx-auto">
           <div className="text-6xl mb-6">📊</div>
@@ -560,7 +560,7 @@ const AnalyticsPage: React.FC = () => {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#111217] p-6 pb-12">
+    <div className="relative min-h-screen w-full overflow-hidden p-6 pb-12">
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.15),transparent_50%)]" />

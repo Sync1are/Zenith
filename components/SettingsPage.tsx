@@ -20,7 +20,7 @@ const Section: React.FC<{ title: string; desc?: string; children: React.ReactNod
   desc,
   children,
 }) => (
-  <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+  <section className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-5 shadow-xl">
     <header className="mb-3">
       <h2 className="text-sm tracking-wide uppercase text-[var(--subtle)]">{title}</h2>
       {desc ? <p className="mt-0.5 text-sm text-[var(--subtle)]">{desc}</p> : null}

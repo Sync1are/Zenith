@@ -4,20 +4,20 @@ import { useAppStore } from '../store/useAppStore';
 import { TaskStatus } from '../types';
 
 const parseDurationToSeconds = (duration: string | undefined): number => {
-    if (!duration) return 0;
-    let totalSeconds = 0;
-    const hourMatch = duration.match(/(\d+)\s*hours?/);
-    const minMatch = duration.match(/(\d+)\s*min/);
-    if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
-    if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
-    if (totalSeconds === 0) {
-        const num = parseInt(duration);
-        if (!isNaN(num)) {
-            if (duration.includes("hour")) return num * 3600;
-            if (duration.includes("min")) return num * 60;
-        }
+  if (!duration) return 0;
+  let totalSeconds = 0;
+  const hourMatch = duration.match(/(\d+)\s*hours?/);
+  const minMatch = duration.match(/(\d+)\s*min/);
+  if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
+  if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
+  if (totalSeconds === 0) {
+    const num = parseInt(duration);
+    if (!isNaN(num)) {
+      if (duration.includes("hour")) return num * 3600;
+      if (duration.includes("min")) return num * 60;
     }
-    return totalSeconds;
+  }
+  return totalSeconds;
 };
 
 const AnalyticsChartCard: React.FC = () => {
@@ -56,8 +56,7 @@ const AnalyticsChartCard: React.FC = () => {
   }, [tasks]);
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 h-full flex flex-col">
-
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 h-full flex flex-col">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-semibold text-[var(--text)]">Weekly Focus Time</h3>
         <div className="text-xs text-[var(--subtle)]">
@@ -70,33 +69,34 @@ const AnalyticsChartCard: React.FC = () => {
           <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
               </linearGradient>
             </defs>
 
             <Tooltip
               formatter={(v) => `${v} min`}
               contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
+                backgroundColor: "rgba(0,0,0,0.8)",
+                border: "1px solid rgba(255,255,255,0.1)",
                 borderRadius: "0.5rem",
+                backdropFilter: "blur(4px)"
               }}
               labelStyle={{ color: "var(--text)" }}
             />
 
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: "var(--subtle)" }} 
-              fontSize={12} 
-              axisLine={false} 
-              tickLine={false} 
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "var(--subtle)" }}
+              fontSize={12}
+              axisLine={false}
+              tickLine={false}
             />
-            <YAxis 
-              tick={{ fill: "var(--subtle)" }} 
-              fontSize={12} 
-              axisLine={false} 
-              tickLine={false} 
+            <YAxis
+              tick={{ fill: "var(--subtle)" }}
+              fontSize={12}
+              axisLine={false}
+              tickLine={false}
             />
 
             <Area

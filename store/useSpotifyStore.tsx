@@ -2,6 +2,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { beginLogin } from "../auth/spotifyAuth";
+
 type SpotifyTokens = {
   accessToken: string | null;
   refreshToken: string | null;
@@ -23,6 +25,8 @@ interface SpotifyState {
   clearSpotifyTokens: () => void;
 
   // Lifecycle
+  connect: () => void;
+  disconnect: () => void;
   ensureSpotifyAccessToken: () => Promise<string | null>;
   acceptOAuthTokens: (data: { access_token: string; refresh_token: string; expires_in: number }) => void;
 
@@ -72,6 +76,14 @@ export const useSpotifyStore = create<SpotifyState>()(
       setSpotifyTokens: (t) => set({ spotify: t }),
 
       clearSpotifyTokens: () => set({ spotify: { accessToken: null, refreshToken: null, expiresAt: null } }),
+
+      connect: () => {
+        beginLogin();
+      },
+
+      disconnect: () => {
+        set({ spotify: { accessToken: null, refreshToken: null, expiresAt: null } });
+      },
 
       acceptOAuthTokens: (data) => {
         const expiresAt = Date.now() + (data.expires_in - 30) * 1000;

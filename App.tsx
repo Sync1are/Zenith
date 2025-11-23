@@ -140,85 +140,85 @@ const App: React.FC = () => {
     );
   }
 
-  // AUTH FLOW
-  if (!currentUser) {
-    if (isSignup) {
-      return <SignUpPage onNavigateToLogin={() => setIsSignup(false)} />;
-    }
-    return (
-      <LoginPage
-        onLoginSuccess={() => setActivePage("Dashboard")}
-        onNavigateToSignup={() => setIsSignup(true)}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col text-white relative">
-
       {/* 🌿 Live Environment Background (Fixed z-0) */}
       <LiveBackground />
 
-      {/* Content Wrapper (z-10) */}
-      <div className="relative z-10 flex flex-col h-full min-h-screen">
-        <TitleBar />
-        <NotificationSystem />
+      {/* Auth Flow */}
+      {!currentUser ? (
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          {isSignup ? (
+            <SignUpPage onNavigateToLogin={() => setIsSignup(false)} />
+          ) : (
+            <LoginPage
+              onLoginSuccess={() => setActivePage("Dashboard")}
+              onNavigateToSignup={() => setIsSignup(true)}
+            />
+          )}
+        </div>
+      ) : (
+        /* Content Wrapper (z-10) */
+        <div className="relative z-10 flex flex-col h-full min-h-screen">
+          <TitleBar />
+          <NotificationSystem />
 
-        {/* TopNavBar */}
-        <TopNavBar
-          activeServer={activeServerId}
-          onSelect={(id) => setActiveServerId(id)}
-        />
-
-        <div className="flex flex-1 overflow-hidden pt-4 relative">
-
-          {/* Sidebar */}
-          <Sidebar
-            activeItem={activePage}
-            onSelect={(page) => {
-              setActivePage(page);
-              setIsMobileDrawerOpen(false);
-            }}
-            isMobileDrawerOpen={isMobileDrawerOpen}
-            setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+          {/* TopNavBar */}
+          <TopNavBar
+            activeServer={activeServerId}
+            onSelect={(id) => setActiveServerId(id)}
           />
 
-          <main className="flex-1 overflow-y-auto w-full">
-            <div className="max-w-full px-6 lg:px-10 py-6 md:pl-24">
-              <Header
-                currentPage={activePage}
-                setSidebarOpen={setIsMobileDrawerOpen}
-              />
+          <div className="flex flex-1 overflow-hidden pt-4 relative">
 
-              {/* 🚀 ANIMATED PAGE TRANSITION START */}
-              {/* 🍃 NATURAL / SUBTLE DRIFT */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activePage}
-                  initial={{ opacity: 0, y: 8 }}   // Starts 8px down, invisible
-                  animate={{ opacity: 1, y: 0 }}   // Floats up to natural position
-                  exit={{ opacity: 0, y: -8 }}     // Floats up and vanishes
-                  transition={{
-                    duration: 0.2,
-                    ease: "easeOut"                // Natural deceleration
-                  }}
-                  className="w-full h-full"
-                >
-                  {renderContent()}
-                </motion.div>
-              </AnimatePresence>
-              {/* 🚀 ANIMATED PAGE TRANSITION END */}
+            {/* Sidebar */}
+            <Sidebar
+              activeItem={activePage}
+              onSelect={(page) => {
+                setActivePage(page);
+                setIsMobileDrawerOpen(false);
+              }}
+              isMobileDrawerOpen={isMobileDrawerOpen}
+              setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+            />
 
-            </div>
-          </main>
+            <main className="flex-1 overflow-y-auto w-full">
+              <div className="max-w-full px-6 lg:px-10 py-6 md:pl-24">
+                <Header
+                  currentPage={activePage}
+                  setSidebarOpen={setIsMobileDrawerOpen}
+                />
 
+                {/* 🚀 ANIMATED PAGE TRANSITION START */}
+                {/* 🍃 NATURAL / SUBTLE DRIFT */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activePage}
+                    initial={{ opacity: 0, y: 8 }}   // Starts 8px down, invisible
+                    animate={{ opacity: 1, y: 0 }}   // Floats up to natural position
+                    exit={{ opacity: 0, y: -8 }}     // Floats up and vanishes
+                    transition={{
+                      duration: 0.2,
+                      ease: "easeOut"                // Natural deceleration
+                    }}
+                    className="w-full h-full"
+                  >
+                    {renderContent()}
+                  </motion.div>
+                </AnimatePresence>
+                {/* 🚀 ANIMATED PAGE TRANSITION END */}
+
+              </div>
+            </main>
+
+          </div>
+
+          {/* Chat overlay */}
+          <AnimatePresence>
+            {activeUserId && <ChatPage />}
+          </AnimatePresence>
         </div>
-
-        {/* Chat overlay */}
-        <AnimatePresence>
-          {activeUserId && <ChatPage />}
-        </AnimatePresence>
-      </div>
+      )}
     </div>
   );
 };

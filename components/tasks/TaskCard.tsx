@@ -74,7 +74,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div
             draggable
             onDragStart={(e) => onDragStart(e, task)}
-            className="bg-[#1C1C1E] border border-gray-800 rounded-lg p-4 group transition hover:-translate-y-1 hover:shadow-lg relative"
+            className="bg-gray-800/40 backdrop-blur-sm border border-gray-700 hover:bg-orange-500/10 hover:border-orange-500/40 rounded-lg p-4 group transition hover:-translate-y-1 hover:shadow-lg relative"
         >
             {/* Controls */}
             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 flex gap-1 transition">
@@ -102,7 +102,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <p className="font-semibold text-white mb-2">{task.title}</p>
 
             {/* Time + Category */}
-            <div className="text-sm text-gray-400 flex justify-between mb-3">
+            <div className="text-sm text-gray-400 group-hover:text-gray-300 flex justify-between mb-3">
                 <span className="flex items-center gap-1">
                     <TagIcon className="w-3 h-3" /> {task.category}
                 </span>
@@ -128,7 +128,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                         <div key={st.id} className="flex items-center justify-between text-gray-400 text-sm">
                             <button onClick={() => onToggleSubtask(task.id, st.id)} className="flex items-center gap-2">
                                 <div className={`w-3 h-3 rounded-full border ${st.isCompleted ? "bg-orange-500" : "border-gray-500"}`} />
-                                <span className={`${st.isCompleted ? "line-through text-gray-600" : "text-gray-300"}`}>{st.title}</span>
+                                <span className={`${st.isCompleted ? "line-through text-white/40" : "text-gray-200 group-hover:text-white"}`}>{st.title}</span>
                             </button>
                             <span className="font-mono text-xs">{st.duration}</span>
                         </div>

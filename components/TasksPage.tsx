@@ -121,7 +121,7 @@ const TasksPage = () => {
                     <div key={status}
                         onDragOver={e => e.preventDefault()}
                         onDrop={() => draggedTask && moveTask(draggedTask, status)}
-                        className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-4 space-y-4 min-h-[200px]"
+                        className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-4 space-y-4 min-h-[200px]"
                     >
                         <h3 className="text-white font-bold">{status}</h3>
 

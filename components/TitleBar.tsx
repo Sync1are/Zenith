@@ -4,11 +4,17 @@ import { X, Square, Minus } from "lucide-react";
 const TitleBar = () => {
   return (
     <div
-      className="fixed top-0 left-0 right-0 h-10 bg-[#111217] flex items-center justify-end px-4 select-none z-50"
-      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      className="fixed top-0 left-0 right-0 h-10 flex items-center justify-end px-4 select-none z-50"
+      style={{
+        WebkitAppRegion: "drag",
+        background: "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
+        backdropFilter: "blur(10px) saturate(1.05)",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 8px 30px rgba(15,12,30,0.5)"
+      } as React.CSSProperties}
     >
       <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-        
+
         {/* Minimize */}
         <button
           onClick={() => window.electronAPI.minimize()}

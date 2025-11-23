@@ -42,7 +42,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin }) => {
 
     if (verificationSent) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#111217] relative overflow-hidden">
+            <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -72,10 +72,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin }) => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#111217] relative overflow-hidden">
-            {/* Background Ambience */}
-            <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px]" />
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}

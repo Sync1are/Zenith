@@ -228,8 +228,7 @@ const MonthlyCalendar: React.FC<{
 
   return (
     <div
-      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 text-[var(--text)] flex-shrink-0"
-      style={{ backdropFilter: 'blur(20px)' }}
+      className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-[var(--text)] flex-shrink-0"
     >
       <div className="flex justify-between items-center mb-6">
         <button
@@ -307,8 +306,7 @@ const UpcomingEvents: React.FC<{
 
   return (
     <div
-      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 text-[var(--text)] flex-1 min-h-0"
-      style={{ backdropFilter: 'blur(20px)' }}
+      className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-[var(--text)] flex-1 min-h-0"
     >
       <h3 className="font-bold text-lg mb-4 text-[var(--text)]">
         Events for {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
@@ -493,8 +491,7 @@ const WeeklyView: React.FC<{
 
   return (
     <div
-      className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 flex flex-col max-h-[100vh] overflow-y-auto"
-      style={{ backdropFilter: 'blur(20px)' }}
+      className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col max-h-[100vh] overflow-y-auto"
     >
       <div className="grid grid-cols-[auto_1fr] flex-shrink-0 mb-4">
         <div className="w-20"></div>
@@ -507,8 +504,9 @@ const WeeklyView: React.FC<{
               <div
                 className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-all"
                 style={{
-                  backgroundColor: isSameDay(day, new Date()) ? 'var(--accent)' : 'var(--bg)',
+                  backgroundColor: isSameDay(day, new Date()) ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)',
                   color: isSameDay(day, new Date()) ? 'white' : 'var(--text)',
+                  border: isSameDay(day, new Date()) ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 {day.getDate()}

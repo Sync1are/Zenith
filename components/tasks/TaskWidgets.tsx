@@ -22,7 +22,7 @@ export const DailyStatsWidget: React.FC = () => {
     const highPriority = tasks.filter(t => t.priority === TaskPriority.HIGH && t.status !== TaskStatus.DONE);
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 📊 Today's Stats
             </h3>
@@ -67,7 +67,7 @@ export const TodaysEvents: React.FC = () => {
 
     if (todaysEvents.length === 0) {
         return (
-            <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">📅 Today's Events</h3>
                 <p className="text-gray-500 text-center py-8">No events scheduled today</p>
             </div>
@@ -75,7 +75,7 @@ export const TodaysEvents: React.FC = () => {
     }
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4">📅 Today's Events</h3>
             <div className="space-y-3 max-h-48 overflow-y-auto">
                 {todaysEvents.map(event => {
@@ -125,7 +125,7 @@ export const QuickTemplates: React.FC = () => {
     };
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4">⚡ Quick Add Templates</h3>
             <div className="grid grid-cols-2 gap-3">
                 {templates.map((template, idx) => (
@@ -178,7 +178,7 @@ export const CategoryBreakdown: React.FC = () => {
     }, [tasks]);
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-800 rounded-xl p-6">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4">📂 Category Breakdown</h3>
             <div className="space-y-4">
                 {categoryStats.map(({ category, total, completed, percentage }) => (

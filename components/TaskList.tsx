@@ -26,7 +26,7 @@ const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({ ta
         : task.isCompleted ? 100 : (task.status === TaskStatus.IN_PROGRESS ? 50 : 0);
 
     return (
-        <div className="grid grid-cols-10 items-center gap-4 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/40 transition-colors">
+        <div className="grid grid-cols-10 items-center gap-4 p-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition-colors">
 
             {/* Toggle + Title */}
             <div className="col-span-4 flex items-center space-x-4">
@@ -89,7 +89,7 @@ const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({ ta
                             <div className="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden relative">
                                 <div
                                     className={`h-2 transition-all duration-[1000ms] ease-linear ${isActive ? 'bg-orange-500' : 'bg-blue-500'}`}
-                                    style={{ 
+                                    style={{
                                         width: `${progress}%`,
                                         boxShadow: isActive ? '0 0 8px rgba(249, 115, 22, 0.6)' : 'none'
                                     }}
@@ -124,12 +124,12 @@ const TaskList: React.FC = () => {
     const handleToggle = (id: number) => {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
-        
-        setTasks(tasks.map(t => 
-            t.id === id 
-                ? { 
-                    ...t, 
-                    isCompleted: !t.isCompleted, 
+
+        setTasks(tasks.map(t =>
+            t.id === id
+                ? {
+                    ...t,
+                    isCompleted: !t.isCompleted,
                     status: !t.isCompleted ? TaskStatus.DONE : TaskStatus.TODO,
                     completedAt: !t.isCompleted ? Date.now() : undefined
                 }
@@ -142,31 +142,31 @@ const TaskList: React.FC = () => {
         // Priority 1: Active task always at the top
         const aIsActive = a.id === activeTaskId;
         const bIsActive = b.id === activeTaskId;
-        
+
         if (aIsActive && !bIsActive) return -1;
         if (!aIsActive && bIsActive) return 1;
-        
+
         // Priority 2: Sort by status (IN_PROGRESS > TODO > DONE)
-        const statusOrder = { 
-            [TaskStatus.IN_PROGRESS]: 0, 
+        const statusOrder = {
+            [TaskStatus.IN_PROGRESS]: 0,
             [TaskStatus.TODO]: 1,
-            [TaskStatus.DONE]: 2 
+            [TaskStatus.DONE]: 2
         };
         const statusDiff = statusOrder[a.status] - statusOrder[b.status];
         if (statusDiff !== 0) return statusDiff;
-        
+
         // Priority 3: For DONE tasks, show newest first
         if (a.status === TaskStatus.DONE && b.status === TaskStatus.DONE) {
             return (b.completedAt || 0) - (a.completedAt || 0);
         }
-        
+
         // Priority 4: Default order (by id, newest first)
         return b.id - a.id;
     });
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-white">📋 Task Completion History</h3>
                 <div className="flex items-center gap-3 text-sm">
                     {activeTaskId && (
@@ -181,7 +181,7 @@ const TaskList: React.FC = () => {
             </div>
 
             {/* Header Row */}
-            <div className="grid grid-cols-10 gap-4 p-4 text-sm font-semibold text-gray-400 border-b border-gray-800/50">
+            <div className="grid grid-cols-10 gap-4 p-4 text-sm font-semibold text-gray-400 border-b border-white/10">
                 <div className="col-span-4">Task</div>
                 <div className="col-span-2">Priority</div>
                 <div className="col-span-2">Est. Duration</div>
