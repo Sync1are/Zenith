@@ -366,21 +366,25 @@ const StudySessionModal: React.FC = () => {
                                             <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
                                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Participants ({participants.size})</h4>
                                                 <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                                    {participantList.map((p) => (
-                                                        <div key={p.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold">
-                                                                    {p.name[0]}
+                                                    {participantList.map((p) => {
+                                                        const user = users.find(u => u.id === p.userId);
+                                                        const name = user?.username || 'Unknown';
+                                                        return (
+                                                            <div key={p.userId} className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold">
+                                                                        {name[0]}
+                                                                    </div>
+                                                                    <span className="text-sm font-medium text-white">{name}</span>
                                                                 </div>
-                                                                <span className="text-sm font-medium text-white">{p.name}</span>
+                                                                {p.isMicOn ? (
+                                                                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                                                                ) : (
+                                                                    <div className="w-2 h-2 rounded-full bg-red-500 opacity-50" />
+                                                                )}
                                                             </div>
-                                                            {p.isMicOn ? (
-                                                                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                                                            ) : (
-                                                                <div className="w-2 h-2 rounded-full bg-red-500 opacity-50" />
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                     {participantList.length === 0 && (
                                                         <p className="text-sm text-gray-500 text-center py-2">Waiting for others...</p>
                                                     )}
