@@ -46,16 +46,16 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-        <div className="flex gap-6 h-full">
+        <div className="flex flex-col lg:flex-row gap-6 h-full">
             {/* Left Column - Smart Home Card */}
-            <div className="flex-shrink-0 w-[28rem] flex flex-col">
+            <div className="flex-shrink-0 w-full lg:w-80 xl:w-96 2xl:w-[28rem] flex flex-col">
                 <SmartHomeCard />
             </div>
 
             {/* Right Column - Dashboard Widgets */}
             <div className="flex-1 space-y-6 overflow-y-auto">
                 {/* Top Row - AI Coach + Analytics Chart (50/50) */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="min-w-0">
                         <AiCoachCard />
                     </div>
@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Stats Grid - 2x2 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                     {stats.map(stat => (
                         <StatCard key={stat.label} {...stat} />
                     ))}

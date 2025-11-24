@@ -341,7 +341,7 @@ const SmartHomeCard: React.FC = () => {
     const weekDays = getWeekDays();
 
     return (
-        <div className="w-full max-w-md mx-auto px-6 pb-6 pt-0">
+        <div className="w-full max-w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-3xl mx-auto px-4 sm:px-6 pb-6 pt-0">
             <style>{`
         .smart-card {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
@@ -386,7 +386,7 @@ const SmartHomeCard: React.FC = () => {
         }
       `}</style>
 
-            <div className="smart-card rounded-3xl p-5 flex flex-col">
+            <div className="smart-card rounded-3xl p-4 sm:p-5 flex flex-col">
                 {/* Header with Greeting */}
                 <div className="flex items-center justify-between mb-3 flex-shrink-0">
                     <div>
@@ -412,7 +412,7 @@ const SmartHomeCard: React.FC = () => {
                 </div>
 
                 {/* Grid of Info Cards */}
-                <div className="grid grid-cols-2 gap-4 flex-shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-shrink-0">
                     {/* Time Card */}
                     <motion.div
                         className="info-box p-4 col-span-2"
@@ -431,7 +431,69 @@ const SmartHomeCard: React.FC = () => {
                                     {formatDate(currentTime)}
                                 </p>
                             </div>
-                            <div className="text-5xl opacity-80">🕐</div>
+                            <div className="relative w-16 h-16 opacity-80">
+                                <svg viewBox="0 0 100 100" className="w-full h-full">
+                                    {/* Clock face */}
+                                    <circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+
+                                    {/* Hour markers */}
+                                    {[...Array(12)].map((_, i) => {
+                                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                                        const x1 = 50 + 38 * Math.cos(angle);
+                                        const y1 = 50 + 38 * Math.sin(angle);
+                                        const x2 = 50 + 42 * Math.cos(angle);
+                                        const y2 = 50 + 42 * Math.sin(angle);
+                                        return (
+                                            <line
+                                                key={i}
+                                                x1={x1}
+                                                y1={y1}
+                                                x2={x2}
+                                                y2={y2}
+                                                stroke="rgba(255,255,255,0.5)"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                            />
+                                        );
+                                    })}
+
+                                    {/* Hour hand */}
+                                    <line
+                                        x1="50"
+                                        y1="50"
+                                        x2={50 + 25 * Math.sin((currentTime.getHours() % 12 + currentTime.getMinutes() / 60) * 30 * (Math.PI / 180))}
+                                        y2={50 - 25 * Math.cos((currentTime.getHours() % 12 + currentTime.getMinutes() / 60) * 30 * (Math.PI / 180))}
+                                        stroke="rgba(255,255,255,0.9)"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                    />
+
+                                    {/* Minute hand */}
+                                    <line
+                                        x1="50"
+                                        y1="50"
+                                        x2={50 + 35 * Math.sin((currentTime.getMinutes() + currentTime.getSeconds() / 60) * 6 * (Math.PI / 180))}
+                                        y2={50 - 35 * Math.cos((currentTime.getMinutes() + currentTime.getSeconds() / 60) * 6 * (Math.PI / 180))}
+                                        stroke="rgba(255,255,255,0.9)"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                    />
+
+                                    {/* Second hand */}
+                                    <line
+                                        x1="50"
+                                        y1="50"
+                                        x2={50 + 38 * Math.sin(currentTime.getSeconds() * 6 * (Math.PI / 180))}
+                                        y2={50 - 38 * Math.cos(currentTime.getSeconds() * 6 * (Math.PI / 180))}
+                                        stroke="rgba(249, 115, 22, 0.8)"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                    />
+
+                                    {/* Center dot */}
+                                    <circle cx="50" cy="50" r="3" fill="rgba(255,255,255,0.9)" />
+                                </svg>
+                            </div>
                         </div>
                     </motion.div>
 
