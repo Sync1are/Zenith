@@ -13,11 +13,7 @@ const AiCoachCard: React.FC = () => {
     return (
         <div className="relative p-8 rounded-3xl overflow-hidden bg-white/5 backdrop-blur-md border border-white/10 h-full flex flex-col justify-between min-h-[300px]">
             <div className="absolute inset-0">
-                <img
-                    src="https://images.unsplash.com/photo-1532309488615-5234533fee89?q=80&w=2070&auto=format&fit=crop"
-                    className="w-full h-full object-cover opacity-20"
-                    alt=""
-                />
+
             </div>
 
             <div className="relative z-10">

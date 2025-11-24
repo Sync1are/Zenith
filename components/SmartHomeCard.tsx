@@ -388,19 +388,19 @@ const SmartHomeCard: React.FC = () => {
 
             <div className="smart-card rounded-3xl p-5 flex flex-col">
                 {/* Header with Greeting */}
-                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <div className="flex items-center justify-between mb-3 flex-shrink-0">
                     <div>
-                        <h2 className="text-2xl font-bold text-white">Hi {currentUser?.username || "User"}</h2>
+                        <h2 className="text-xl font-bold text-white">Hi {currentUser?.username || "User"}</h2>
                         <p className="text-sm text-white/50">Welcome Home</p>
                     </div>
                     {currentUser?.avatar ? (
                         <img
                             src={currentUser.avatar}
                             alt={currentUser.username}
-                            className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20"
+                            className="w-9 h-9 rounded-full object-cover ring-2 ring-white/20"
                         />
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
                             {currentUser?.username?.[0]?.toUpperCase() || "U"}
                         </div>
                     )}

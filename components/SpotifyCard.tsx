@@ -213,7 +213,7 @@ const SpotifyCard: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl glass-panel p-4 mt-6 transition-all">
+    <div className="relative overflow-hidden rounded-3xl glass-panel p-3 mt-4 transition-all">
       <style>{`
         .glass-panel {
           background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
@@ -263,9 +263,9 @@ const SpotifyCard: React.FC = () => {
 
 // --- UI Subcomponents ---
 const ConnectView = () => (
-  <div className="flex items-center justify-between h-full gap-4">
-    <div className="flex items-center gap-4">
-      <SpotifyLogo className="w-12 h-12 text-white/80 flex-shrink-0" />
+  <div className="flex items-center justify-between h-full gap-3">
+    <div className="flex items-center gap-3">
+      <SpotifyLogo className="w-10 h-10 text-white/80 flex-shrink-0" />
       <div>
         <h2 className="font-semibold text-base">Connect Spotify</h2>
         <p className="text-xs text-white/60">Control your music from here.</p>
@@ -281,8 +281,8 @@ const ConnectView = () => (
 );
 
 const EmptyView = () => (
-  <div className="flex items-center justify-center h-full text-center text-white/70 gap-4 py-8">
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <div className="flex items-center justify-center h-full text-center text-white/70 gap-3 py-6">
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
     </svg>
     <div>
@@ -293,10 +293,10 @@ const EmptyView = () => (
 );
 
 const PlayerView = ({ track, progress, formatTime, handlePrev, handleToggle, handleNext, loadPlaylists }) => (
-  <div className="flex flex-row items-center h-full gap-4">
+  <div className="flex flex-row items-center h-full gap-3">
     <motion.img
       src={track?.album?.images?.[1]?.url || "/placeholder.png"}
-      className="relative w-24 h-24 rounded-lg shadow-lg object-cover flex-shrink-0"
+      className="relative w-20 h-20 rounded-lg shadow-lg object-cover flex-shrink-0"
       alt={track.album?.name}
     />
     <div className="flex flex-col flex-1 h-full justify-between min-w-0 self-stretch py-1">
