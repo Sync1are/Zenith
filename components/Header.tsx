@@ -98,10 +98,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setSidebarOpen }) => {
           </svg>
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-white">{currentPage}</h1>
-          <p className="text-gray-400">
-            {currentPage === 'Dashboard' ? "Welcome back, let's be productive." : `Manage your ${currentPage.toLowerCase()}.`}
-          </p>
+
+
         </div>
       </div>
 

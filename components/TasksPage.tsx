@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Task, TaskStatus } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import {
@@ -26,13 +26,23 @@ const TasksPage = () => {
         pauseTask,
         updateTask,
         deleteTask,
-        addTask
+        addTask,
+        shouldOpenAiTaskModal,
+        triggerAiTaskModal
     } = useAppStore();
 
     const [draggedTask, setDraggedTask] = useState<Task | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [aiModalOpen, setAiModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | undefined>();
+
+    // Check if AI modal should be opened from external trigger
+    useEffect(() => {
+        if (shouldOpenAiTaskModal) {
+            setAiModalOpen(true);
+            triggerAiTaskModal(false); // Reset the trigger
+        }
+    }, [shouldOpenAiTaskModal, triggerAiTaskModal]);
 
     const handleToggleSubtask = (taskId: number, subtaskId: number) => {
         updateTask(taskId, {

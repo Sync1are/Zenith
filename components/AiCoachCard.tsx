@@ -1,28 +1,36 @@
 import React from 'react';
+import { useAppStore } from '../store/useAppStore';
 
 const AiCoachCard: React.FC = () => {
+    const setActivePage = useAppStore(state => state.setActivePage);
+    const triggerAiTaskModal = useAppStore(state => state.triggerAiTaskModal);
+
+    const handleBreakdown = () => {
+        setActivePage('Tasks');
+        triggerAiTaskModal(true);
+    };
+
     return (
         <div className="relative p-8 rounded-3xl overflow-hidden bg-white/5 backdrop-blur-md border border-white/10 h-full flex flex-col justify-between min-h-[300px]">
             <div className="absolute inset-0">
                 <img
                     src="https://images.unsplash.com/photo-1532309488615-5234533fee89?q=80&w=2070&auto=format&fit=crop"
                     className="w-full h-full object-cover opacity-20"
-                    alt="background"
+                    alt=""
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent"></div>
             </div>
 
             <div className="relative z-10">
-                <p className="font-semibold text-[var(--accent)]">AI Accountability Coach</p>
-                <h2 className="text-4xl font-bold text-[var(--text)] mt-2">Optimize Your Day</h2>
-                <p className="mt-2 max-w-md text-[var(--subtle)]">
+                <p className="font-semibold text-blue-200 drop-shadow-sm">AI Accountability Coach</p>
+                <h2 className="text-4xl font-bold text-white mt-2 drop-shadow-md">Optimize Your Day</h2>
+                <p className="mt-2 max-w-md text-white/90 drop-shadow-sm font-medium">
                     Your schedule seems packed. Let's break down 'Project Phoenix' into smaller, manageable tasks.
                 </p>
             </div>
 
             <div className="relative z-10 mt-6">
                 <button
-                    onClick={() => alert('AI task breakdown is not yet implemented.')}
+                    onClick={handleBreakdown}
                     className="
                         px-6 py-2
                         font-semibold

@@ -10,8 +10,8 @@ const StatCard: React.FC<Stat> = ({ label, value, iconBgColor }) => {
                 <CheckIcon className="h-4 w-4 text-white" />
             </div>
             <div>
-                <p className="text-gray-400 text-sm">{label}</p>
-                <p className="text-2xl font-bold text-white">{value}</p>
+                <p className="text-white/90 text-sm drop-shadow-md">{label}</p>
+                <p className="text-2xl font-bold text-white drop-shadow-md">{value}</p>
             </div>
         </div>
     );

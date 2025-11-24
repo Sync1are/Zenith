@@ -181,7 +181,7 @@ const TaskList: React.FC = () => {
             </div>
 
             {/* Header Row */}
-            <div className="grid grid-cols-10 gap-4 p-4 text-sm font-semibold text-gray-400 border-b border-white/10">
+            <div className="grid grid-cols-10 gap-4 p-4 text-sm font-semibold text-white/90 drop-shadow-md border-b border-white/10">
                 <div className="col-span-4">Task</div>
                 <div className="col-span-2">Priority</div>
                 <div className="col-span-2">Est. Duration</div>

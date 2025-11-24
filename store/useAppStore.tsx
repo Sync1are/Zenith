@@ -120,6 +120,10 @@ interface AppState {
   activePage: string;
   setActivePage: (page: string) => void;
 
+  // AI Task Modal trigger (for cross-component communication)
+  shouldOpenAiTaskModal: boolean;
+  triggerAiTaskModal: (open: boolean) => void;
+
   // Study Session
   studySession: {
     isOpen: boolean;
@@ -155,6 +159,10 @@ export const useAppStore = create<AppState>()(
       // Navigation
       activePage: "Dashboard",
       setActivePage: (page) => set({ activePage: page }),
+
+      // AI Task Modal trigger
+      shouldOpenAiTaskModal: false,
+      triggerAiTaskModal: (open) => set({ shouldOpenAiTaskModal: open }),
 
       // Study Session
       studySession: { isOpen: false, mode: 'menu', code: null },

@@ -23,20 +23,28 @@ import { useAppStore } from "./store/useAppStore";
 import { useSettingsStore } from "./store/useSettingsStore";
 import { useSpotifyStore } from "./store/useSpotifyStore";
 import { useMessageStore } from "./store/useMessageStore";
+import { useCalendarStore } from "./store/useCalendarStore";
+import { useFocusStore } from "./store/useFocusStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
+import { useFirebaseSync } from "./utils/firebaseSync";
 
 // Animations
 import { AnimatePresence, motion } from "framer-motion";
 
 import LiveBackground from "./components/LiveBackground";
 import StudySessionModal from './components/StudySessionModal';
+import MigrationLoadingScreen from './components/MigrationLoadingScreen';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './config/firebase';
+import { useMigrationStore } from './store/useMigrationStore';
 
 const App: React.FC = () => {
   // 🌙 Navigation
   const activePage = useAppStore((s) => s.activePage);
   const setActivePage = useAppStore((s) => s.setActivePage);
+
+  // 🌙 Migration state
+  const isMigrating = useMigrationStore((s) => s.isMigrating);
 
   // Study Session State
   const { studySession, setStudySessionOpen, handleIncomingCall } = useAppStore();
@@ -64,6 +72,35 @@ const App: React.FC = () => {
     settings.applyThemeToDom();
     return () => stop();
   }, []);
+
+  // 🔥 Firebase Store Sync (only when user is logged in)
+  useFirebaseSync({
+    collectionName: 'app-state',
+    store: useAppStore,
+    selector: (state) => ({
+      tasks: state.tasks,
+      sessionHistory: state.sessionHistory,
+      focusMode: state.focusMode,
+      timerRemaining: state.timerRemaining,
+      activePage: state.activePage,
+      spotify: state.spotify,
+    }),
+  });
+
+  useFirebaseSync({
+    collectionName: 'calendar-state',
+    store: useCalendarStore,
+  });
+
+  useFirebaseSync({
+    collectionName: 'settings-state',
+    store: useSettingsStore,
+  });
+
+  useFirebaseSync({
+    collectionName: 'focus-state',
+    store: useFocusStore,
+  });
 
   // Initialize Auth
   useEffect(() => {
@@ -185,6 +222,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col text-white relative">
+      {/* 🔄 Migration Loading Screen */}
+      <MigrationLoadingScreen isVisible={isMigrating} />
+
       {/* 🌿 Live Environment Background (Fixed z-0) */}
       <LiveBackground />
 
