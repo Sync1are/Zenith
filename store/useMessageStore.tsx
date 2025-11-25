@@ -217,24 +217,11 @@ export const useMessageStore = create<MessageState>()(
                                 // Store the unsubscribe function
                                 (window as any).__userDocUnsub = userDocUnsub;
 
-                                // Set up beforeunload as backup (though not reliable)
-                                const handleVisibilityChange = async () => {
-                                    if (document.visibilityState === 'hidden') {
-                                        await setDoc(
-                                            userStatusDatabaseRef,
-                                            { status: "offline", lastActive: Date.now() },
-                                            { merge: true }
-                                        );
-                                    } else if (document.visibilityState === 'visible') {
-                                        await setDoc(
-                                            userStatusDatabaseRef,
-                                            { status: "online", lastActive: Date.now() },
-                                            { merge: true }
-                                        );
-                                    }
-                                };
-
-                                document.addEventListener('visibilitychange', handleVisibilityChange);
+                                // Note: Removed visibilitychange listener to prevent setting offline on minimize
+                                // Status will only update to offline on:
+                                // 1. Actual app close (via onDisconnect in Firebase Realtime Database)
+                                // 2. Manual status change by user
+                                // 3. Network disconnection (via onDisconnect)
                             }
                         } else {
                             set({ currentUser: null, isLoading: false });
