@@ -334,7 +334,7 @@ const AddFriendModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ is
   const [searchQuery, setSearchQuery] = useState('');
   const [searchedUser, setSearchedUser] = useState<any | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const { users, currentUser, addFriend } = useMessageStore();
+  const { users, currentUser, sendFriendRequest } = useMessageStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -363,14 +363,19 @@ const AddFriendModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ is
     }
   };
 
-  const handleAddFriend = () => {
+  const handleAddFriend = async () => {
     if (searchedUser && currentUser) {
-      addFriend(searchedUser.id);
-      setTimeout(() => {
-        onClose();
-        setSearchQuery('');
-        setSearchedUser(null);
-      }, 500);
+      try {
+        await sendFriendRequest(searchedUser.username);
+        setTimeout(() => {
+          onClose();
+          setSearchQuery('');
+          setSearchedUser(null);
+        }, 500);
+      } catch (error: any) {
+        console.error('Failed to send friend request:', error);
+        alert(error.message || 'Failed to send friend request');
+      }
     }
   };
 
