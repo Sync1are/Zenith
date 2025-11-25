@@ -102,6 +102,12 @@ const App: React.FC = () => {
   useFirebaseSync({
     collectionName: 'focus-state',
     store: useFocusStore,
+    selector: (state) => ({
+      environment: state.environment,
+      tasks: state.tasks,
+      focusMode: state.focusMode,
+      // Don't sync functions or runtime state
+    }),
   });
 
   // Initialize Auth

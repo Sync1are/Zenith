@@ -72,6 +72,7 @@ export interface Persona {
   role: string;
   avatarUrl: string;
   status: Status | string;
+  customStatus?: { emoji: string; text: string };
 }
 
 export interface DesignConceptProps {

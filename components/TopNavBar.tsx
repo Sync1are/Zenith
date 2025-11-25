@@ -134,6 +134,10 @@ const ConceptDeck: React.FC<{
                           <span className="animate-pulse text-purple-400 flex items-center gap-1">
                             <span className="w-1 h-1 bg-purple-400 rounded-full" /> Thinking...
                           </span>
+                        ) : persona.customStatus ? (
+                          <span className="flex items-center gap-1">
+                            {persona.customStatus.emoji} {persona.customStatus.text}
+                          </span>
                         ) : persona.role}
                       </span>
                     </div>
@@ -274,7 +278,11 @@ const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void
           name: f.username,
           role: "Friend",
           avatarUrl: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.username}`,
-          status: f.status === 'online' ? Status.ONLINE : Status.OFFLINE
+          status: f.status === 'online' ? Status.ONLINE : Status.OFFLINE,
+          customStatus: f.statusEmoji && f.customStatus ? {
+            emoji: f.statusEmoji,
+            text: f.customStatus
+          } : undefined
         });
       });
     }

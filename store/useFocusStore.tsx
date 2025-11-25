@@ -1,5 +1,6 @@
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type Priority = "HIGH" | "MEDIUM" | "LOW";
 export type TaskStatus = "IDLE" | "RUNNING" | "DONE";
@@ -48,57 +49,72 @@ const DURATIONS: Record<FocusMode, number> = {
   "Long Break": 15 * 60,
 };
 
-export const useFocusStore = create<FocusStore>((set, get) => ({
-  tasks: [],
-  activeTaskId: null,
-  focusMode: "Pomodoro",
-  timerRemaining: DURATIONS["Pomodoro"],
-  timerActive: false,
-  environment: "fireplace", // Default environment
-
-  setTasks: (tasks) => set({ tasks }),
-
-  addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
-
-  startTask: (taskId) => {
-    set((state) => ({
-      activeTaskId: taskId,
-      timerRemaining: DURATIONS[state.focusMode],
-      timerActive: true,
-      tasks: state.tasks.map(t =>
-        t.id === taskId ? { ...t, status: "RUNNING" } : t.status === "RUNNING" ? { ...t, status: "IDLE" } : t
-      ),
-    }));
-  },
-
-  pauseTask: () => {
-    set((state) => ({
-      timerActive: false,
-      tasks: state.tasks.map(t =>
-        t.status === "RUNNING" ? { ...t, status: "IDLE" } : t
-      ),
+export const useFocusStore = create<FocusStore>()(
+  persist(
+    (set, get) => ({
+      tasks: [],
       activeTaskId: null,
-    }));
-  },
+      focusMode: "Pomodoro",
+      timerRemaining: DURATIONS["Pomodoro"],
+      timerActive: false,
+      environment: "fireplace", // Default environment
 
-  completeTask: (taskId) => set((state) => ({
-    tasks: state.tasks.map(t => t.id === taskId ? { ...t, status: "DONE" } : t),
-    activeTaskId: null,
-    timerActive: false,
-  })),
+      setTasks: (tasks) => set({ tasks }),
 
-  setFocusMode: (mode) => {
-    set({ focusMode: mode, timerRemaining: DURATIONS[mode], timerActive: false });
-  },
+      addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
 
-  setTimerRemaining: (seconds) => set({ timerRemaining: seconds }),
+      startTask: (taskId) => {
+        set((state) => ({
+          activeTaskId: taskId,
+          timerRemaining: DURATIONS[state.focusMode],
+          timerActive: true,
+          tasks: state.tasks.map(t =>
+            t.id === taskId ? { ...t, status: "RUNNING" } : t.status === "RUNNING" ? { ...t, status: "IDLE" } : t
+          ),
+        }));
+      },
 
-  toggleTimerActive: () => set((state) => ({ timerActive: !state.timerActive })),
+      pauseTask: () => {
+        set((state) => ({
+          timerActive: false,
+          tasks: state.tasks.map(t =>
+            t.status === "RUNNING" ? { ...t, status: "IDLE" } : t
+          ),
+          activeTaskId: null,
+        }));
+      },
 
-  resetTimer: () => {
-    const mode = get().focusMode;
-    set({ timerRemaining: DURATIONS[mode], timerActive: false });
-  },
+      completeTask: (taskId) => set((state) => ({
+        tasks: state.tasks.map(t => t.id === taskId ? { ...t, status: "DONE" } : t),
+        activeTaskId: null,
+        timerActive: false,
+      })),
 
-  setEnvironment: (env) => set({ environment: env }),
-}));
+      setFocusMode: (mode) => {
+        set({ focusMode: mode, timerRemaining: DURATIONS[mode], timerActive: false });
+      },
+
+      setTimerRemaining: (seconds) => set({ timerRemaining: seconds }),
+
+      toggleTimerActive: () => set((state) => ({ timerActive: !state.timerActive })),
+
+      resetTimer: () => {
+        const mode = get().focusMode;
+        set({ timerRemaining: DURATIONS[mode], timerActive: false });
+      },
+
+      setEnvironment: (env) => set({ environment: env }),
+    }),
+    {
+      name: "zenith-focus-storage",
+      partialize: (state) => ({
+        // Persist environment selection
+        environment: state.environment,
+        // Also persist focus mode and tasks if you want
+        focusMode: state.focusMode,
+        tasks: state.tasks,
+      }),
+    }
+  )
+);
+
