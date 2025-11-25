@@ -23,6 +23,9 @@ type SettingsState = {
   // Notifications
   desktopNotifications: boolean;
   taskCompletedAlerts: boolean;
+
+  // Audio
+  clickSoundEnabled: boolean;
 };
 
 type SettingsActions = {
@@ -44,6 +47,9 @@ type SettingsActions = {
   // Notifications
   setDesktopNotifications: (v: boolean) => void;
   setTaskCompletedAlerts: (v: boolean) => void;
+
+  // Audio
+  setClickSoundEnabled: (v: boolean) => void;
 
   // Theme Helpers
   applyThemeToDom: (t?: ThemeKey) => void;
@@ -71,6 +77,8 @@ const initial: SettingsState = {
 
   desktopNotifications: true,
   taskCompletedAlerts: true,
+
+  clickSoundEnabled: false,
 };
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
@@ -115,6 +123,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       setTaskCompletedAlerts: (v) => set({ taskCompletedAlerts: v }),
 
       // ──────────────────────────────
+      // Audio
+      // ──────────────────────────────
+      setClickSoundEnabled: (v) => set({ clickSoundEnabled: v }),
+
+      // ──────────────────────────────
       // Theme Engine (Core)
       // ──────────────────────────────
       applyThemeToDom: (t) => {
@@ -150,7 +163,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
 
       // SYSTEM THEME LIVE UPDATES
       startSystemThemeSync: () => {
-        if (typeof window === 'undefined') return () => {};
+        if (typeof window === 'undefined') return () => { };
         const mql = window.matchMedia('(prefers-color-scheme: dark)');
 
         const handler = () => {
@@ -158,7 +171,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
         };
 
         mql.addEventListener?.('change', handler);
-        
+
         return () => mql.removeEventListener?.('change', handler);
       },
 
@@ -188,6 +201,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
         breakReminders: s.breakReminders,
         desktopNotifications: s.desktopNotifications,
         taskCompletedAlerts: s.taskCompletedAlerts,
+        clickSoundEnabled: s.clickSoundEnabled,
       }),
       version: 2,
       migrate: (persisted, version) => {

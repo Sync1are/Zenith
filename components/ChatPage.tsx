@@ -20,7 +20,7 @@ const SendIcon = ({ className }: { className?: string }) => (
 
 const ChatPage: React.FC = () => {
     const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser, subscribeToMessages } = useMessageStore();
-    const { tasks, startStudySession } = useAppStore();
+    const { tasks, startPersonalCall } = useAppStore();
     const [inputText, setInputText] = useState("");
     const [azeMessages, setAzeMessages] = useState<ChatMessage[]>([]);
     const [isAzeLoading, setIsAzeLoading] = useState(false);
@@ -86,7 +86,7 @@ const ChatPage: React.FC = () => {
             setIsAzeLoading(true);
 
             try {
-                const response = await getChatResponse(inputText, azeMessages, { tasks });
+                const response = await getChatResponse(inputText, azeMessages);
                 const aiMessage: ChatMessage = {
                     id: Date.now() + 1,
                     role: 'assistant',
@@ -114,16 +114,19 @@ const ChatPage: React.FC = () => {
 
     const handleCall = async () => {
         if (!activeUserId || !currentUser) return;
-        const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        startStudySession(newCode);
 
-        // Send invite message (for history/fallback)
-        sendMessage(activeUserId, "📞 Incoming Call...", 'call_invite', { sessionCode: newCode });
+        // Start personal call (not a study session)
+        startPersonalCall(activeUserId);
+        const { personalCall } = useAppStore.getState();
+        const callId = personalCall.callId;
+
+        // Send invite message (for history)
+        sendMessage(activeUserId, "📞 Ringing...", 'personal_call_invite', { callId });
 
         // Trigger "Ring" on receiver's end
         try {
-            await setDoc(doc(db, "users", activeUserId, "incoming_call", "active"), {
-                sessionCode: newCode,
+            await setDoc(doc(db, "users", activeUserId, "incoming_personal_call", "active"), {
+                callId,
                 callerId: currentUser.id,
                 timestamp: Date.now()
             });
@@ -349,13 +352,13 @@ const ChatPage: React.FC = () => {
                                                             : 'bg-white/10 text-gray-100 border border-white/10 rounded-bl-none'
                                                             }`}
                                                     >
-                                                        {msg.type === 'call_invite' ? (
+                                                        {msg.type === 'call_invite' || msg.type === 'personal_call_invite' ? (
                                                             <div className="flex items-center gap-3">
                                                                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
                                                                     📞
                                                                 </div>
                                                                 <div>
-                                                                    <div className="font-bold">Incoming Call...</div>
+                                                                    <div className="font-bold">Ringing...</div>
                                                                     <div className="text-xs opacity-80">Click to join</div>
                                                                 </div>
                                                                 <button

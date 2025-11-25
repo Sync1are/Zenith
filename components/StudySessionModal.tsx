@@ -231,51 +231,97 @@ const StudySessionModal: React.FC = () => {
                             {mode === 'menu' && (
                                 <motion.div
                                     key="menu"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="space-y-4 p-6"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="p-8 space-y-6"
                                 >
+                                    {/* Minimalist Header */}
+                                    <div className="text-center space-y-3 mb-8">
+                                        <div className="relative inline-block">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 blur-2xl opacity-20 animate-pulse" />
+                                            <h2 className="relative text-3xl font-bold text-white tracking-tight">
+                                                Study Session
+                                            </h2>
+                                        </div>
+                                        <p className="text-sm text-gray-400 font-light">Create or join a collaborative workspace</p>
+                                    </div>
+
+                                    {/* Create Session - Minimalist Card */}
                                     <button
                                         onClick={handleCreateSession}
-                                        className="w-full group relative overflow-hidden rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        className="w-full group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-600 opacity-100" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                        <div className="relative p-6 flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                                🚀
+                                        {/* Animated gradient background */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 opacity-100 group-hover:opacity-90 transition-opacity" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+                                        {/* Subtle animated orb */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+
+                                        <div className="relative p-6 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {/* Icon */}
+                                                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                    </svg>
+                                                </div>
+
+                                                {/* Text */}
+                                                <div className="text-left">
+                                                    <div className="text-lg font-semibold text-white mb-0.5">Create New Session</div>
+                                                    <div className="text-xs text-white/70 font-light">Start a new study room</div>
+                                                </div>
                                             </div>
-                                            <div className="text-left flex-1">
-                                                <div className="text-xs font-bold text-indigo-100 uppercase tracking-[0.15em] mb-1 opacity-90">Start New</div>
-                                                <div className="text-xl font-bold text-white tracking-tight">Create Session</div>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transform translate-x-3 group-hover:translate-x-0 transition-all duration-300">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+
+                                            {/* Arrow */}
+                                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </div>
                                         </div>
                                     </button>
 
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Join with Code</h3>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={joinCodeInput}
-                                                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                                                placeholder="CODE"
-                                                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-center font-mono font-bold text-white focus:outline-none focus:border-indigo-500"
-                                                maxLength={6}
-                                            />
-                                            <button
-                                                onClick={handleJoinSession}
-                                                disabled={joinCodeInput.length < 6}
-                                                className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 rounded-xl text-white font-bold transition-all"
-                                            >
-                                                JOIN
-                                            </button>
+                                    {/* Divider */}
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t border-white/10" />
+                                        </div>
+                                        <div className="relative flex justify-center">
+                                            <span className="bg-[#1a1a1a] px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">Or</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Join Session - Minimal Glass Card */}
+                                    <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-sm p-6">
+                                        {/* Subtle glow */}
+                                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl" />
+
+                                        <div className="relative space-y-4">
+                                            <div>
+                                                <h3 className="text-base font-semibold text-white mb-1">Join Session</h3>
+                                                <p className="text-xs text-gray-400 font-light">Enter a 6-character code</p>
+                                            </div>
+
+                                            <div className="flex gap-3">
+                                                <input
+                                                    type="text"
+                                                    value={joinCodeInput}
+                                                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                                                    placeholder="••••••"
+                                                    className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-center font-mono text-lg font-medium text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all"
+                                                    maxLength={6}
+                                                />
+                                                <button
+                                                    onClick={handleJoinSession}
+                                                    disabled={joinCodeInput.length < 6}
+                                                    className="px-6 py-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-gray-700/50 disabled:to-gray-800/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-white text-sm font-semibold transition-all shadow-lg hover:shadow-orange-500/20 hover:scale-105 active:scale-95"
+                                                >
+                                                    Join
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>

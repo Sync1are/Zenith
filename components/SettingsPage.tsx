@@ -220,6 +220,8 @@ const SettingsPage: React.FC = () => {
     setDesktopNotifications,
     taskCompletedAlerts,
     setTaskCompletedAlerts,
+    clickSoundEnabled,
+    setClickSoundEnabled,
     resetSettings,
   } = useSettingsStore();
 
@@ -295,6 +297,11 @@ const SettingsPage: React.FC = () => {
         <Row>
           <Label hint="Enable motion for transitions and UI feedback">Animations</Label>
           <Toggle enabled={animations} onChange={setAnimations} rightHint={animations ? "On" : "Off"} />
+        </Row>
+
+        <Row>
+          <Label hint="Play a soft click sound on every mouse click">Click Sound</Label>
+          <Toggle enabled={clickSoundEnabled} onChange={setClickSoundEnabled} rightHint={clickSoundEnabled ? "On" : "Off"} />
         </Row>
       </Section>
 

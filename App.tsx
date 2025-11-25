@@ -27,12 +27,14 @@ import { useCalendarStore } from "./store/useCalendarStore";
 import { useFocusStore } from "./store/useFocusStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { useFirebaseSync } from "./utils/firebaseSync";
+import { playClickSound } from "./utils/clickSound";
 
 // Animations
 import { AnimatePresence, motion } from "framer-motion";
 
 import LiveBackground from "./components/LiveBackground";
 import StudySessionModal from './components/StudySessionModal';
+import PersonalCallModal from './components/PersonalCallModal';
 import MigrationLoadingScreen from './components/MigrationLoadingScreen';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './config/firebase';
@@ -48,8 +50,8 @@ const App: React.FC = () => {
   // 🌙 Migration state
   const isMigrating = useMigrationStore((s) => s.isMigrating);
 
-  // Study Session State
-  const { studySession, setStudySessionOpen, handleIncomingCall } = useAppStore();
+  // Study Session & Personal Call State
+  const { studySession, setStudySessionOpen, handleIncomingCall, personalCall, handleIncomingPersonalCall } = useAppStore();
 
   const [isSignup, setIsSignup] = useState(false);
 
@@ -67,6 +69,9 @@ const App: React.FC = () => {
   // 🌙 TopNav Server Tabs
   const [activeServerId, setActiveServerId] = useState("home");
 
+  // 🎵 Click Sound Setting
+  const clickSoundEnabled = useSettingsStore((s) => s.clickSoundEnabled);
+
   // Theme Sync
   useEffect(() => {
     const settings = useSettingsStore.getState();
@@ -74,6 +79,22 @@ const App: React.FC = () => {
     settings.applyThemeToDom();
     return () => stop();
   }, []);
+
+  // 🎵 Global Click Sound Listener
+  useEffect(() => {
+    if (!clickSoundEnabled) return;
+
+    const handleClick = () => {
+      playClickSound();
+    };
+
+    // Add global click listener
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+    };
+  }, [clickSoundEnabled]);
 
   // 🔥 Firebase Store Sync (only when user is logged in)
   useFirebaseSync({
@@ -188,6 +209,23 @@ const App: React.FC = () => {
 
     return () => unsub();
   }, [currentUser, studySession.isOpen]);
+
+  // 5. Listen for incoming personal calls (Global)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const callRef = doc(db, "users", currentUser.id, "incoming_personal_call", "active");
+    const unsub = onSnapshot(callRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && data.callId && !personalCall.isActive) {
+          handleIncomingPersonalCall(data.callerId, data.callId);
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [currentUser, personalCall.isActive]);
 
   // Tick timer
   useEffect(() => {
@@ -359,6 +397,9 @@ const App: React.FC = () => {
 
           {/* Study Session Modal (Global) */}
           <StudySessionModal />
+
+          {/* Personal Call Modal (Global) */}
+          <PersonalCallModal />
         </div>
       )}
     </div>

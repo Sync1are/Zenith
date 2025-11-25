@@ -137,6 +137,18 @@ interface AppState {
   handleIncomingCall: (code: string, callerId: string) => void;
   rejectCall: () => void;
 
+  // Personal Call (1-on-1)
+  personalCall: {
+    isActive: boolean;
+    mode: 'idle' | 'outgoing' | 'incoming' | 'connected';
+    callId: string | null;
+    otherUserId: string | null;
+  };
+  startPersonalCall: (receiverId: string) => void;
+  acceptPersonalCall: () => void;
+  endPersonalCall: () => void;
+  handleIncomingPersonalCall: (callerId: string, callId: string) => void;
+
   // Ticker
   tick: () => void;
 }
@@ -180,6 +192,24 @@ export const useAppStore = create<AppState>()(
       })),
       rejectCall: () => set((state) => ({
         studySession: { isOpen: false, mode: 'menu', code: null, callerId: undefined }
+      })),
+
+      // Personal Call (1-on-1)
+      personalCall: { isActive: false, mode: 'idle', callId: null, otherUserId: null },
+      startPersonalCall: (receiverId) => {
+        const callId = `call-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        set((state) => ({
+          personalCall: { isActive: true, mode: 'outgoing', callId, otherUserId: receiverId }
+        }));
+      },
+      acceptPersonalCall: () => set((state) => ({
+        personalCall: { ...state.personalCall, mode: 'connected' }
+      })),
+      endPersonalCall: () => set({
+        personalCall: { isActive: false, mode: 'idle', callId: null, otherUserId: null }
+      }),
+      handleIncomingPersonalCall: (callerId, callId) => set((state) => ({
+        personalCall: { isActive: true, mode: 'incoming', callId, otherUserId: callerId }
       })),
 
       // Legacy single token (implicit flow) — consider migrating to spotify.{...}
