@@ -13,9 +13,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showGuestWarning, setShowGuestWarning] = useState(false);
 
     // Selectively subscribe to store (efficient)
     const login = useMessageStore((s) => s.login);
+    const loginAsGuest = useMessageStore((s) => s.loginAsGuest);
     const currentUser = useMessageStore((s) => s.currentUser);
 
     // Skip login if already logged in
@@ -45,6 +47,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                 msg = error.message;
             }
             setError(msg);
+            setIsLoading(false);
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        setShowGuestWarning(false);
+        setIsLoading(true);
+        setError("");
+
+        try {
+            await loginAsGuest();
+        } catch (error: any) {
+            console.error("Guest login error:", error);
+            setError(error.message || "Guest login failed.");
             setIsLoading(false);
         }
     };
@@ -167,6 +183,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                         Google
                     </motion.button>
 
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowGuestWarning(true)}
+                        disabled={isLoading}
+                        className="w-full mt-3 bg-gradient-to-r from-orange-500/20 to-indigo-600/20 border border-orange-500/30 text-white font-medium py-3 rounded-xl hover:from-orange-500/30 hover:to-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Continue as Guest
+                    </motion.button>
+
                     <div className="mt-6 text-center">
                         <p className="text-gray-400 text-sm">
                             Don't have an account?{" "}
@@ -180,6 +209,51 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                     </div>
                 </div>
             </motion.div>
+
+            {/* Guest Warning Modal */}
+            {showGuestWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2 }}
+                        className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Guest Account Warning</h3>
+                        </div>
+
+                        <p className="text-gray-300 mb-6 leading-relaxed">
+                            Your guest account will be <span className="text-orange-400 font-semibold">permanently deleted</span> when you log out.
+                            All data, tasks, and messages will be lost.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setShowGuestWarning(false)}
+                                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-lg transition-colors border border-white/10"
+                            >
+                                Cancel
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleGuestLogin}
+                                className="flex-1 bg-gradient-to-r from-orange-500 to-indigo-600 hover:from-orange-600 hover:to-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-orange-500/20"
+                            >
+                                I Understand
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 };

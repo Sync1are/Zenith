@@ -4,6 +4,7 @@ import SpotifyCard from "./SpotifyCard";
 import { useAppStore } from "../store/useAppStore";
 import { useMessageStore } from "../store/useMessageStore";
 import { Cloud, CloudRain, Sun, Moon, Wind, Droplets, MapPin } from 'lucide-react';
+import { useSuperFocus } from "../hooks/useSuperFocus";
 
 // --- Types for Weather Card ---
 enum DayPhase {
@@ -287,8 +288,15 @@ const SmartHomeCard: React.FC = () => {
         wind: "12 km/h"
     });
     const currentUser = useMessageStore((s) => s.currentUser);
-    const calendarEvents = useAppStore((s) => s.calendarEvents) || [];
     const tasks = useAppStore((s) => s.tasks) || [];
+    const superFocus = useSuperFocus();
+
+    // Format elapsed time as MM:SS
+    const formatSuperFocusTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -311,21 +319,6 @@ const SmartHomeCard: React.FC = () => {
             day: "numeric",
         });
     };
-
-    // Get today's events
-    const getTodayEvents = () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        return calendarEvents.filter((event) => {
-            const eventDate = new Date(event.start);
-            return eventDate >= today && eventDate < tomorrow;
-        }).slice(0, 3);
-    };
-
-    const todayEvents = getTodayEvents();
 
     // Get week days centered on today
     const getWeekDays = () => {
@@ -497,35 +490,6 @@ const SmartHomeCard: React.FC = () => {
                         </div>
                     </motion.div>
 
-                    {/* Today's Events Card */}
-                    {todayEvents.length > 0 && (
-                        <motion.div
-                            className="info-box p-4 col-span-2"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <p className="text-white/60 text-xs font-medium uppercase tracking-wider mb-3">
-                                Today's Events
-                            </p>
-                            <div className="space-y-2">
-                                {todayEvents.map((event) => {
-                                    const eventTime = new Date(event.start).toLocaleTimeString("en-US", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        hour12: true,
-                                    });
-                                    return (
-                                        <div key={event.id} className="flex items-center gap-2 text-sm">
-                                            <div className={`w-2 h-2 rounded-full bg-${event.category === 'work' ? 'orange' : event.category === 'personal' ? 'purple' : 'blue'}-400`} />
-                                            <span className="text-white/50 text-xs">{eventTime}</span>
-                                            <span className="text-white/80 flex-1 truncate">{event.title}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </motion.div>
-                    )}
-
                     {/* Weather Card */}
                     <WeatherCard weather={weatherData} loading={false} time={currentTime} />
 
@@ -584,24 +548,43 @@ const SmartHomeCard: React.FC = () => {
                         </div>
                     </motion.div>
 
-                    {/* Smart Light Control Card */}
+                    {/* SUPER Focus Mode Card */}
                     <motion.div
                         className="info-box p-4"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                            if (!superFocus.isActive) {
+                                // 1. Enter SUPER Focus Mode
+                                superFocus.toggle();
+                                // 2. Navigate to Focus page
+                                useAppStore.getState().setActivePage('Focus');
+                                // 3. Start the Timer (if not already active)
+                                useAppStore.getState().setTimerActive(true);
+                            } else {
+                                superFocus.toggle();
+                            }
+                        }}
+                        style={{ cursor: 'pointer' }}
                     >
                         <div className="flex flex-col h-full justify-between">
                             <div className="flex items-center justify-between mb-3">
                                 <p className="text-white/60 text-xs font-medium uppercase tracking-wider">
-                                    Focus
+                                    SUPER FOCUS
                                 </p>
-                                <span className="text-2xl">💡</span>
+                                <span className="text-2xl">🔥</span>
                             </div>
                             <div>
-                                <p className="text-white text-sm font-semibold mb-2">Deep Work</p>
-                                <div className="toggle-switch">
-                                    <div className="toggle-dot" />
-                                </div>
+                                {superFocus.isActive ? (
+                                    <>
+                                        <p className="text-white text-base font-bold mb-1 animate-pulse">ACTIVE</p>
+                                        <p className="text-lg font-mono text-orange-400 font-semibold">
+                                            {formatSuperFocusTime(superFocus.elapsed)}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-white text-sm font-semibold">Click to Enter</p>
+                                )}
                             </div>
                         </div>
                     </motion.div>

@@ -6,6 +6,7 @@ import { TaskStatus, TaskPriority } from "../types";
 import SpotifyCard from "../components/SpotifyCard";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 import { TaskModal } from "./tasks/TaskModals";
+import { useSuperFocus } from "../hooks/useSuperFocus";
 
 // ===============================
 // 1. Particle Background
@@ -131,13 +132,38 @@ const DurationChips = () => {
 };
 
 // --- Timer Content (The part that swoops in/out) ---
+// --- Timer Content (The part that swoops in/out) ---
 const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
   const tasks = useAppStore((s) => s.tasks);
   const timerRemaining = useAppStore((s) => s.timerRemaining);
   const timerActive = useAppStore((s) => s.timerActive);
+  const superFocus = useSuperFocus();
 
   const activeTaskTitle = useMemo(() => tasks.find((t) => t.id === taskId)?.title || "—", [tasks, taskId]);
 
+  // --- SUPER FOCUS TIMER DISPLAY ---
+  if (superFocus.isActive) {
+    const elapsed = superFocus.elapsed;
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, "0");
+    const secs = (elapsed % 60).toString().padStart(2, "0");
+
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-full">
+        <p className="uppercase tracking-[0.2em] text-[10px] lg:text-xs text-orange-400 font-bold animate-pulse">SUPER FOCUS ACTIVE</p>
+        <p className="mt-2 text-sm lg:text-base text-white/80 font-medium max-w-[16rem] truncate text-center px-4">
+          {activeTaskTitle}
+        </p>
+        <div className="mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black tracking-tighter font-mono text-transparent bg-clip-text bg-gradient-to-b from-orange-300 to-red-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+          {mins}:{secs}
+        </div>
+        <p className="mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] text-white/40">
+          Total Session Time
+        </p>
+      </div>
+    );
+  }
+
+  // --- STANDARD TIMER DISPLAY ---
   const isOvertime = timerRemaining < 0;
   const absRemaining = Math.abs(timerRemaining);
   const minutes = Math.floor(absRemaining / 60).toString().padStart(2, "0");
@@ -156,6 +182,34 @@ const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
         {isOvertime ? "OVERTIME" : (timerActive ? "Focus Interval" : "Ready")}
       </p>
     </div>
+  );
+};
+
+// --- SUPER Focus Toggle Button ---
+const SuperFocusToggle: React.FC = () => {
+  const superFocus = useSuperFocus();
+
+  return (
+    <motion.button
+      onClick={() => superFocus.toggle()}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${superFocus.isActive
+        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/50"
+        : "bg-white/10 text-white/70 hover:bg-white/15 border border-white/20"
+        }`}
+    >
+      {superFocus.isActive ? (
+        <span className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          SUPER FOCUS ACTIVE
+        </span>
+      ) : (
+        <span className="flex items-center gap-2">
+          🔥 ENTER SUPER FOCUS
+        </span>
+      )}
+    </motion.button>
   );
 };
 
@@ -212,7 +266,7 @@ const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
         {/* SVG Ring (Static) */}
         <svg className="absolute inset-0 w-full h-full transform -rotate-90">
           <circle cx="50%" cy="50%" r="42%" stroke="rgba(255,255,255,0.08)" strokeWidth="12" fill="none" />
-          <circle
+          <motion.circle
             cx="50%"
             cy="50%"
             r="42%"
@@ -224,6 +278,8 @@ const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
             strokeDashoffset={100 - progress}
             strokeLinecap="round"
             className="transition-all duration-1000 ease-linear"
+            initial={{ strokeDashoffset: 100 }}
+            animate={{ strokeDashoffset: 100 - progress }}
           />
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -254,10 +310,15 @@ const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
             <TimerContent taskId={displayTaskId} />
           </div>
         </div>
+
+        {/* SUPER Focus Toggle Button Positioned Below Timer */}
+        <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto">
+          <SuperFocusToggle />
+        </div>
       </div>
 
       {/* Controls */}
-      <div className="flex justify-center gap-4 mt-8 lg:mt-10 relative z-20">
+      <div className="flex justify-center gap-4 mt-20 lg:mt-24 relative z-20">
         <button
           onClick={resetTimer}
           className="p-4 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all backdrop-blur-md group"
@@ -298,7 +359,7 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
 
   const available = useMemo(() => tasks.filter((t) => t.status !== TaskStatus.DONE), [tasks]);
 
-  const handleTaskClick = (taskId: string, idx: number) => {
+  const handleTaskClick = (taskId: number, idx: number) => {
     if (activeTaskId === taskId && timerActive) return;
     startTask(taskId);
     setTimerActive(true);
@@ -503,6 +564,7 @@ const FocusPage: React.FC = () => {
       priority: taskData.priority || TaskPriority.MEDIUM,
       duration: taskData.duration || "25 min",
       status: TaskStatus.TODO,
+      isCompleted: false,
       createdAt: Date.now(),
     });
     setIsAddTaskOpen(false);

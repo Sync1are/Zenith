@@ -37,11 +37,13 @@ import MigrationLoadingScreen from './components/MigrationLoadingScreen';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './config/firebase';
 import { useMigrationStore } from './store/useMigrationStore';
+import { useSuperFocus } from "./hooks/useSuperFocus";
 
 const App: React.FC = () => {
   // 🌙 Navigation
   const activePage = useAppStore((s) => s.activePage);
   const setActivePage = useAppStore((s) => s.setActivePage);
+  const superFocus = useSuperFocus();
 
   // 🌙 Migration state
   const isMigrating = useMigrationStore((s) => s.isMigrating);
@@ -243,34 +245,82 @@ const App: React.FC = () => {
       ) : (
         /* Content Wrapper (z-10) */
         <div className="relative z-10 flex flex-col h-full min-h-screen">
-          <TitleBar />
+          {/* Hide TitleBar in Super Focus Mode */}
+          <AnimatePresence>
+            {!superFocus.isActive && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="z-50"
+              >
+                <TitleBar />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <NotificationSystem />
 
-          {/* TopNavBar */}
-          <TopNavBar
-            activeServer={activeServerId}
-            onSelect={(id) => setActiveServerId(id)}
-          />
+          {/* Hide TopNavBar in Super Focus Mode */}
+          <AnimatePresence>
+            {!superFocus.isActive && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <TopNavBar
+                  activeServer={activeServerId}
+                  onSelect={(id) => setActiveServerId(id)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex flex-1 overflow-hidden pt-4 relative">
 
-            {/* Sidebar */}
-            <Sidebar
-              activeItem={activePage}
-              onSelect={(page) => {
-                setActivePage(page);
-                setIsMobileDrawerOpen(false);
-              }}
-              isMobileDrawerOpen={isMobileDrawerOpen}
-              setIsMobileDrawerOpen={setIsMobileDrawerOpen}
-            />
+            {/* Hide Sidebar in Super Focus Mode */}
+            <AnimatePresence>
+              {!superFocus.isActive && (
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="h-full"
+                >
+                  <Sidebar
+                    activeItem={activePage}
+                    onSelect={(page) => {
+                      setActivePage(page);
+                      setIsMobileDrawerOpen(false);
+                    }}
+                    isMobileDrawerOpen={isMobileDrawerOpen}
+                    setIsMobileDrawerOpen={setIsMobileDrawerOpen}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <main className="flex-1 overflow-y-auto w-full">
-              <div className="max-w-full px-6 lg:px-10 py-6 md:pl-24">
-                <Header
-                  currentPage={activePage}
-                  setSidebarOpen={setIsMobileDrawerOpen}
-                />
+              <div className={`max-w-full px-6 lg:px-10 py-6 transition-all duration-500 ${!superFocus.isActive ? 'md:pl-24' : 'pl-0'}`}>
+                {/* Hide Header in Super Focus Mode */}
+                <AnimatePresence>
+                  {!superFocus.isActive && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                    >
+                      <Header
+                        currentPage={activePage}
+                        setSidebarOpen={setIsMobileDrawerOpen}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* 🚀 ANIMATED PAGE TRANSITION START */}
                 {/* 🍃 NATURAL / SUBTLE DRIFT */}

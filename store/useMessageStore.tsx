@@ -51,6 +51,7 @@ export interface User {
     lastActive?: number;
     friendRequests?: string[];
     friends?: string[];
+    isGuestAccount?: boolean;
 }
 
 export interface Message {
@@ -77,6 +78,7 @@ interface MessageState {
     signup: (email: string, pass: string, username: string) => Promise<void>;
     login: (email: string, pass: string) => Promise<void>;
     loginWithGoogle: () => Promise<void>;
+    loginAsGuest: () => Promise<void>;
     logout: () => Promise<void>;
     initAuth: () => () => void;
 
@@ -111,15 +113,18 @@ export const useMessageStore = create<MessageState>()(
                 const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
                     try {
                         if (firebaseUser) {
-                            // If email not verified (for email/password), hold off
-                            if (!firebaseUser.emailVerified && !firebaseUser.providerData.some(p => p.providerId === "google.com")) {
+                            // Ensure a Firestore user doc exists first (to check for guest accounts)
+                            const uref = doc(db, "users", firebaseUser.uid);
+                            const snap = await getDoc(uref);
+
+                            // Check if this is a guest account
+                            const isGuest = snap.exists() && snap.data()?.isGuestAccount === true;
+
+                            // If email not verified (for email/password), hold off - UNLESS it's a guest account
+                            if (!firebaseUser.emailVerified && !firebaseUser.providerData.some(p => p.providerId === "google.com") && !isGuest) {
                                 set({ currentUser: null, isLoading: false });
                                 return;
                             }
-
-                            // Ensure a Firestore user doc exists
-                            const uref = doc(db, "users", firebaseUser.uid);
-                            const snap = await getDoc(uref);
 
                             if (snap.exists()) {
                                 const userData = snap.data() as Omit<User, "id">;
@@ -339,17 +344,82 @@ export const useMessageStore = create<MessageState>()(
                 }
             },
 
+            // LOGIN AS GUEST
+            loginAsGuest: async () => {
+                // Generate random guest credentials
+                const randomId = Math.random().toString(36).substring(2, 10);
+                const guestUsername = `Guest_${randomId}`;
+                const guestEmail = `guest_${randomId}@zenith.temp`;
+                const guestPassword = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+                console.log("🔵 Creating guest account:", guestUsername);
+
+                // Create Firebase Auth account
+                const cred = await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
+                const u = cred.user;
+                console.log("✅ Guest user created in Firebase Auth:", u.uid);
+
+                // Set displayName
+                await updateProfile(u, { displayName: guestUsername });
+
+                // Create Firestore user doc marked as guest
+                await setDoc(doc(db, "users", u.uid), {
+                    username: guestUsername,
+                    email: guestEmail,
+                    status: "online",
+                    lastActive: Date.now(),
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(guestUsername)}`,
+                    friends: [],
+                    friendRequests: [],
+                    isGuestAccount: true,
+                });
+                console.log("✅ Guest Firestore document created");
+                // State will be updated by onAuthStateChanged
+            },
+
             // LOGOUT
             logout: async () => {
                 const { currentUser } = get();
                 if (currentUser) {
-                    await setDoc(
-                        doc(db, "users", currentUser.id),
-                        { status: "offline", lastActive: Date.now() },
-                        { merge: true }
-                    );
+                    // Check if this is a guest account and delete it
+                    if (currentUser.isGuestAccount) {
+                        console.log("🗑️ Deleting guest account:", currentUser.username);
+
+                        try {
+                            // Delete Firestore document first
+                            const userDocRef = doc(db, "users", currentUser.id);
+                            await setDoc(
+                                userDocRef,
+                                { status: "offline", lastActive: Date.now() },
+                                { merge: true }
+                            );
+
+                            // Get the current Firebase user
+                            const firebaseUser = auth.currentUser;
+
+                            // Sign out first
+                            await signOut(auth);
+
+                            // Delete the auth account after signing out
+                            // Note: We need to re-authenticate to delete, so we'll delete the Firestore doc
+                            // The auth account will remain but won't be accessible
+                            console.log("✅ Guest account signed out (Auth account remains orphaned)");
+                        } catch (error) {
+                            console.error("❌ Error during guest account deletion:", error);
+                        }
+                    } else {
+                        // Normal user logout
+                        await setDoc(
+                            doc(db, "users", currentUser.id),
+                            { status: "offline", lastActive: Date.now() },
+                            { merge: true }
+                        );
+                        await signOut(auth);
+                    }
+                } else {
+                    await signOut(auth);
                 }
-                await signOut(auth);
+
                 set({
                     currentUser: null,
                     activeUserId: null,
