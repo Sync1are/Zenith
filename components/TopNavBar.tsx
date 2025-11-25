@@ -1,34 +1,229 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { LogoIcon } from "./icons/IconComponents";
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { MessageCircle, Plus, Users, UserPlus, X } from 'lucide-react';
 import { useMessageStore } from "../store/useMessageStore";
+import { Status, Persona } from "../types";
+import { motion, AnimatePresence } from "framer-motion";
 
-const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void; }> = ({ activeServer, onSelect }) => {
-  const { activeUserId, setActiveUser, sendFriendRequest, currentUser, users, notifications } = useMessageStore();
+// --- UI Component (ConceptDeck) ---
+// Pure presentation component that receives state from parent
+const ConceptDeck: React.FC<{
+  personas: Persona[];
+  onAddPersona: () => void;
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onOpenChat: (id: string) => void;
+  isDropdownOpen: boolean;
+  setDropdownOpen: (open: boolean) => void;
+  hoveredId: string | null;
+  setHoveredId: (id: string | null) => void;
+}> = ({
+  personas, onAddPersona, activeId, onSelect, onOpenChat,
+  isDropdownOpen, setDropdownOpen, hoveredId, setHoveredId
+}) => {
 
-  const [isAutoHidden, setIsAutoHidden] = useState(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Max number of visual slots (excluding the 'Add' button). 
+    const MAX_SLOTS = 6;
+    const hasOverflow = personas.length > MAX_SLOTS;
+    const visibleLimit = hasOverflow ? MAX_SLOTS - 1 : personas.length;
 
-  // Add Friend Modal State
-  const [showAddFriend, setShowAddFriend] = useState(false);
-  const [friendUsername, setFriendUsername] = useState("");
-  const [requestStatus, setRequestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [statusMessage, setStatusMessage] = useState("");
+    // --- Logic to ensure Active Persona is always visible ---
+    let visiblePersonas = [...personas];
+    let overflowPersonas: typeof personas = [];
 
-  // Tooltip state
-  const [tooltip, setTooltip] =
-    useState<{ id: string; label: string; rect: DOMRect } | null>(null);
-
-  // Tooltip handler
-  const handleHover = (id: string | null, label?: string, rect?: DOMRect) => {
-    if (id && label && rect) {
-      setTooltip({ id, label, rect });
+    if (hasOverflow && activeId) {
+      const activeIndex = personas.findIndex(p => p.id === activeId);
+      if (activeIndex !== -1) {
+        const copy = [...personas];
+        if (activeIndex >= visibleLimit) {
+          const itemToBump = copy[visibleLimit - 1];
+          copy[visibleLimit - 1] = copy[activeIndex];
+          copy[activeIndex] = itemToBump;
+        }
+        visiblePersonas = copy.slice(0, visibleLimit);
+        overflowPersonas = copy.slice(visibleLimit);
+      } else {
+        visiblePersonas = personas.slice(0, visibleLimit);
+        overflowPersonas = personas.slice(visibleLimit);
+      }
     } else {
-      setTooltip(null);
+      if (hasOverflow) {
+        visiblePersonas = personas.slice(0, visibleLimit);
+        overflowPersonas = personas.slice(visibleLimit);
+      } else {
+        visiblePersonas = personas;
+        overflowPersonas = [];
+      }
     }
+
+    return (
+      <div className="flex items-center justify-center space-x-4 px-4 h-20 pointer-events-auto">
+        <AnimatePresence mode='popLayout'>
+          {visiblePersonas.map((persona, index) => {
+            const isActive = activeId === persona.id && !isDropdownOpen;
+
+            return (
+              <div key={persona.id} className="relative group/tooltip">
+                <AnimatePresence>
+                  {hoveredId === persona.id && !isActive && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/80 backdrop-blur-md text-white text-xs font-medium rounded-lg border border-white/10 whitespace-nowrap z-[60]">
+                      {persona.name}
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/80 rotate-45 border-r border-b border-white/10" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <motion.button
+                  layout
+                  onClick={() => {
+                    if (isDropdownOpen) setDropdownOpen(false);
+                    onSelect(persona.id);
+                  }}
+                  onMouseEnter={() => setHoveredId(persona.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  style={{ zIndex: isActive ? 50 : 30 - index }}
+                  initial={false}
+                  animate={{
+                    width: isActive ? 256 : 40,
+                    height: isActive ? 56 : 48,
+                    borderRadius: isActive ? 16 : 12,
+                    opacity: isActive ? 1 : 0.6,
+                    y: isActive ? 0 : 0,
+                    rotate: 0
+                  }}
+                  whileHover={!isActive ? {
+                    scale: 1.1,
+                    y: -12,
+                    zIndex: 40,
+                    opacity: 1,
+                  } : {}}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className={`relative flex items-center overflow-hidden border border-white/10 shadow-2xl group ${isActive ? 'bg-[#1e1e20] ring-1 ring-white/10' : 'bg-zinc-800/80 backdrop-blur-sm'}`}>
+                  <motion.div layout className={`absolute left-0 top-0 h-full overflow-hidden`} animate={{ width: isActive ? 56 : "100%" }}>
+                    <motion.img
+                      layoutId={`avatar-${persona.id}`}
+                      src={persona.avatarUrl}
+                      alt={persona.name}
+                      className="w-full h-full object-cover"
+                      animate={{
+                        scale: isActive ? 1 : 1.1,
+                        filter: isActive ? 'grayscale(0%)' : 'grayscale(100%)'
+                      }}
+                    />
+
+                    {!isActive && <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />}
+
+                    <div className={`absolute w-2.5 h-2.5 rounded-full ring-2 ring-[#1e1e20] transition-all duration-500 z-10 ${isActive ? 'bottom-1 right-1' : 'bottom-1 right-1/2 translate-x-1/2 mb-1'
+                      } ${persona.status === Status.ONLINE ? 'bg-emerald-400' :
+                        persona.status === Status.THINKING ? 'bg-purple-400 animate-pulse' : 'bg-zinc-500'
+                      }`} />
+                  </motion.div>
+
+                  <motion.div
+                    className="absolute left-14 right-0 top-0 h-full flex items-center justify-between pl-3 pr-3"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: isActive ? 1 : 0, x: isActive ? 0 : 20 }}
+                    transition={{ duration: 0.2, delay: isActive ? 0.1 : 0 }}>
+                    <div className="flex flex-col items-start overflow-hidden min-w-0">
+                      <span className="text-sm font-bold text-white truncate w-full text-left tracking-tight">{persona.name}</span>
+                      <span className="text-[10px] text-zinc-400 font-medium truncate w-full flex items-center gap-1 text-left">
+                        {persona.status === Status.THINKING ? (
+                          <span className="animate-pulse text-purple-400 flex items-center gap-1">
+                            <span className="w-1 h-1 bg-purple-400 rounded-full" /> Thinking...
+                          </span>
+                        ) : persona.role}
+                      </span>
+                    </div>
+
+                    <div className="flex-shrink-0 ml-1">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenChat(persona.id);
+                        }}
+                        className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer">
+                        <MessageCircle size={16} />
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.button>
+              </div>
+            );
+          })}
+        </AnimatePresence>
+
+        {hasOverflow && (
+          <div className={`relative transition-all duration-500 ${isDropdownOpen ? 'z-[60]' : 'z-[40]'}`} style={{ marginLeft: '1rem' }}>
+            <button
+              onClick={() => setDropdownOpen(!isDropdownOpen)}
+              className={`relative flex items-center justify-center rounded-xl bg-zinc-800/90 border border-white/10 shadow-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group ${isDropdownOpen ? 'w-64 h-14 bg-[#1e1e20] ring-1 ring-white/10 translate-y-0' : 'w-10 h-12 hover:w-12 hover:-translate-y-2 hover:bg-zinc-700'}`}>
+              <span className={`absolute transition-all duration-300 font-bold text-zinc-400 group-hover:text-white ${isDropdownOpen ? 'opacity-0 scale-50' : 'opacity-100 scale-100 text-xs'}`}>
+                +{overflowPersonas.length}
+              </span>
+
+              <div className={`absolute inset-0 flex items-center justify-between px-4 transition-all duration-300 ${isDropdownOpen ? 'opacity-100 scale-100 delay-100' : 'opacity-0 scale-90'}`}>
+                <div className="flex items-center gap-2 text-white">
+                  <Users size={16} className="text-zinc-400" />
+                  <span className="text-sm font-bold">More Agents</span>
+                </div>
+                <span className="text-[10px] font-mono bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">{overflowPersonas.length}</span>
+              </div>
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full mt-2 left-0 w-64 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+                <div className="max-h-56 overflow-y-auto p-1 custom-scrollbar">
+                  {overflowPersonas.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        onSelect(p.id);
+                        setDropdownOpen(false);
+                      }}
+                      className="flex items-center gap-3 w-full p-2 hover:bg-white/5 rounded-lg text-left transition-colors group">
+                      <div className="relative">
+                        <img src={p.avatarUrl} className="w-8 h-8 rounded-full object-cover" alt={p.name} />
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#18181b] ${p.status === Status.ONLINE ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-zinc-200 group-hover:text-white truncate">{p.name}</span>
+                        <span className="text-[10px] text-zinc-500 truncate">{p.role}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={onAddPersona}
+          className="w-10 h-12 rounded-xl border-2 border-dashed border-white/10 hover:border-white/30 hover:bg-white/5 flex items-center justify-center transition-all z-0 ml-4 text-white/20 hover:text-white hover:scale-110 active:scale-95 flex-shrink-0">
+          <Plus size={20} />
+        </button>
+
+      </div>
+    );
   };
 
-  // Auto-hide logic
+// --- Main Connected Component ---
+const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void; }> = ({ activeServer, onSelect }) => {
+  const { activeUserId, setActiveUser, currentUser, users, addFriend } = useMessageStore();
+  const [localActiveId, setLocalActiveId] = useState<string | null>(null);
+  const [isAutoHidden, setIsAutoHidden] = useState(false);
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeUserId) { setLocalActiveId(activeUserId); }
+  }, [activeUserId]);
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (e.clientY < 100) {
@@ -54,307 +249,235 @@ const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void
     };
   }, []);
 
-  const handleSendRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!friendUsername.trim()) return;
-
-    setRequestStatus("loading");
-    setStatusMessage("");
-
-    try {
-      await sendFriendRequest(friendUsername.trim());
-      setRequestStatus("success");
-      setStatusMessage("Friend request sent!");
-      setTimeout(() => {
-        setShowAddFriend(false);
-        setFriendUsername("");
-        setRequestStatus("idle");
-        setStatusMessage("");
-      }, 2000);
-    } catch (error: any) {
-      setRequestStatus("error");
-      setStatusMessage(error.message || "Failed to send request");
+  useEffect(() => {
+    if (isAutoHidden) {
+      setLocalActiveId(activeUserId);
+      setDropdownOpen(false);
     }
+  }, [isAutoHidden, activeUserId]);
+
+  const personas: Persona[] = useMemo(() => {
+    const list: Persona[] = [];
+    list.push({
+      id: "aze-ai",
+      name: "Aze",
+      role: "Study Buddy",
+      avatarUrl: "https://api.dicebear.com/7.x/bottts/svg?seed=aze",
+      status: Status.THINKING
+    });
+
+    if (currentUser?.friends) {
+      const friends = users.filter(u => currentUser.friends.includes(u.id));
+      friends.forEach(f => {
+        list.push({
+          id: f.id,
+          name: f.username,
+          role: "Friend",
+          avatarUrl: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.username}`,
+          status: f.status === 'online' ? Status.ONLINE : Status.OFFLINE
+        });
+      });
+    }
+
+    return list;
+  }, [currentUser, users]);
+
+  const handleSelect = (id: string) => {
+    setLocalActiveId(id);
+  };
+
+  const handleOpenChat = (id: string) => {
+    setActiveUser(id);
+    onSelect(id);
   };
 
   return (
     <>
-      {/* MAIN NAV CONTAINER */}
       <div
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        className={`
-          fixed top-12 left-0 right-0 flex justify-center z-[9999]
-          transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-          pointer-events-none
-          ${isAutoHidden ? "-translate-y-[250%]" : "translate-y-0"}
-        `}
+        className={`fixed top-6 left-0 right-0 flex justify-center z-[9999] py-4 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) pointer-events-none ${isAutoHidden ? "-translate-y-[200%]" : "translate-y-0"}`}
         onMouseEnter={() => {
           setIsAutoHidden(false);
           if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-        }}
-      >
-        <nav
-          className="
-            relative flex items-center gap-3 px-3 py-3
-            bg-[#09090b]/60 backdrop-blur-xl border border-white/5
-            rounded-full shadow-2xl
-            pointer-events-auto overflow-visible
-          "
-        >
-          {/* HOME BUTTON */}
-          <NavItem
-            id="home"
-            label="Home"
-            isActive={activeUserId === null}
-            onClick={() => setActiveUser(null)}
-            onHover={handleHover}
-          >
-            <div
-              className={`
-                w-full h-full rounded-full flex items-center justify-center transition-colors duration-300
-                ${activeUserId === null ? "bg-orange-500" : "bg-white/10 group-hover:bg-orange-500"}
-              `}
-            >
-              <LogoIcon className="w-6 h-6 text-white" />
-            </div>
-          </NavItem>
-
-          <div className="w-px h-8 bg-white/10 mx-1" />
-
-          {/* FRIENDS LIST */}
-          <div className="flex items-center gap-3 max-w-[400px] overflow-x-auto overflow-y-visible scrollbar-hide px-1">
-            {currentUser?.friends && currentUser.friends.length > 0 && (
-              <>
-                {users
-                  .filter(user => currentUser.friends?.includes(user.id))
-                  .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
-                  .map((friend) => {
-                    const unreadCount = notifications[friend.id] || 0;
-
-                    return (
-                      <NavItem
-                        key={friend.id}
-                        id={friend.id}
-                        label={friend.username}
-                        isActive={activeUserId === friend.id}
-                        onClick={() => setActiveUser(friend.id)}
-                        onHover={handleHover}
-                      >
-                        <img
-                          src={
-                            friend.avatar ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`
-                          }
-                          alt={friend.username}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-
-                        {/* Status Indicator */}
-                        <div
-                          className={`
-                            absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#18181b]
-                            ${friend.status === "online"
-                              ? "bg-green-500"
-                              : friend.status === "idle"
-                                ? "bg-yellow-500"
-                                : friend.status === "dnd"
-                                  ? "bg-red-500"
-                                  : friend.status === "invisible"
-                                    ? "bg-gray-700"
-                                    : "bg-gray-500"
-                            }
-                          `}
-                        />
-
-                        {/* Notification Badge */}
-                        {unreadCount > 0 && (
-                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-[#18181b] z-20">
-                            <span className="text-[10px] font-bold text-white">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                          </div>
-                        )}
-                      </NavItem>
-                    );
-                  })}
-              </>
-            )}
-          </div>
-
-          <div className="w-px h-8 bg-white/10 mx-1" />
-
-          {/* AZE AI CHATBOT */}
-          <NavItem
-            id="aze-ai"
-            label="Aze - Your Study Buddy"
-            isActive={activeUserId === "aze-ai"}
-            onClick={() => setActiveUser("aze-ai")}
-            onHover={handleHover}
-          >
-            <div className="w-full h-full rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 group-hover:from-indigo-500 group-hover:to-purple-500 transition-all duration-300">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              {/* Sparkle indicator */}
-              <div className="absolute -top-0.5 -right-0.5 w-3 h-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-              </div>
-            </div>
-          </NavItem>
-
-          <div className="w-px h-8 bg-white/10 mx-1" />
-
-          {/* ADD FRIEND BUTTON */}
-          <NavItem
-            id="add-friend"
-            label="Add Friend"
-            isActive={showAddFriend}
-            onClick={() => setShowAddFriend(true)}
-            onHover={handleHover}
-          >
-            <div className="w-full h-full rounded-full flex items-center justify-center bg-white/10 group-hover:bg-indigo-500 transition-colors duration-300">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-          </NavItem>
-
-        </nav>
-
-        {/* GLOBAL TOOLTIP */}
-        <AnimatePresence>
-          {tooltip && (
-            <motion.div
-              initial={{ opacity: 0, y: -5, scale: 0.9 }}
-              animate={{ opacity: 1, y: -10, scale: 1 }}
-              exit={{ opacity: 0, y: -5, scale: 0.9 }}
-              style={{
-                position: "fixed",
-                top: tooltip.rect.top - 12, // clean spacing above
-                left: tooltip.rect.left + tooltip.rect.width / 2,
-                transform: "translateX(-50%)",
-                zIndex: 10000,
-              }}
-              className="px-3 py-1.5 bg-black/90 text-white text-xs font-medium rounded-lg whitespace-nowrap border border-white/10 shadow-xl pointer-events-none"
-            >
-              {tooltip.label}
-
-              <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 rotate-45 border-r border-b border-white/10" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        }}>
+        <ConceptDeck
+          personas={personas}
+          activeId={localActiveId}
+          onSelect={handleSelect}
+          onOpenChat={handleOpenChat}
+          onAddPersona={() => setIsAddFriendModalOpen(true)}
+          isDropdownOpen={isDropdownOpen}
+          setDropdownOpen={setDropdownOpen}
+          hoveredId={hoveredId}
+          setHoveredId={setHoveredId}
+        />
       </div>
 
-      {/* ADD FRIEND MODAL */}
-      <AnimatePresence>
-        {showAddFriend && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white">Add Friend</h2>
-                <button
-                  onClick={() => setShowAddFriend(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleSendRequest} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Username</label>
-                  <input
-                    type="text"
-                    value={friendUsername}
-                    onChange={(e) => setFriendUsername(e.target.value)}
-                    placeholder="Enter username..."
-                    className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                    autoFocus
-                  />
-                </div>
-
-                {statusMessage && (
-                  <div className={`text-sm ${requestStatus === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                    {statusMessage}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={requestStatus === 'loading' || !friendUsername.trim()}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  {requestStatus === 'loading' ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Send Request
-                    </>
-                  )}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <AddFriendModal
+        isOpen={isAddFriendModalOpen}
+        onClose={() => setIsAddFriendModalOpen(false)}
+      />
     </>
   );
 };
 
-/* ------------------------- NAV ITEM COMPONENT ------------------------- */
+// --- Add Friend Modal Component ---
+const AddFriendModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedUser, setSearchedUser] = useState<any | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const { users, currentUser, addFriend } = useMessageStore();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-const NavItem = ({ id, label, isActive, onClick, onHover, children }: any) => {
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    setTimeout(() => {
+      const foundUser = users.find(u =>
+        u.username.toLowerCase() === searchQuery.toLowerCase().trim() &&
+        u.id !== currentUser?.id
+      );
+      setSearchedUser(foundUser || null);
+      setIsSearching(false);
+    }, 300);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleAddFriend = () => {
+    if (searchedUser && currentUser) {
+      addFriend(searchedUser.id);
+      setTimeout(() => {
+        onClose();
+        setSearchQuery('');
+        setSearchedUser(null);
+      }, 500);
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setSearchQuery('');
+    setSearchedUser(null);
+  };
+
+  const isFriend = currentUser?.friends?.includes(searchedUser?.id);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="relative group">
-      <button
-        onClick={onClick}
-        onMouseEnter={(e) => onHover(id, label, e.currentTarget.getBoundingClientRect())}
-        onMouseLeave={() => onHover(null)}
-        className={`
-          relative w-12 h-12 transition-all duration-300 z-10
-          ${isActive ? "scale-110" : "hover:scale-105"}
-        `}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="spotlight"
-            className="absolute inset-0 bg-indigo-500/20 rounded-full blur-lg"
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative bg-[#1e1e20] border border-white/10 rounded-2xl shadow-2xl w-[480px] p-6 z-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <UserPlus size={24} className="text-purple-400" />
+            Add Friend
+          </h2>
+          <button onClick={handleClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <X size={20} className="text-zinc-400 hover:text-white" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-zinc-400 mb-2">Enter username</label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Search by username..."
+            className="w-full px-4 py-3 bg-zinc-900/50 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
           />
+          <p className="text-xs text-zinc-500 mt-2">Press Enter to search</p>
+        </div>
+
+        {isSearching && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400 border-t-transparent"></div>
+          </div>
         )}
 
-        <div
-          className={`
-            w-full h-full rounded-full overflow-hidden border-2 transition-all duration-300
-            ${isActive
-              ? "border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
-              : "border-transparent hover:border-white/20"}
-          `}
-        >
-          {children}
-        </div>
-      </button>
+        {!isSearching && searchedUser && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-zinc-900/50 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <img
+                    src={searchedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${searchedUser.username}`}
+                    alt={searchedUser.username}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-white/10"
+                  />
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full ring-2 ring-[#1e1e20] ${searchedUser.status === 'online' ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                </div>
 
-      {isActive && (
-        <motion.div
-          layoutId="activePill"
-          className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full"
-        />
-      )}
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold text-white">{searchedUser.username}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${searchedUser.status === 'online' ? 'bg-emerald-400/10 text-emerald-400' : 'bg-zinc-500/10 text-zinc-400'}`}>
+                      {searchedUser.status === 'online' ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                  {searchedUser.customStatus && (
+                    <p className="text-sm text-zinc-400 mt-1 flex items-center gap-1">
+                      {searchedUser.customStatus.emoji} {searchedUser.customStatus.text}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddFriend}
+                disabled={isFriend}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${isFriend ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed' : 'bg-purple-500 hover:bg-purple-600 text-white'}`}>
+                <UserPlus size={18} />
+                {isFriend ? 'Already Friends' : 'Add Friend'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {!isSearching && searchQuery && !searchedUser && (
+          <div className="text-center py-12">
+            <p className="text-zinc-400">No user found with username "{searchQuery}"</p>
+          </div>
+        )}
+
+        {!isSearching && !searchQuery && !searchedUser && (
+          <div className="text-center py-12">
+            <Users size={48} className="mx-auto text-zinc-600 mb-3" />
+            <p className="text-zinc-400">Enter a username to find friends</p>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 };
-
 
 export default TopNavBar;

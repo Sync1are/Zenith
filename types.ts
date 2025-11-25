@@ -56,3 +56,27 @@ export interface ChatMessage {
   timestamp: number;
   hasAudio?: boolean;
 }
+
+export enum Status {
+  ONLINE = 'online',
+  THINKING = 'thinking',
+  OFFLINE = 'offline',
+  IDLE = 'idle',
+  DND = 'dnd',
+  INVISIBLE = 'invisible'
+}
+
+export interface Persona {
+  id: string;
+  name: string;
+  role: string;
+  avatarUrl: string;
+  status: Status | string;
+}
+
+export interface DesignConceptProps {
+  personas: Persona[];
+  onAddPersona: () => void;
+  activeId: string;
+  onSelect: (id: string) => void;
+}
