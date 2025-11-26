@@ -36,7 +36,7 @@ import LiveBackground from "./components/LiveBackground";
 import StudySessionModal from './components/StudySessionModal';
 import PersonalCallModal from './components/PersonalCallModal';
 import MigrationLoadingScreen from './components/MigrationLoadingScreen';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
 import { useMigrationStore } from './store/useMigrationStore';
 import { useSuperFocus } from "./hooks/useSuperFocus";
@@ -219,7 +219,19 @@ const App: React.FC = () => {
       if (snap.exists()) {
         const data = snap.data();
         if (data && data.callId && !personalCall.isActive) {
-          handleIncomingPersonalCall(data.callerId, data.callId);
+          // Check if the call is recent (within 5 minutes)
+          const callTimestamp = data.timestamp || 0;
+          const now = Date.now();
+          const fiveMinutesInMs = 5 * 60 * 1000;
+
+          if (now - callTimestamp < fiveMinutesInMs) {
+            // Call is recent, show the modal
+            handleIncomingPersonalCall(data.callerId, data.callId);
+          } else {
+            // Call is too old (stale), delete it
+            console.log('Ignoring stale call from', new Date(callTimestamp));
+            deleteDoc(callRef).catch(err => console.error('Error deleting stale call:', err));
+          }
         }
       }
     });
@@ -238,6 +250,35 @@ const App: React.FC = () => {
   useEffect(() => {
     handleAuthRedirectIfPresent(acceptTokens);
   }, [acceptTokens]);
+
+  // 🔒 SUPER FOCUS KEYBOARD LOCKDOWN
+  // Block ALL keyboard input except ESC key when in Super Focus mode
+  useEffect(() => {
+    if (!superFocus.isActive) return;
+
+    const blockKeyboard = (event: KeyboardEvent) => {
+      // Allow ONLY Escape key to work (for exiting Super Focus)
+      if (event.key === 'Escape') {
+        return; // Let Escape through - Electron handles it
+      }
+
+      // Block everything else
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
+
+    // Attach to all keyboard events at capture phase (highest priority)
+    document.addEventListener('keydown', blockKeyboard, true);
+    document.addEventListener('keyup', blockKeyboard, true);
+    document.addEventListener('keypress', blockKeyboard, true);
+
+    return () => {
+      document.removeEventListener('keydown', blockKeyboard, true);
+      document.removeEventListener('keyup', blockKeyboard, true);
+      document.removeEventListener('keypress', blockKeyboard, true);
+    };
+  }, [superFocus.isActive]);
 
   // Page switcher
   const renderContent = useCallback(() => {

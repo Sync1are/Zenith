@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMessageStore } from '../store/useMessageStore';
 import { useAppStore } from '../store/useAppStore';
 import { useWebRTC } from '../hooks/useWebRTC';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const PersonalCallModal: React.FC = () => {
     const { personalCall, acceptPersonalCall, endPersonalCall } = useAppStore();
@@ -71,12 +73,39 @@ const PersonalCallModal: React.FC = () => {
         }
     };
 
-    const handleDecline = () => {
+    const handleDecline = async () => {
+        // Clean up Firebase document before ending call
+        if (currentUser?.id) {
+            try {
+                const callRef = doc(db, "users", currentUser.id, "incoming_personal_call", "active");
+                await deleteDoc(callRef);
+            } catch (error) {
+                console.error("Error deleting call document:", error);
+            }
+        }
+
         leaveCall();
         endPersonalCall();
     };
 
-    const handleEnd = () => {
+    const handleEnd = async () => {
+        // Clean up Firebase documents before ending call
+        if (currentUser?.id) {
+            try {
+                // Clean up our own incoming call document
+                const myCallRef = doc(db, "users", currentUser.id, "incoming_personal_call", "active");
+                await deleteDoc(myCallRef);
+
+                // If we're the caller (outgoing mode), also clean up the receiver's document
+                if (mode === 'outgoing' && otherUserId) {
+                    const receiverCallRef = doc(db, "users", otherUserId, "incoming_personal_call", "active");
+                    await deleteDoc(receiverCallRef);
+                }
+            } catch (error) {
+                console.error("Error deleting call document:", error);
+            }
+        }
+
         leaveCall();
         endPersonalCall();
     };
@@ -164,8 +193,8 @@ const PersonalCallModal: React.FC = () => {
                                 <h3 className="text-xl font-bold text-white mb-1">{otherUser?.username || 'Unknown'}</h3>
                                 <div className="flex items-center justify-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' :
-                                            connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                                'bg-gray-500'
+                                        connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                                            'bg-gray-500'
                                         }`} />
                                     <p className={`text-sm font-medium ${connectionStatus === 'connected' ? 'text-green-400' : 'text-gray-400'}`}>
                                         {connectionStatus === 'connected' ? 'Connected' :
@@ -185,8 +214,8 @@ const PersonalCallModal: React.FC = () => {
                                 <button
                                     onClick={toggleMic}
                                     className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isMicOn
-                                            ? 'bg-white/10 text-white hover:bg-white/20'
-                                            : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'
+                                        ? 'bg-white/10 text-white hover:bg-white/20'
+                                        : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'
                                         }`}
                                     title={isMicOn ? 'Mute' : 'Unmute'}
                                 >
