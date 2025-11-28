@@ -16,14 +16,14 @@ const PriorityBadge: React.FC<{ priority: TaskPriority }> = ({ priority }) => {
 };
 
 // --- Task Row ---
-const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({ task, onToggle }) => {
+const TaskItem: React.FC<{ task: Task; onToggle: (id: string) => void }> = ({ task, onToggle }) => {
     const activeTaskId = useAppStore(state => state.activeTaskId);
     const isActive = task.id === activeTaskId;
 
     // If subtasks exist → calculate progress from subtasks
     const progress = task.subtasks && task.subtasks.length > 0
         ? Math.round((task.subtasks.filter(st => st.isCompleted).length / task.subtasks.length) * 100)
-        : task.isCompleted ? 100 : (task.status === TaskStatus.IN_PROGRESS ? 50 : 0);
+        : task.isCompleted ? 100 : (task.status === TaskStatus.InProgress ? 50 : 0);
 
     return (
         <div className="grid grid-cols-10 items-center gap-4 p-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition-colors">
@@ -121,7 +121,7 @@ const TaskList: React.FC = () => {
     const activeTaskId = useAppStore(state => state.activeTaskId);
     const setTasks = useAppStore(state => state.setTasks);
 
-    const handleToggle = (id: number) => {
+    const handleToggle = (id: string) => {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
 
@@ -130,7 +130,7 @@ const TaskList: React.FC = () => {
                 ? {
                     ...t,
                     isCompleted: !t.isCompleted,
-                    status: !t.isCompleted ? TaskStatus.DONE : TaskStatus.TODO,
+                    status: !t.isCompleted ? TaskStatus.Done : TaskStatus.Todo,
                     completedAt: !t.isCompleted ? Date.now() : undefined
                 }
                 : t
@@ -148,20 +148,20 @@ const TaskList: React.FC = () => {
 
         // Priority 2: Sort by status (IN_PROGRESS > TODO > DONE)
         const statusOrder = {
-            [TaskStatus.IN_PROGRESS]: 0,
-            [TaskStatus.TODO]: 1,
-            [TaskStatus.DONE]: 2
+            [TaskStatus.InProgress]: 0,
+            [TaskStatus.Todo]: 1,
+            [TaskStatus.Done]: 2
         };
         const statusDiff = statusOrder[a.status] - statusOrder[b.status];
         if (statusDiff !== 0) return statusDiff;
 
         // Priority 3: For DONE tasks, show newest first
-        if (a.status === TaskStatus.DONE && b.status === TaskStatus.DONE) {
+        if (a.status === TaskStatus.Done && b.status === TaskStatus.Done) {
             return (b.completedAt || 0) - (a.completedAt || 0);
         }
 
         // Priority 4: Default order (by id, newest first)
-        return b.id - a.id;
+        return parseInt(b.id) - parseInt(a.id);
     });
 
     return (

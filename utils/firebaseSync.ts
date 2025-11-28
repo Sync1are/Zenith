@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { doc, setDoc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { useMigrationStore } from '../store/useMigrationStore';
@@ -26,6 +26,7 @@ const listeners: Map<string, Unsubscribe> = new Map();
  */
 export function useFirebaseSync<T>({ collectionName, store, selector }: FirebaseSyncOptions<T>) {
     const [currentUserId, setCurrentUserId] = useState<string | null>(auth.currentUser?.uid || null);
+    const isPending = useRef(false);
 
     // Monitor auth state changes
     useEffect(() => {
@@ -101,7 +102,7 @@ export function useFirebaseSync<T>({ collectionName, store, selector }: Firebase
                 // Set up real-time listener
                 console.log(`%c[FirebaseSync] 👂 Setting up real-time listener for ${collectionName}`, 'color: #9775fa');
                 const unsubscribe = onSnapshot(docRef, (snapshot) => {
-                    if (snapshot.exists() && !syncing.has(collectionName)) {
+                    if (snapshot.exists() && !syncing.has(collectionName) && !isPending.current) {
                         const data = snapshot.data()?.data;
                         if (data) {
                             console.log(`%c[FirebaseSync] 🔄 Real-time update received for ${collectionName}`, 'color: #a9e34b');
@@ -131,6 +132,7 @@ export function useFirebaseSync<T>({ collectionName, store, selector }: Firebase
             if (!auth.currentUser) return;
 
             clearTimeout(syncTimer);
+            isPending.current = true;
             syncTimer = setTimeout(async () => {
                 syncing.add(collectionName);
                 console.log(`%c[FirebaseSync] 📤 Syncing ${collectionName} to Firebase...`, 'color: #74c0fc');
@@ -142,6 +144,7 @@ export function useFirebaseSync<T>({ collectionName, store, selector }: Firebase
                     console.error(`%c[FirebaseSync] ❌ Error syncing ${collectionName}:`, 'color: #ff6b6b; font-weight: bold', error);
                 } finally {
                     syncing.delete(collectionName);
+                    isPending.current = false;
                 }
             }, 1000); // 1 second debounce
         });

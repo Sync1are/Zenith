@@ -1,10 +1,16 @@
-
 export enum TaskStatus {
-  TODO = 'To Do',
-  IN_PROGRESS = 'In Progress',
-  DONE = 'Done',
+  Todo = 'Todo',
+  InProgress = 'In Progress',
+  Done = 'Done',
 }
 
+export enum Priority {
+  Low = 'Low',
+  Medium = 'Medium',
+  High = 'High',
+}
+
+// Keep old enum for backward compatibility
 export enum TaskPriority {
   LOW = 'Low',
   MEDIUM = 'Medium',
@@ -12,27 +18,23 @@ export enum TaskPriority {
 }
 
 export interface Subtask {
-  id: number;
+  id: string;
   title: string;
-  duration: string; // e.g. "45 min"
   isCompleted: boolean;
-  completedAt?: number; // timestamp
 }
 
 export interface Task {
-  id: number;
+  id: string;
   title: string;
-  category: string;
-  priority: TaskPriority;
-  duration: string; // parent-estimated OR auto-summed
+  description?: string;
+  priority: Priority;
   status: TaskStatus;
-  isCompleted: boolean;
-  subtasks?: Subtask[];
-  // For stopwatch mode (no duration)
-  elapsedTime?: number;
-  remainingTime?: number;
-  completedAt?: number; // timestamp
-  createdAt?: number; // timestamp when task was created
+  estimatedTimeMinutes: number;
+  timeSpentMinutes?: number;
+  remainingTime?: number; // in seconds
+  createdAt: Date;
+  subtasks: Subtask[];
+  category: string;
 }
 
 

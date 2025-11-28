@@ -9,8 +9,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import InlinePersonalCall from './InlinePersonalCall';
 
 const SendIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -20,7 +21,7 @@ const SendIcon = ({ className }: { className?: string }) => (
 
 const ChatPage: React.FC = () => {
     const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser, subscribeToMessages } = useMessageStore();
-    const { tasks, startPersonalCall } = useAppStore();
+    const { tasks, startPersonalCall, startStudySession } = useAppStore();
     const [inputText, setInputText] = useState("");
     const [azeMessages, setAzeMessages] = useState<ChatMessage[]>([]);
     const [isAzeLoading, setIsAzeLoading] = useState(false);
@@ -120,8 +121,8 @@ const ChatPage: React.FC = () => {
         const { personalCall } = useAppStore.getState();
         const callId = personalCall.callId;
 
-        // Send invite message (for history)
-        sendMessage(activeUserId, "📞 Ringing...", 'personal_call_invite', { callId });
+        // Send personal call message (for history)
+        sendMessage(activeUserId, "📞 Calling...", 'personal_call', { callId, callStatus: 'ringing' });
 
         // Trigger "Ring" on receiver's end
         try {
@@ -345,37 +346,47 @@ const ChatPage: React.FC = () => {
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>
-                                                    <div
-                                                        className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words ${isMe
-                                                            ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-br-none'
-                                                            : 'bg-white/10 text-gray-100 border border-white/10 rounded-bl-none'
-                                                            }`}
-                                                    >
-                                                        {msg.type === 'call_invite' || msg.type === 'personal_call_invite' ? (
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
-                                                                    📞
+                                                {msg.type === 'personal_call' ? (
+                                                    <InlinePersonalCall
+                                                        message={msg}
+                                                        isMe={isMe}
+                                                        otherUserId={activeUserId || ''}
+                                                        currentUserId={currentUser?.id || ''}
+                                                        otherUserName={activeUser?.username || 'Unknown'}
+                                                    />
+                                                ) : (
+                                                    <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>
+                                                        <div
+                                                            className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words ${isMe
+                                                                ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-br-none'
+                                                                : 'bg-white/10 text-gray-100 border border-white/10 rounded-bl-none'
+                                                                }`}
+                                                        >
+                                                            {msg.type === 'call_invite' ? (
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+                                                                        📞
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-bold">Ringing...</div>
+                                                                        <div className="text-xs opacity-80">Click to join</div>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => msg.sessionCode && startStudySession(msg.sessionCode)}
+                                                                        className="px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors"
+                                                                    >
+                                                                        JOIN
+                                                                    </button>
                                                                 </div>
-                                                                <div>
-                                                                    <div className="font-bold">Ringing...</div>
-                                                                    <div className="text-xs opacity-80">Click to join</div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => msg.sessionCode && startStudySession(msg.sessionCode)}
-                                                                    className="px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors"
-                                                                >
-                                                                    JOIN
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            msg.text
-                                                        )}
+                                                            ) : (
+                                                                msg.text
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-[9px] text-gray-500 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
+                                                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
                                                     </div>
-                                                    <p className={`text-[9px] text-gray-500 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                </div>
+                                                )}
                                             </motion.div>
                                         </React.Fragment>
                                     );

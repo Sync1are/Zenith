@@ -1,0 +1,75 @@
+const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || "";
+
+interface TaskPlan {
+    summary: string;
+    estimatedTotalMinutes: number;
+    subtasks: Array<{
+        title: string;
+    }>;
+}
+
+async function callOpenRouter(messages: Array<{ role: string; content: string }>): Promise<string> {
+    if (!API_KEY) {
+        throw new Error("API Key not configured");
+    }
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": typeof window !== 'undefined' ? window.location.origin : "",
+            "X-Title": "Zenith AI Task Planner",
+        },
+        body: JSON.stringify({
+            model: "openai/gpt-3.5-turbo",
+            messages,
+            max_tokens: 1000,
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+export async function breakDownTask(taskTitle: string): Promise<TaskPlan | null> {
+    try {
+        const prompt = `Break down the following task into actionable subtasks and provide an estimated time:
+
+Task: "${taskTitle}"
+
+Please respond in the following JSON format:
+{
+  "summary": "A brief 1-2 sentence summary of the task",
+  "estimatedTotalMinutes": <number>,
+  "subtasks": [
+    { "title": "Subtask 1" },
+    { "title": "Subtask 2" },
+    ...
+  ]
+}
+
+Provide 3-5 specific, actionable subtasks. Keep the response concise and practical.`;
+
+        const response = await callOpenRouter([
+            { role: 'user', content: prompt }
+        ]);
+
+        // Parse JSON from response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            console.error('No JSON found in AI response');
+            return null;
+        }
+
+        const plan: TaskPlan = JSON.parse(jsonMatch[0]);
+        return plan;
+    } catch (error) {
+        console.error('Error breaking down task:', error);
+        return null;
+    }
+}

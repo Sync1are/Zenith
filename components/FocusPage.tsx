@@ -357,7 +357,7 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
   const timerActive = useAppStore((s) => s.timerActive);
   const setTimerActive = useAppStore((s) => s.setTimerActive);
 
-  const available = useMemo(() => tasks.filter((t) => t.status !== TaskStatus.DONE), [tasks]);
+  const available = useMemo(() => tasks.filter((t) => t.status !== TaskStatus.Done), [tasks]);
 
   const handleTaskClick = (taskId: number, idx: number) => {
     if (activeTaskId === taskId && timerActive) return;

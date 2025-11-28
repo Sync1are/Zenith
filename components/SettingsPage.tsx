@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyStore } from "../store/useSpotifyStore";
 import { useSettingsStore, ThemeKey } from "../store/useSettingsStore";
 import { useMessageStore } from "../store/useMessageStore";
+import { useAppStore } from "../store/useAppStore";
 import ThemeGrid from "../components/ThemeGrid";
 // Small primitives
 const Label: React.FC<{ children: React.ReactNode; hint?: string }> = ({ children, hint }) => (
@@ -265,6 +266,20 @@ const SettingsPage: React.FC = () => {
     setConfirmClear(false);
   };
 
+  const [confirmReset, setConfirmReset] = useState(false);
+  const resetApp = useAppStore((s) => s.resetApp);
+
+  const onResetApp = () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      setTimeout(() => setConfirmReset(false), 2200);
+      return;
+    }
+    resetApp();
+    resetSettings();
+    setConfirmReset(false);
+  };
+
 
 
   return (
@@ -407,8 +422,8 @@ const SettingsPage: React.FC = () => {
 
         <div className="flex items-center justify-between rounded-lg border border-rose-700 bg-rose-900/20 p-4">
           <div>
-            <p className="font-medium text-rose-300">Clear All Data</p>
-            <p className="text-sm text-[var(--subtle)]">Permanently resets settings</p>
+            <p className="font-medium text-rose-300">Clear Settings</p>
+            <p className="text-sm text-[var(--subtle)]">Resets settings only</p>
           </div>
           <button
             onClick={onClearAll}
@@ -417,6 +432,21 @@ const SettingsPage: React.FC = () => {
             title={confirmClear ? "Click again to confirm" : ""}
           >
             {confirmClear ? "Click to Confirm" : "Clear"}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-orange-700 bg-orange-900/20 p-4">
+          <div>
+            <p className="font-medium text-orange-300">Reset All App Data</p>
+            <p className="text-sm text-[var(--subtle)]">Clears tasks, settings, and all data</p>
+          </div>
+          <button
+            onClick={onResetApp}
+            className={`rounded-lg px-4 py-2 font-medium ${confirmReset ? "bg-orange-700 text-white" : "bg-orange-600 text-white hover:bg-orange-700"
+              }`}
+            title={confirmReset ? "Click again to confirm" : ""}
+          >
+            {confirmReset ? "⚠️ Confirm Reset" : "Reset All"}
           </button>
         </div>
       </Section>

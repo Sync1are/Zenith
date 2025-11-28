@@ -21,8 +21,9 @@ const NotificationSystem: React.FC = () => {
   const timerActive = useAppStore(state => state.timerActive);
   const activeTaskId = useAppStore(state => state.activeTaskId);
 
-  const lastCompletedTasksRef = useRef<Set<number>>(new Set());
+  const lastCompletedTasksRef = useRef<Set<string>>(new Set());
   const isFirstRun = useRef(true);
+  const previousTimerRef = useRef<number>(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Helper to add notification
@@ -75,7 +76,7 @@ const NotificationSystem: React.FC = () => {
 
   // Check for completed tasks
   useEffect(() => {
-    const completedTasks = tasks.filter(t => t.status === TaskStatus.DONE);
+    const completedTasks = tasks.filter(t => t.status === TaskStatus.Done);
     const currentCompletedIds = new Set(completedTasks.map(t => t.id));
 
     if (isFirstRun.current) {
@@ -96,9 +97,13 @@ const NotificationSystem: React.FC = () => {
     lastCompletedTasksRef.current = currentCompletedIds;
   }, [tasks]);
 
-  // Check for Overtime
+  // Check for Overtime - FIXED: Only trigger when crossing from positive to 0
   useEffect(() => {
-    if (timerActive && activeTaskId && timerRemaining === 0) {
+    const previousTimer = previousTimerRef.current;
+    previousTimerRef.current = timerRemaining;
+
+    // Only trigger if we crossed from positive to zero (not when starting at 0)
+    if (timerActive && activeTaskId && timerRemaining === 0 && previousTimer > 0) {
       const task = tasks.find(t => t.id === activeTaskId);
       if (task) {
         playNotificationSound(400, 1.0);

@@ -33,7 +33,7 @@ const AnalyticsChartCard: React.FC = () => {
     startOfWeek.setHours(0, 0, 0, 0);
 
     const completedThisWeek = tasks.filter(task =>
-      task.status === TaskStatus.DONE &&
+      task.status === TaskStatus.Done &&
       task.completedAt &&
       task.completedAt >= startOfWeek.getTime()
     );

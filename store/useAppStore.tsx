@@ -61,7 +61,7 @@ async function refreshAccessToken(
 interface AppState {
   // Tasks
   tasks: Task[];
-  activeTaskId: number | null;
+  activeTaskId: string | null;
 
   // Focus timer
   focusMode: FocusMode;
@@ -99,12 +99,12 @@ interface AppState {
   // Task CRUD
   setTasks: (updater: (prev: Task[]) => Task[]) => void;
   addTask: (task: Task) => void;
-  updateTask: (taskId: number, data: Partial<Task>) => void;
-  deleteTask: (id: number) => void;
+  updateTask: (taskId: string, data: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
 
   // Task control
-  setActiveTask: (id: number | null) => void;
-  startTask: (taskId: number) => void;
+  setActiveTask: (id: string | null) => void;
+  startTask: (taskId: string) => void;
   pauseTask: () => void;
 
   // Timer control
@@ -143,10 +143,11 @@ interface AppState {
     mode: 'idle' | 'outgoing' | 'incoming' | 'connected';
     callId: string | null;
     otherUserId: string | null;
+    callEndReason?: 'user_ended' | 'no_answer' | 'declined';
   };
   startPersonalCall: (receiverId: string) => void;
   acceptPersonalCall: () => void;
-  endPersonalCall: () => void;
+  endPersonalCall: (reason?: 'user_ended' | 'no_answer' | 'declined') => void;
   handleIncomingPersonalCall: (callerId: string, callId: string) => void;
 
   // Ticker
@@ -205,9 +206,9 @@ export const useAppStore = create<AppState>()(
       acceptPersonalCall: () => set((state) => ({
         personalCall: { ...state.personalCall, mode: 'connected' }
       })),
-      endPersonalCall: () => set({
-        personalCall: { isActive: false, mode: 'idle', callId: null, otherUserId: null }
-      }),
+      endPersonalCall: (reason = 'user_ended') => set((state) => ({
+        personalCall: { isActive: false, mode: 'idle', callId: null, otherUserId: null, callEndReason: reason }
+      })),
       handleIncomingPersonalCall: (callerId, callId) => set((state) => ({
         personalCall: { isActive: true, mode: 'incoming', callId, otherUserId: callerId }
       })),
@@ -370,27 +371,8 @@ export const useAppStore = create<AppState>()(
         const task = tasks.find((t) => t.id === taskId);
         if (!task) return;
 
-        // Parse "50min", "1 hour", "90" etc.
-        const parseToSeconds = (duration: string) => {
-          const num = parseInt(duration);
-          if (Number.isNaN(num)) return 0;
-          const lower = duration.toLowerCase();
-          if (lower.includes("hour")) return num * 3600;
-          if (lower.includes("min")) return num * 60;
-          return num; // already in seconds
-        };
-
-        const totalSeconds = task.subtasks?.length
-          ? task.subtasks.reduce((acc, st) => {
-            const n = parseInt(st.duration);
-            if (Number.isNaN(n)) return acc;
-            const low = st.duration.toLowerCase();
-            if (low.includes("hour")) return acc + n * 3600;
-            if (low.includes("min")) return acc + n * 60;
-            return acc + n;
-          }, 0)
-          : parseToSeconds(task.duration);
-
+        // Convert estimatedTimeMinutes to seconds
+        const totalSeconds = task.estimatedTimeMinutes * 60;
         const remaining = task.remainingTime ?? totalSeconds;
 
         set((state) => ({
@@ -400,9 +382,9 @@ export const useAppStore = create<AppState>()(
           lastStartRemaining: remaining,
           tasks: state.tasks.map((t) =>
             t.id === taskId
-              ? { ...t, status: TaskStatus.IN_PROGRESS, remainingTime: remaining }
-              : t.status === TaskStatus.IN_PROGRESS
-                ? { ...t, status: TaskStatus.TODO }
+              ? { ...t, status: TaskStatus.InProgress, remainingTime: remaining }
+              : t.status === TaskStatus.InProgress
+                ? { ...t, status: TaskStatus.Todo }
                 : t
           ),
         }));
@@ -420,7 +402,7 @@ export const useAppStore = create<AppState>()(
         // Persist current remaining time into the active task and set it back to TODO
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === activeTaskId ? { ...t, remainingTime: timerRemaining, status: TaskStatus.TODO } : t
+            t.id === activeTaskId ? { ...t, remainingTime: timerRemaining, status: TaskStatus.Todo } : t
           ),
           activeTaskId: null,
           timerActive: false,

@@ -60,10 +60,14 @@ export interface Message {
     text: string;
     // Keeping number for UI sorting, but we store serverTimestamp in Firestore too.
     timestamp: number;
+    // Message type
+    type?: 'text' | 'call_invite' | 'personal_call';
     // Study session invitation metadata
-    type?: 'text' | 'call_invite';
     sessionCode?: string;
     sessionId?: string;
+    // Personal call metadata
+    callId?: string;
+    callStatus?: 'ringing' | 'connected' | 'ended' | 'no_answer' | 'declined';
 }
 
 interface MessageState {
@@ -88,7 +92,7 @@ interface MessageState {
     acceptFriendRequest: (senderId: string) => Promise<void>;
     rejectFriendRequest: (senderId: string) => Promise<void>;
 
-    sendMessage: (receiverId: string, text: string, type?: 'text' | 'call_invite', metadata?: { sessionCode?: string }) => Promise<void>;
+    sendMessage: (receiverId: string, text: string, type?: 'text' | 'call_invite' | 'personal_call', metadata?: { sessionCode?: string; callId?: string; callStatus?: string }) => Promise<void>;
     subscribeToUsers: () => () => void;
     subscribeToMessages: (partnerId: string) => () => void;
     subscribeToNotifications: () => () => void;
@@ -634,8 +638,10 @@ export const useMessageStore = create<MessageState>()(
                             text: string;
                             timestamp?: number;
                             createdAt?: Timestamp | null;
-                            type?: 'text' | 'call_invite';
+                            type?: 'text' | 'call_invite' | 'personal_call';
                             sessionCode?: string;
+                            callId?: string;
+                            callStatus?: 'ringing' | 'connected' | 'ended' | 'no_answer' | 'declined';
                         };
                         const ts =
                             typeof data.timestamp === "number"
@@ -648,7 +654,9 @@ export const useMessageStore = create<MessageState>()(
                             text: data.text,
                             timestamp: ts,
                             type: data.type,
-                            sessionCode: data.sessionCode
+                            sessionCode: data.sessionCode,
+                            callId: data.callId,
+                            callStatus: data.callStatus
                         });
                     });
 

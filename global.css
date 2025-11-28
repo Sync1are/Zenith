@@ -1180,6 +1180,181 @@ body {
   }
 }
 
+--card: #151516;
+--accent: #4f6cff;
+--subtle: #757575;
+--border: #222;
+}
+
+/* Nightfall */
+:root[data-theme='nightfall'] {
+  --bg: #0b0b0c;
+  --text: #cfe7e9;
+  --card: #141415;
+  --accent: #47d6cc;
+  --subtle: #6fa7a2;
+  --border: #1f1f20;
+}
+
+/* Chrome Dark */
+:root[data-theme='chrome-dark'] {
+  --bg: #111213;
+  --text: #dcdcdc;
+  --card: #18191b;
+  --accent: #b5c7d9;
+  --subtle: #9ca6ad;
+  --border: #242628;
+}
+
+/* Royal Midnight */
+:root[data-theme='royal-midnight'] {
+  --bg: #070a14;
+  --text: #e8e6f4;
+  --card: #0f1523;
+  --accent: #e3b341;
+  --subtle: #a99a6a;
+  --border: #1c2539;
+}
+
+/* Obsidian Dark */
+:root[data-theme='obsidian-dark'] {
+  --bg: #000000;
+  --text: #ededed;
+  --card: #0b0b0b;
+  --accent: #a855f7;
+  --subtle: #8f8f8f;
+  --border: #1b1b1b;
+}
+
+/* =============================
+   PACK E — Premium Gold Themes
+   ============================= */
+
+/* Gold Noir */
+:root[data-theme='gold-noir'] {
+  --bg: #0c0c0c;
+  --text: #f6f6f6;
+  --card: #151515;
+  --accent: #ffd700;
+  --subtle: #c1a96f;
+  --border: #262626;
+}
+
+/* Ivory Gold */
+:root[data-theme='ivory-gold'] {
+  --bg: #f7f5ef;
+  --text: #1d1b18;
+  --card: #ffffff;
+  --accent: #e1b450;
+  --subtle: #947d59;
+  --border: #dfd9ce;
+}
+
+/* Monarch */
+:root[data-theme='monarch'] {
+  --bg: #0a0a0a;
+  --text: #fdf6d1;
+  --card: #141414;
+  --accent: #ffcc33;
+  --subtle: #c9b36f;
+  --border: #242424;
+}
+
+/* Amber Stone */
+:root[data-theme='amber-stone'] {
+  --bg: #1d1813;
+  --text: #ffe7cc;
+  --card: #261f18;
+  --accent: #ffb55a;
+  --subtle: #c79a72;
+  --border: #3a2f26;
+}
+
+/* ============================
+   Utilities
+   ============================ */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glass Mode Utility */
+.glass-panel {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.glass-on .glass-panel {
+  background-color: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+/* User's Custom Glass Panel */
+.glass-panel-custom {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  backdrop-filter: blur(10px) saturate(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 30px rgba(15, 12, 30, 0.5);
+}
+
+/* ============================
+   Circular Arc Animations
+   ============================ */
+@keyframes arcInNext {
+  from {
+    transform: translate(100%, 20%) rotate(15deg) scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes arcOutNext {
+  from {
+    transform: translate(0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translate(-100%, -20%) rotate(-15deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes arcInPrev {
+  from {
+    transform: translate(-100%, 20%) rotate(-15deg) scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes arcOutPrev {
+  from {
+    transform: translate(0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translate(100%, -20%) rotate(15deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
 .animate-arc-in-next {
   animation: arcInNext 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
@@ -1194,4 +1369,120 @@ body {
 
 .animate-arc-out-prev {
   animation: arcOutPrev 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ============================
+   Tasks Page Animations
+   ============================ */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out;
+}
+
+@keyframes exit-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+.animate-exit-right {
+  animation: exit-right 0.4s ease-out forwards;
+}
+
+@keyframes exit-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+}
+
+.animate-exit-left {
+  animation: exit-left 0.4s ease-out forwards;
+}
+
+@keyframes exit-delete {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.animate-exit-delete {
+  animation: exit-delete 0.3s ease-out forwards;
+}
+
+/* Stagger animations */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+/* Custom scrollbar for tasks page */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }

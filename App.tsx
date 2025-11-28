@@ -34,7 +34,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import LiveBackground from "./components/LiveBackground";
 import StudySessionModal from './components/StudySessionModal';
-import PersonalCallModal from './components/PersonalCallModal';
+
 import MigrationLoadingScreen from './components/MigrationLoadingScreen';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
@@ -440,7 +440,7 @@ const App: React.FC = () => {
           <StudySessionModal />
 
           {/* Personal Call Modal (Global) */}
-          <PersonalCallModal />
+
         </div>
       )}
     </div>
