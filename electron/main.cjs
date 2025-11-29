@@ -21,6 +21,26 @@ function createWindow() {
     },
   });
 
+  // Set Content Security Policy (CSP)
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = { ...details.responseHeaders };
+
+    // Remove existing CSP headers to avoid conflicts (browser takes most restrictive intersection)
+    Object.keys(responseHeaders).forEach(key => {
+      if (key.toLowerCase() === 'content-security-policy') {
+        delete responseHeaders[key];
+      }
+    });
+
+    responseHeaders['Content-Security-Policy'] = [
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.tailwindcss.com https://unpkg.com https://aistudiocdn.com https://*.spotify.com https://accounts.spotify.com https://*.youtube.com https://youtube.com https://www.youtube.com https://img.youtube.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai;",
+      "connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai;",
+      "media-src 'self' data: blob: https: https://cdn.pixabay.com;"
+    ];
+
+    callback({ responseHeaders });
+  });
+
   mainWindow = win;
 
   if (isDev) {
