@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Youtube, Calculator, StickyNote, Music } from "lucide-react";
 
 // UI Components
 import Sidebar from "./components/Sidebar";
@@ -6,6 +7,8 @@ import Header from "./components/Header";
 import TitleBar from "./components/TitleBar";
 import NotificationSystem from "./components/Notifications";
 import TopNavBar from "./components/TopNavBar";
+import { Dock } from "./components/Dock";
+import { Window } from "./components/Window";
 
 // Pages
 import Dashboard from "./components/Dashboard";
@@ -46,6 +49,123 @@ const App: React.FC = () => {
   const activePage = useAppStore((s) => s.activePage);
   const setActivePage = useAppStore((s) => s.setActivePage);
   const superFocus = useSuperFocus();
+
+  // 🎯 Window Management State
+  const [openWindows, setOpenWindows] = useState<string[]>([]);
+  const [minimizedWindows, setMinimizedWindows] = useState<string[]>([]);
+  const [activeWindow, setActiveWindow] = useState<string | null>(null);
+  const [iconPositions, setIconPositions] = useState<Record<string, DOMRect>>({});
+  const [windowZIndices, setWindowZIndices] = useState<Record<string, number>>({});
+  const baseZIndex = 1000;
+
+  // 🎯 Mini-Apps Configuration
+  const dockApps = React.useMemo(() => [
+    {
+      id: 'youtube',
+      title: 'YouTube',
+      icon: Youtube,
+      width: 800,
+      height: 600,
+      component: (
+        <webview
+          src="https://www.youtube.com"
+          className="w-full h-full border-0"
+          allowpopups
+        />
+      )
+    },
+    {
+      id: 'calculator',
+      title: 'Calculator',
+      icon: Calculator,
+      width: 320,
+      height: 480,
+      component: (
+        <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-800 to-gray-900 text-white">
+          <div className="text-center">
+            <Calculator size={48} className="mx-auto mb-4 opacity-50" />
+            <p className="text-sm opacity-70">Calculator coming soon</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'notes',
+      title: 'Notes',
+      icon: StickyNote,
+      width: 600,
+      height: 500,
+      component: (
+        <div className="p-4 h-full bg-yellow-50">
+          <textarea
+            className="w-full h-full bg-transparent border-0 resize-none focus:outline-none text-gray-800"
+            placeholder="Start typing your notes..."
+          />
+        </div>
+      )
+    },
+    {
+      id: 'music',
+      title: 'Music',
+      icon: Music,
+      width: 400,
+      height: 500,
+      component: (
+        <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+          <div className="text-center">
+            <Music size={48} className="mx-auto mb-4" />
+            <p className="text-sm">Music Player coming soon</p>
+          </div>
+        </div>
+      )
+    },
+  ], []);
+
+  // Handle window actions
+  const handleAppClick = useCallback((appId: string) => {
+    if (minimizedWindows.includes(appId)) {
+      // Un-minimize
+      setMinimizedWindows(prev => prev.filter(id => id !== appId));
+      setActiveWindow(appId);
+    } else if (openWindows.includes(appId)) {
+      // Focus if already open
+      setActiveWindow(appId);
+      // Bring to front
+      setWindowZIndices(prev => {
+        const maxZ = Math.max(...Object.values(prev), baseZIndex);
+        return { ...prev, [appId]: maxZ + 1 };
+      });
+    } else {
+      // Open new window
+      setOpenWindows(prev => [...prev, appId]);
+      setActiveWindow(appId);
+      setWindowZIndices(prev => {
+        const maxZ = Math.max(...Object.values(prev), baseZIndex);
+        return { ...prev, [appId]: maxZ + 1 };
+      });
+    }
+  }, [minimizedWindows, openWindows, windowZIndices]);
+
+  const handleWindowClose = useCallback((appId: string) => {
+    setOpenWindows(prev => prev.filter(id => id !== appId));
+    setMinimizedWindows(prev => prev.filter(id => id !== appId));
+    setActiveWindow(prev => prev === appId ? null : prev);
+  }, []);
+
+  const handleWindowMinimize = useCallback((appId: string) => {
+    setMinimizedWindows(prev => [...prev, appId]);
+    setActiveWindow(prev => prev === appId ? null : prev);
+  }, []);
+
+  const handleWindowFocus = useCallback((appId: string) => {
+    setActiveWindow(appId);
+    setWindowZIndices(prev => {
+      const maxZ = Math.max(...Object.values(prev), baseZIndex);
+      // Only update if not already top
+      if (prev[appId] === maxZ) return prev;
+      return { ...prev, [appId]: maxZ + 1 };
+    });
+  }, []);
 
   // 🌙 Migration state
   const isMigrating = useMigrationStore((s) => s.isMigrating);
@@ -440,6 +560,35 @@ const App: React.FC = () => {
           <StudySessionModal />
 
           {/* Personal Call Modal (Global) */}
+
+          {/* 🚀 Mini-App Windows */}
+          {dockApps.map(app => (
+            <Window
+              key={app.id}
+              app={app}
+              isOpen={openWindows.includes(app.id)}
+              isMinimized={minimizedWindows.includes(app.id)}
+              isActive={activeWindow === app.id}
+              zIndex={windowZIndices[app.id] || baseZIndex}
+              iconRect={iconPositions[app.id]}
+              onClose={() => handleWindowClose(app.id)}
+              onMinimize={() => handleWindowMinimize(app.id)}
+              onFocus={() => handleWindowFocus(app.id)}
+            />
+          ))}
+
+          {/* 🚀 Dock */}
+          <AnimatePresence>
+            {!superFocus.isActive && (
+              <Dock
+                apps={dockApps}
+                openAppIds={openWindows}
+                activeAppId={activeWindow}
+                onAppClick={handleAppClick}
+                onLayout={setIconPositions}
+              />
+            )}
+          </AnimatePresence>
 
         </div>
       )}

@@ -83,3 +83,26 @@ export interface DesignConceptProps {
   activeId: string;
   onSelect: (id: string) => void;
 }
+
+export interface AppConfig {
+  id: string;
+  title: string;
+  icon: any;
+  width?: number;
+  height?: number;
+  component: React.ReactNode;
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        src?: string;
+        allowpopups?: boolean;
+        webpreferences?: string;
+        useragent?: string;
+        partition?: string;
+      };
+    }
+  }
+}
