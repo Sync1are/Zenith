@@ -85,12 +85,22 @@ export const useSpotifyStore = create<SpotifyState>()(
         set({ spotify: { accessToken: null, refreshToken: null, expiresAt: null } });
       },
 
-      acceptOAuthTokens: (data) => {
+      acceptOAuthTokens: async (data) => {
         const expiresAt = Date.now() + (data.expires_in - 30) * 1000;
+
+        let secureRefreshToken = data.refresh_token;
+        if (window.electronAPI?.spotify?.encryptToken) {
+          try {
+            secureRefreshToken = await window.electronAPI.spotify.encryptToken(data.refresh_token);
+          } catch (e) {
+            console.error("Failed to encrypt token", e);
+          }
+        }
+
         set({
           spotify: {
             accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            refreshToken: secureRefreshToken,
             expiresAt,
           },
         });
@@ -104,16 +114,36 @@ export const useSpotifyStore = create<SpotifyState>()(
         }
         if (!spotify.refreshToken) return null;
         try {
-          const data = await refreshAccessToken(spotify.refreshToken);
-          const expiresAt = Date.now() + (data.expires_in - 30) * 1000;
-          set({
-            spotify: {
-              accessToken: data.access_token,
-              refreshToken: data.refresh_token || spotify.refreshToken,
-              expiresAt,
-            },
-          });
-          return data.access_token;
+          if (window.electronAPI?.spotify?.refreshToken) {
+            const data = await window.electronAPI.spotify.refreshToken(spotify.refreshToken);
+            const expiresAt = Date.now() + (data.expires_in - 30) * 1000;
+
+            let newRefreshToken = spotify.refreshToken;
+            if (data.refresh_token) {
+              newRefreshToken = await window.electronAPI.spotify.encryptToken(data.refresh_token);
+            }
+
+            set({
+              spotify: {
+                accessToken: data.access_token,
+                refreshToken: newRefreshToken,
+                expiresAt,
+              },
+            });
+            return data.access_token;
+          } else {
+            // Fallback for non-Electron environments
+            const data = await refreshAccessToken(spotify.refreshToken);
+            const expiresAt = Date.now() + (data.expires_in - 30) * 1000;
+            set({
+              spotify: {
+                accessToken: data.access_token,
+                refreshToken: data.refresh_token || spotify.refreshToken,
+                expiresAt,
+              },
+            });
+            return data.access_token;
+          }
         } catch (e) {
           console.error(e);
           set({ spotify: { accessToken: null, refreshToken: spotify.refreshToken, expiresAt: null } });

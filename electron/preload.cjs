@@ -17,5 +17,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   removeExitSuperFocusListener: () => {
     ipcRenderer.removeAllListeners('exit-super-focus-requested');
+  },
+
+  // Secure Spotify
+  spotify: {
+    encryptToken: (token) => ipcRenderer.invoke('spotify-encrypt-token', token),
+    refreshToken: (encryptedToken) => ipcRenderer.invoke('spotify-refresh-token', encryptedToken),
   }
 });

@@ -92,6 +92,71 @@ ipcMain.on("exit-super-focus", () => {
   globalShortcut.unregisterAll();
 });
 
+// Secure Spotify Token Handlers
+const { safeStorage, net } = require("electron");
+
+ipcMain.handle('spotify-encrypt-token', async (event, token) => {
+  if (safeStorage.isEncryptionAvailable()) {
+    return safeStorage.encryptString(token).toString('base64');
+  }
+  console.warn("safeStorage not available, storing plain token");
+  return token;
+});
+
+ipcMain.handle('spotify-refresh-token', async (event, encryptedToken) => {
+  try {
+    let refreshToken = encryptedToken;
+    if (safeStorage.isEncryptionAvailable()) {
+      try {
+        refreshToken = safeStorage.decryptString(Buffer.from(encryptedToken, 'base64'));
+      } catch (e) {
+        console.error("Failed to decrypt token:", e);
+        throw new Error("Decryption failed");
+      }
+    }
+
+    const SPOTIFY_CLIENT_ID = "c78fa3fb2fc34a76ae9f6771a403589f";
+
+    const body = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }).toString();
+
+    const request = net.request({
+      method: 'POST',
+      url: 'https://accounts.spotify.com/api/token',
+    });
+
+    request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+    return new Promise((resolve, reject) => {
+      request.on('response', (response) => {
+        let data = '';
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        response.on('end', () => {
+          if (response.statusCode === 200) {
+            resolve(JSON.parse(data));
+          } else {
+            reject(new Error(`Spotify refresh failed: ${response.statusCode} ${data}`));
+          }
+        });
+      });
+      request.on('error', (error) => {
+        reject(error);
+      });
+      request.write(body);
+      request.end();
+    });
+
+  } catch (error) {
+    console.error("Spotify refresh error:", error);
+    throw error;
+  }
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });

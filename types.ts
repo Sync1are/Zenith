@@ -94,6 +94,26 @@ export interface AppConfig {
 }
 
 declare global {
+  interface Window {
+    electronAPI: {
+      minimize: () => void;
+      maximize: () => void;
+      close: () => void;
+      enterSuperFocus: () => void;
+      exitSuperFocus: () => void;
+      onExitSuperFocusRequested: (callback: () => void) => void;
+      removeExitSuperFocusListener: () => void;
+      // Compact Mode
+      setNormalMode: () => void;
+      onCompactModeExited: (callback: () => void) => void;
+      // Secure Spotify
+      spotify: {
+        encryptToken: (token: string) => Promise<string>;
+        refreshToken: (encryptedToken: string) => Promise<any>;
+      };
+    };
+  }
+
   namespace JSX {
     interface IntrinsicElements {
       webview: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
