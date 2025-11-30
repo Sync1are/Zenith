@@ -350,9 +350,9 @@ const ChatPage: React.FC = () => {
                                                     <InlinePersonalCall
                                                         message={msg}
                                                         isMe={isMe}
-                                                        otherUserId={activeUserId || ''}
-                                                        currentUserId={currentUser?.id || ''}
-                                                        otherUserName={activeUser?.username || 'Unknown'}
+                                                        chatId={[currentUser?.id || '', activeUserId || ''].sort().join('_')}
+                                                        currentUser={currentUser}
+                                                        otherUser={activeUser}
                                                     />
                                                 ) : (
                                                     <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>

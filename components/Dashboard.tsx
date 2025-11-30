@@ -6,30 +6,29 @@ import TaskList from './TaskList';
 import SmartHomeCard from './SmartHomeCard';
 import { useAppStore } from "../store/useAppStore";
 import { TaskStatus } from "../types";
-const parseDurationToSeconds = (duration: string): number => {
-    if (!duration) return 0;
-    const num = parseInt(duration);
-    if (duration.includes("hour")) return num * 3600;
-    if (duration.includes("min")) return num * 60;
-    return num;
-};
+
 
 const Dashboard: React.FC = () => {
     const tasks = useAppStore(state => state.tasks);
 
     // ---- Derived Stats ----
-    const completedCount = tasks.filter(t => t.status === TaskStatus.DONE).length;
-    const inProgress = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS);
+    const completedCount = tasks.filter(t => t.status === TaskStatus.Done).length;
+    const inProgress = tasks.filter(t => t.status === TaskStatus.InProgress);
+
 
     // Total Focus Time Today (just sums remainingTime or parsed duration)
     const focusSeconds = inProgress.reduce((acc, t) => {
-        if (t.remainingTime != null) return acc + (parseDurationToSeconds(t.duration!) - t.remainingTime);
-        if (t.elapsedTime != null) return acc + t.elapsedTime;
-        if (!t.duration) return acc;
-        const num = parseInt(t.duration);
-        if (t.duration.includes("hour")) return acc + (num * 3600);
-        if (t.duration.includes("min")) return acc + (num * 60);
-        return acc + num;
+        const totalSeconds = t.estimatedTimeMinutes * 60;
+
+        if (t.remainingTime !== undefined) {
+            return acc + Math.max(0, totalSeconds - t.remainingTime);
+        }
+
+        if (t.timeSpentMinutes) {
+            return acc + (t.timeSpentMinutes * 60);
+        }
+
+        return acc;
     }, 0);
 
     const focusHours = (focusSeconds / 3600).toFixed(1);

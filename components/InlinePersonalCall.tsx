@@ -1,305 +1,321 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { useWebRTC } from '../hooks/useWebRTC';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Message } from '../store/useMessageStore';
+import { Phone, PhoneOff, Mic, MicOff, Clock } from 'lucide-react';
 
 interface InlinePersonalCallProps {
     message: Message;
     isMe: boolean;
-    otherUserId: string;
-    currentUserId: string;
-    otherUserName: string;
+    chatId: string;
+    currentUser: any;
+    otherUser: any;
 }
 
 const InlinePersonalCall: React.FC<InlinePersonalCallProps> = ({
     message,
     isMe,
-    otherUserId,
-    currentUserId,
-    otherUserName
+    chatId,
+    currentUser,
+    otherUser
 }) => {
-    const { personalCall, acceptPersonalCall, endPersonalCall, handleIncomingPersonalCall } = useAppStore();
-    const [ringTimer, setRingTimer] = useState(45);
+    const {
+        personalCall,
+        acceptPersonalCall,
+        endPersonalCall,
+        handleIncomingPersonalCall
+    } = useAppStore();
 
     const {
         isMicOn,
         connectionStatus,
-        error,
         initializeCall,
         joinCall,
         toggleMic,
         leaveCall,
     } = useWebRTC();
 
-    const callId = message.callId || '';
-    const callStatus = message.callStatus || 'ringing';
-    const isIncoming = !isMe && callStatus === 'ringing';
-    const isOutgoing = isMe && callStatus === 'ringing';
-    const isActive = callStatus === 'connected' && personalCall.isActive && personalCall.callId === callId;
-    const isEnded = ['ended', 'no_answer', 'declined'].includes(callStatus);
+    const [duration, setDuration] = useState(0);
+    const [callStatus, setCallStatus] = useState(message.callStatus || 'ringing');
+    const [ringTimer, setRingTimer] = useState(45);
 
-    // Handle WebRTC initialization for active calls
+    // Listen to real-time updates for this specific message to sync status
     useEffect(() => {
-        if (isActive && connectionStatus === 'idle') {
-            if (isMe) {
-                initializeCall(callId, currentUserId);
+        const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+        const unsub = onSnapshot(msgRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                if (data.callStatus && data.callStatus !== callStatus) {
+                    setCallStatus(data.callStatus);
+                }
+                // Sync duration if provided in update (for "Call lasted X")
+                if (data.callDuration) {
+                    setDuration(data.callDuration);
+                }
             }
-        }
-    }, [isActive, connectionStatus, isMe, callId, currentUserId]);
+        });
+        return () => unsub();
+    }, [chatId, message.id]);
 
-    // Handle timeout (no answer)
-    const handleTimeout = async () => {
-        try {
-            // Clean up Firebase incoming call notification
-            const callRef = doc(db, 'users', currentUserId, 'incoming_personal_call', 'active');
-            await deleteDoc(callRef);
-
-            // Update message status to no_answer (Missed Call)
-            const chatId = [currentUserId, otherUserId].sort().join('_');
-            const messageRef = doc(db, 'chats', chatId, 'messages', message.id);
-            await updateDoc(messageRef, { callStatus: 'no_answer' });
-        } catch (err) {
-            console.error('Failed to handle timeout:', err);
-        }
-
-        if (isActive) leaveCall();
-        endPersonalCall('no_answer');
-    };
-
-    // 45-second timeout for incoming calls
+    // Timer for ringing (45s window)
     useEffect(() => {
-        if (isIncoming && callStatus === 'ringing') {
-            setRingTimer(45);
-            const interval = setInterval(() => {
-                setRingTimer(prev => {
+        if (callStatus === 'ringing') {
+            const timer = setInterval(() => {
+                setRingTimer((prev) => {
                     if (prev <= 1) {
-                        clearInterval(interval);
+                        clearInterval(timer);
                         handleTimeout();
                         return 0;
                     }
                     return prev - 1;
                 });
             }, 1000);
-
-            return () => clearInterval(interval);
+            return () => clearInterval(timer);
         }
-    }, [isIncoming, callStatus]);
+    }, [callStatus]);
 
-    // 45-second timeout for outgoing calls
+    // Timer for connected call duration
     useEffect(() => {
-        if (isOutgoing && callStatus === 'ringing') {
-            const timer = setTimeout(() => {
-                handleTimeout();
-            }, 45000);
-
-            return () => clearTimeout(timer);
+        let interval: NodeJS.Timeout;
+        if (callStatus === 'connected') {
+            interval = setInterval(() => {
+                setDuration(prev => prev + 1);
+            }, 1000);
         }
-    }, [isOutgoing, callStatus]);
+        return () => clearInterval(interval);
+    }, [callStatus]);
 
-    const handleAccept = async () => {
-        if (callId && currentUserId) {
-            // Update local state
-            handleIncomingPersonalCall(otherUserId, callId);
-            acceptPersonalCall();
-
-            // Join WebRTC call
-            await joinCall(callId, currentUserId);
-
-            // Update message status in Firestore
-            try {
-                const chatId = [currentUserId, otherUserId].sort().join('_');
-                const messageRef = doc(db, 'chats', chatId, 'messages', message.id);
-                await updateDoc(messageRef, { callStatus: 'connected' });
-            } catch (err) {
-                console.error('Failed to update call status:', err);
+    // WebRTC connection management
+    useEffect(() => {
+        if (callStatus === 'connected' && personalCall.isActive && personalCall.callId === message.callId) {
+            if (isMe) {
+                // Caller initializes
+                initializeCall(message.callId!, currentUser.id);
             }
         }
+    }, [callStatus, personalCall.isActive, isMe, message.callId]);
+
+    const handleTimeout = async () => {
+        if (callStatus !== 'ringing') return;
+
+        // Only one side needs to trigger the update, let's say the caller or whoever detects it first
+        // But to be safe, we can check if we are the "active" participant in some way.
+        // Simple approach: Just update. Firestore handles concurrency reasonably well for this.
+
+        try {
+            const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+            await updateDoc(msgRef, {
+                callStatus: 'no_answer',
+                text: isMe ? 'Did not connect' : `Missed call from ${otherUser?.username || 'User'}`
+            });
+
+            // Cleanup any active call docs
+            cleanupCallDocs();
+        } catch (err) {
+            console.error("Error handling timeout:", err);
+        }
+    };
+
+    const cleanupCallDocs = async () => {
+        try {
+            const myCallRef = doc(db, 'users', currentUser.id, 'incoming_personal_call', 'active');
+            await deleteDoc(myCallRef);
+
+            if (otherUser?.id) {
+                const otherCallRef = doc(db, 'users', otherUser.id, 'incoming_personal_call', 'active');
+                await deleteDoc(otherCallRef);
+            }
+        } catch (e) {
+            // Ignore if docs don't exist
+        }
+
+        if (personalCall.isActive) {
+            endPersonalCall('no_answer');
+            leaveCall();
+        }
+    };
+
+    const handleAccept = async () => {
+        if (!message.callId) return;
+
+        handleIncomingPersonalCall(otherUser.id, message.callId);
+        acceptPersonalCall();
+
+        // Join WebRTC
+        await joinCall(message.callId, currentUser.id);
+
+        // Update Firestore
+        const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+        await updateDoc(msgRef, { callStatus: 'connected' });
     };
 
     const handleDecline = async () => {
-        try {
-            // Clean up Firebase incoming call notification
-            const callRef = doc(db, 'users', currentUserId, 'incoming_personal_call', 'active');
-            await deleteDoc(callRef);
+        const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+        await updateDoc(msgRef, {
+            callStatus: 'declined',
+            text: 'Call declined'
+        });
 
-            // Update message status to declined
-            const chatId = [currentUserId, otherUserId].sort().join('_');
-            const messageRef = doc(db, 'chats', chatId, 'messages', message.id);
-            await updateDoc(messageRef, { callStatus: 'declined' });
-        } catch (err) {
-            console.error('Failed to handle decline:', err);
-        }
-
-        leaveCall();
+        cleanupCallDocs();
         endPersonalCall('declined');
     };
 
-    const handleEnd = async () => {
-        try {
-            // Update message status to ended
-            const chatId = [currentUserId, otherUserId].sort().join('_');
-            const messageRef = doc(db, 'chats', chatId, 'messages', message.id);
-            await updateDoc(messageRef, { callStatus: 'ended' });
+    const handleEndCall = async () => {
+        const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+        await updateDoc(msgRef, {
+            callStatus: 'ended',
+            callDuration: duration,
+            text: `Call lasted ${formatDuration(duration)}`
+        });
 
-            // Clean up Firebase documents
-            const myCallRef = doc(db, 'users', currentUserId, 'incoming_personal_call', 'active');
-            await deleteDoc(myCallRef);
-
-            if (isMe && otherUserId) {
-                const receiverCallRef = doc(db, 'users', otherUserId, 'incoming_personal_call', 'active');
-                await deleteDoc(receiverCallRef);
-            }
-        } catch (err) {
-            console.error('Failed to end call:', err);
-        }
-
-        leaveCall();
+        cleanupCallDocs();
         endPersonalCall('user_ended');
+        leaveCall();
     };
 
-    // Incoming call UI
-    if (isIncoming) {
+    const formatDuration = (secs: number) => {
+        const hrs = Math.floor(secs / 3600);
+        const mins = Math.floor((secs % 3600) / 60);
+        const s = secs % 60;
+
+        if (hrs > 0) return `${hrs}h ${mins}m ${s}s`;
+        if (mins > 0) return `${mins}m ${s}s`;
+        return `${s}s`;
+    };
+
+    // --- RENDER STATES ---
+
+    // 1. Ringing (Outgoing)
+    if (callStatus === 'ringing' && isMe) {
         return (
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="my-3 p-4 rounded-2xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 backdrop-blur-sm"
-            >
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center animate-pulse">
-                        📞
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 w-64">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                        <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center animate-pulse">
+                            <Phone className="w-8 h-8 text-indigo-400" />
+                        </div>
+                        <div className="absolute inset-0 rounded-full border-2 border-indigo-500/30 animate-ping" />
                     </div>
-                    <div className="flex-1">
-                        <div className="text-white font-semibold">{otherUserName} is calling...</div>
-                        <div className="text-xs text-indigo-300">Ringing • {ringTimer}s</div>
+                    <div className="text-center">
+                        <p className="font-semibold text-white">Calling {otherUser?.username}...</p>
+                        <p className="text-xs text-indigo-300">Ringing... {ringTimer}s</p>
                     </div>
-                </div>
-                <div className="flex gap-2">
                     <button
-                        onClick={handleDecline}
-                        className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all font-medium text-sm"
+                        onClick={handleEndCall}
+                        className="p-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-full transition-colors"
                     >
-                        Decline
-                    </button>
-                    <button
-                        onClick={handleAccept}
-                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-xl transition-all font-medium text-sm shadow-lg shadow-green-500/20"
-                    >
-                        Answer
+                        <PhoneOff className="w-5 h-5" />
                     </button>
                 </div>
-            </motion.div>
+            </div>
         );
     }
 
-    // Outgoing call UI (ringing)
-    if (isOutgoing) {
+    // 2. Ringing (Incoming)
+    if (callStatus === 'ringing' && !isMe) {
         return (
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="my-3 p-4 rounded-2xl bg-gradient-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20 backdrop-blur-sm"
-            >
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center animate-pulse">
-                        📞
-                    </div>
-                    <div className="flex-1">
-                        <div className="text-white font-semibold">Calling {otherUserName}...</div>
-                        <div className="text-xs text-indigo-300">Ringing...</div>
-                    </div>
-                </div>
-            </motion.div>
-        );
-    }
-
-    // Active call UI
-    if (isActive) {
-        return (
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="my-3 p-4 rounded-2xl bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/30 backdrop-blur-sm"
-            >
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center">
-                        📞
-                    </div>
-                    <div className="flex-1">
-                        <div className="text-white font-semibold">In call with {otherUserName}</div>
-                        <div className="flex items-center gap-1.5 text-xs">
-                            <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' :
-                                connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                                    'bg-gray-500'
-                                }`} />
-                            <span className={connectionStatus === 'connected' ? 'text-green-400' : 'text-gray-400'}>
-                                {connectionStatus === 'connected' ? 'Connected' :
-                                    connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
-                            </span>
+            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-xl p-4 w-64 shadow-lg shadow-indigo-500/10">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                        <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center animate-bounce">
+                            <Phone className="w-8 h-8 text-green-400" />
                         </div>
                     </div>
-                </div>
-
-                {error && (
-                    <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <p className="text-xs text-red-400">{error}</p>
+                    <div className="text-center">
+                        <p className="font-semibold text-white">Incoming Call</p>
+                        <p className="text-xs text-indigo-300">from {otherUser?.username}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">Auto-decline in {ringTimer}s</p>
                     </div>
-                )}
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={toggleMic}
-                        className={`flex-1 px-4 py-2 rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-2 ${isMicOn
-                            ? 'bg-white/10 text-white hover:bg-white/20'
-                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                            }`}
-                        title={isMicOn ? 'Mute' : 'Unmute'}
-                    >
-                        {isMicOn ? '🎤' : '🔇'}
-                        {isMicOn ? 'Mute' : 'Unmute'}
-                    </button>
-                    <button
-                        onClick={handleEnd}
-                        className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all font-medium text-sm shadow-lg shadow-red-500/20"
-                    >
-                        End Call
-                    </button>
+                    <div className="flex gap-4 w-full justify-center">
+                        <button
+                            onClick={handleDecline}
+                            className="flex-1 p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <PhoneOff className="w-4 h-4" />
+                            <span className="text-xs font-medium">Decline</span>
+                        </button>
+                        <button
+                            onClick={handleAccept}
+                            className="flex-1 p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg shadow-green-500/20"
+                        >
+                            <Phone className="w-4 h-4" />
+                            <span className="text-xs font-medium">Accept</span>
+                        </button>
+                    </div>
                 </div>
-            </motion.div>
+            </div>
         );
     }
 
-    // Call ended states
-    if (isEnded) {
-        let statusText = '';
-        let statusIcon = '';
-        let statusColor = 'text-gray-400';
+    // 3. Connected
+    if (callStatus === 'connected') {
+        return (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4 w-64">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 text-green-400">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="font-mono font-medium">{formatDuration(duration)}</span>
+                    </div>
 
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleMic}
+                            className={`p-3 rounded-full transition-colors ${isMicOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400'}`}
+                        >
+                            {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                        </button>
+                        <button
+                            onClick={handleEndCall}
+                            className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-lg shadow-red-500/20"
+                        >
+                            <PhoneOff className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <p className="text-xs text-green-300/70">Connected with {otherUser?.username}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // 4. Ended / Missed / Declined (History View)
+    const getStatusDisplay = () => {
         switch (callStatus) {
             case 'ended':
-                statusText = 'Call ended';
-                statusIcon = '📞';
-                statusColor = 'text-gray-400';
-                break;
+                return {
+                    icon: <Clock className="w-4 h-4" />,
+                    text: `Call lasted ${formatDuration(duration)}`,
+                    color: 'text-gray-400',
+                    bg: 'bg-gray-500/10'
+                };
             case 'no_answer':
-                statusText = isMe ? 'Did not connect' : 'Missed call';
-                statusIcon = '📞';
-                statusColor = 'text-yellow-400';
-                break;
+                return {
+                    icon: <PhoneOff className="w-4 h-4" />,
+                    text: isMe ? 'Did not connect' : `Missed call from ${otherUser?.username}`,
+                    color: 'text-red-400',
+                    bg: 'bg-red-500/10'
+                };
             case 'declined':
-                statusText = isMe ? 'Call declined' : 'Declined';
-                statusIcon = '📞';
-                statusColor = 'text-red-400';
-                break;
+                return {
+                    icon: <PhoneOff className="w-4 h-4" />,
+                    text: 'Call declined',
+                    color: 'text-gray-400',
+                    bg: 'bg-gray-500/10'
+                };
+            default:
+                return null;
         }
+    };
 
+    const statusDisplay = getStatusDisplay();
+
+    if (statusDisplay) {
         return (
-            <div className="my-2 flex items-center gap-2 text-sm opacity-60">
-                <span>{statusIcon}</span>
-                <span className={statusColor}>{statusText}</span>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${statusDisplay.bg} border border-white/5`}>
+                <span className={statusDisplay.color}>{statusDisplay.icon}</span>
+                <span className={`text-sm ${statusDisplay.color}`}>{statusDisplay.text}</span>
             </div>
         );
     }

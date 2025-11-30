@@ -68,6 +68,7 @@ export interface Message {
     // Personal call metadata
     callId?: string;
     callStatus?: 'ringing' | 'connected' | 'ended' | 'no_answer' | 'declined';
+    callDuration?: number;
 }
 
 interface MessageState {
@@ -656,7 +657,8 @@ export const useMessageStore = create<MessageState>()(
                             type: data.type,
                             sessionCode: data.sessionCode,
                             callId: data.callId,
-                            callStatus: data.callStatus
+                            callStatus: data.callStatus,
+                            callDuration: (data as any).callDuration
                         });
                     });
 

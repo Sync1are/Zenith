@@ -117,10 +117,24 @@ class StudySessionService {
         }
     }
 
+    // Helper for safe updates (ignores "No document to update" errors)
+    private async safeUpdate(ref: any, data: any): Promise<void> {
+        try {
+            await updateDoc(ref, data);
+        } catch (error: any) {
+            // Ignore if document doesn't exist (session ended/deleted)
+            if (error.code === 'not-found' || error.message.includes('No document to update')) {
+                console.warn('Attempted to update a non-existent session (likely ended):', ref.id);
+                return;
+            }
+            throw error;
+        }
+    }
+
     // Update mic status
     async updateMicStatus(sessionId: string, userId: string, isMicOn: boolean): Promise<void> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
-        await updateDoc(sessionRef, {
+        await this.safeUpdate(sessionRef, {
             [`participants.${userId}.isMicOn`]: isMicOn,
         });
     }
@@ -133,7 +147,7 @@ class StudySessionService {
         offer: RTCSessionDescriptionInit
     ): Promise<void> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
-        await updateDoc(sessionRef, {
+        await this.safeUpdate(sessionRef, {
             [`signaling.${fromUserId}.${toUserId}.offer`]: JSON.parse(JSON.stringify(offer)),
         });
     }
@@ -146,7 +160,7 @@ class StudySessionService {
         answer: RTCSessionDescriptionInit
     ): Promise<void> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
-        await updateDoc(sessionRef, {
+        await this.safeUpdate(sessionRef, {
             [`signaling.${fromUserId}.${toUserId}.answer`]: JSON.parse(JSON.stringify(answer)),
         });
     }
@@ -159,7 +173,7 @@ class StudySessionService {
         candidate: RTCIceCandidateInit
     ): Promise<void> {
         const sessionRef = doc(this.sessionsCollection, sessionId);
-        await updateDoc(sessionRef, {
+        await this.safeUpdate(sessionRef, {
             [`signaling.${fromUserId}.${toUserId}.iceCandidates`]: arrayUnion(
                 JSON.parse(JSON.stringify(candidate))
             ),

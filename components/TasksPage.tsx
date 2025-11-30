@@ -30,9 +30,7 @@ const TaskCard: React.FC<{
         const absSeconds = Math.abs(seconds);
         const mins = Math.floor(absSeconds / 60).toString().padStart(2, '0');
         const secs = (absSeconds % 60).toString().padStart(2, '0');
-
         const sign = seconds < 0 ? '+' : '';
-
         return `${sign}${mins}:${secs}`;
     };
 
@@ -63,10 +61,10 @@ const TaskCard: React.FC<{
 
     const getPriorityColor = (p: Priority) => {
         switch (p) {
-            case Priority.High: return 'text-red-200 bg-red-900/60 border-red-400/50';
-            case Priority.Medium: return 'text-yellow-200 bg-yellow-900/60 border-yellow-400/50';
-            case Priority.Low: return 'text-green-200 bg-green-900/60 border-green-400/50';
-            default: return 'text-gray-200 bg-gray-800/60 border-gray-400/50';
+            case Priority.High: return 'text-red-400 bg-red-500/20';
+            case Priority.Medium: return 'text-yellow-400 bg-yellow-500/20';
+            case Priority.Low: return 'text-blue-400 bg-blue-500/20';
+            default: return 'text-gray-400 bg-gray-500/20';
         }
     };
 
@@ -81,271 +79,197 @@ const TaskCard: React.FC<{
 
     return (
         <div
-            className={`transform transition-all duration-300 ${animationClass}`}
+            className={`group transform transition-all duration-300 ${animationClass}`}
             style={{ animationDelay: exitAnimation ? '0ms' : `${index * 50}ms`, animationFillMode: 'forwards' }}
         >
-            <div className={`p-5 rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-200 ${expanded ? 'ring-2 ring-white/20' : ''}`}>
-                <div className="flex items-start gap-3">
+            <div className={`relative p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-200 ${expanded ? 'ring-1 ring-white/20' : ''}`}>
+
+                {/* Main Row */}
+                <div className="flex items-center gap-4">
                     {/* Play/Pause Button */}
                     <button
                         onClick={onTogglePlayPause}
                         disabled={task.status === TaskStatus.Done}
-                        className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${task.status === TaskStatus.Done
-                            ? 'bg-green-500 border-green-500 opacity-50 cursor-not-allowed'
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${task.status === TaskStatus.Done
+                            ? 'bg-green-500/20 text-green-400 cursor-not-allowed'
                             : task.status === TaskStatus.InProgress
-                                ? 'bg-blue-500 border-blue-500 animate-pulse hover:scale-110'
-                                : 'border-gray-500 hover:border-blue-400 hover:scale-110'
+                                ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/20 hover:text-white hover:scale-105'
                             }`}
-                        title={task.status === TaskStatus.Done ? 'Task Completed' : task.status === TaskStatus.InProgress ? 'Pause Task' : 'Start Task'}
                     >
                         {task.status === TaskStatus.Done ? (
-                            <Check size={16} className="text-white" strokeWidth={3} />
+                            <Check size={18} strokeWidth={3} />
                         ) : task.status === TaskStatus.InProgress ? (
-                            <Pause size={14} className="text-white" strokeWidth={3} />
+                            <Pause size={18} fill="currentColor" />
                         ) : (
-                            <Play size={14} className="text-white ml-0.5" strokeWidth={3} />
+                            <Play size={18} fill="currentColor" className="ml-0.5" />
                         )}
                     </button>
 
+                    {/* Content */}
                     <div className="flex-1 min-w-0">
                         {isEditing ? (
                             // Edit Mode
-                            <div className="space-y-3 mb-3">
+                            <div className="space-y-3">
                                 <input
                                     type="text"
                                     value={editedTitle}
                                     onChange={(e) => setEditedTitle(e.target.value)}
-                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500/50"
                                     placeholder="Task title"
+                                    autoFocus
                                 />
                                 <div className="flex gap-2">
                                     <select
                                         value={editedPriority}
                                         onChange={(e) => setEditedPriority(e.target.value as Priority)}
-                                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-400/50 cursor-pointer"
+                                        className="bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
                                     >
-                                        <option value={Priority.Low} className="bg-slate-800">🟢 Low</option>
-                                        <option value={Priority.Medium} className="bg-slate-800">🟡 Medium</option>
-                                        <option value={Priority.High} className="bg-slate-800">🔴 High</option>
+                                        <option value={Priority.Low} className="bg-gray-900">Low</option>
+                                        <option value={Priority.Medium} className="bg-gray-900">Medium</option>
+                                        <option value={Priority.High} className="bg-gray-900">High</option>
                                     </select>
                                     <input
                                         type="text"
                                         value={editedCategory}
                                         onChange={(e) => setEditedCategory(e.target.value)}
-                                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                                        className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
                                         placeholder="Category"
                                     />
                                     <input
                                         type="number"
                                         value={editedTime}
                                         onChange={(e) => setEditedTime(e.target.value)}
-                                        className="w-20 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                                        className="w-20 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
                                         placeholder="Min"
                                     />
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={saveEdits}
-                                        className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-400/30 rounded-lg px-3 py-2 font-medium transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Save size={14} />
-                                        Save
-                                    </button>
-                                    <button
-                                        onClick={cancelEdits}
-                                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-400/30 rounded-lg px-3 py-2 font-medium transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <X size={14} />
-                                        Cancel
-                                    </button>
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={cancelEdits} className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors">Cancel</button>
+                                    <button onClick={saveEdits} className="px-3 py-1.5 text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">Save</button>
                                 </div>
                             </div>
                         ) : (
                             // View Mode
-                            <>
-                                <div className="flex items-start justify-between gap-3 mb-2">
-                                    <h4 className={`text-base font-semibold leading-tight transition-all ${task.status === TaskStatus.Done
-                                        ? 'text-gray-400 line-through'
-                                        : 'text-white'
-                                        }`}>
-                                        {task.title}
-                                    </h4>
-
-                                    <div className="flex items-center gap-1">
-                                        {task.status !== TaskStatus.Done && (
-                                            <button
-                                                onClick={onMarkDone}
-                                                className="p-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-400/30 transition-all hover:scale-105"
-                                                title="Mark as Done"
-                                            >
-                                                <CheckCircle2 size={14} />
-                                            </button>
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className={`text-base font-medium truncate transition-all ${task.status === TaskStatus.Done ? 'text-gray-500 line-through' : 'text-white'}`}>
+                                            {task.title}
+                                        </h4>
+                                        {isActive && (
+                                            <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                                                Active
+                                            </span>
                                         )}
-                                        <button
-                                            onClick={() => setIsEditing(true)}
-                                            className="p-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-400/30 transition-all hover:scale-105"
-                                            title="Edit Task"
-                                        >
-                                            <Edit2 size={14} />
+                                    </div>
+
+                                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <span className={`px-2 py-0.5 rounded-full font-semibold ${getPriorityColor(task.priority)}`}>
+                                            {task.priority}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Hash size={10} /> {task.category}
+                                        </span>
+                                        {(task.estimatedTimeMinutes > 0 || task.remainingTime !== undefined) && (
+                                            <span className="flex items-center gap-1">
+                                                <Clock size={10} />
+                                                {isActive && timerRemaining !== undefined
+                                                    ? <span className="text-blue-400 font-mono">{formatTime(timerRemaining)}</span>
+                                                    : task.remainingTime !== undefined
+                                                        ? <span className="font-mono">{formatTime(task.remainingTime)}</span>
+                                                        : <span>{task.estimatedTimeMinutes}m</span>
+                                                }
+                                            </span>
+                                        )}
+                                        {totalSubtasks > 0 && (
+                                            <span className="flex items-center gap-1 text-blue-400">
+                                                <CheckCircle2 size={10} />
+                                                {completedSubtasks}/{totalSubtasks}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Hover Actions */}
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    {task.status !== TaskStatus.Done && (
+                                        <button onClick={onMarkDone} className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Mark Done">
+                                            <Check size={16} />
                                         </button>
-                                        {hasExpandableContent && (
-                                            <button
-                                                onClick={() => setExpanded(!expanded)}
-                                                className={`p-1 rounded-lg hover:bg-white/10 transition-all duration-300 ${expanded ? 'rotate-180 bg-white/10' : ''}`}
-                                            >
-                                                <ChevronDown size={16} className="text-gray-400" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${getPriorityColor(task.priority)}`}>
-                                        {task.priority}
-                                    </span>
-
-                                    <span className="text-xs font-medium px-2 py-1 rounded-lg bg-black/40 text-white border border-white/20 flex items-center gap-1">
-                                        <Hash size={10} />
-                                        {task.category}
-                                    </span>
-
-                                    {task.estimatedTimeMinutes > 0 && (
-                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-black/40 text-white border border-white/20 flex items-center gap-1">
-                                            <Clock size={10} />
-                                            {task.estimatedTimeMinutes}m
-                                        </span>
                                     )}
-
-                                    {totalSubtasks > 0 && (
-                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-blue-500/20 text-blue-200 border border-blue-400/30">
-                                            {completedSubtasks}/{totalSubtasks} Subtasks
-                                        </span>
-                                    )}
-
-                                    {task.status === TaskStatus.InProgress && (
-                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-blue-500/20 text-blue-200 border border-blue-400/30 flex items-center gap-1 animate-pulse">
-                                            <Play size={10} />
-                                            In Progress
-                                        </span>
+                                    <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Edit">
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete">
+                                        <Trash2 size={16} />
+                                    </button>
+                                    {hasExpandableContent && (
+                                        <button
+                                            onClick={() => setExpanded(!expanded)}
+                                            className={`p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all ${expanded ? 'rotate-180' : ''}`}
+                                        >
+                                            <ChevronDown size={16} />
+                                        </button>
                                     )}
                                 </div>
-
-                                {/* Timer Display - Showing Remaining Time */}
-                                {(isActive || task.status === TaskStatus.InProgress) && (
-                                    <div className={`mt-3 flex items-center gap-2 border rounded-lg px-3 py-2 ${(timerRemaining !== undefined && timerRemaining < 0)
-                                        ? 'bg-red-500/10 border-red-400/30'
-                                        : 'bg-blue-500/10 border-blue-400/30'
-                                        }`}>
-                                        <Timer size={16} className={`${(timerRemaining !== undefined && timerRemaining < 0) ? 'text-red-300' : 'text-blue-300'
-                                            } ${timerActive ? 'animate-pulse' : ''}`} />
-                                        <span className={`${(timerRemaining !== undefined && timerRemaining < 0) ? 'text-red-200' : 'text-blue-200'
-                                            } font-mono font-semibold text-sm`}>
-                                            {isActive && timerRemaining !== undefined
-                                                ? formatTime(timerRemaining)
-                                                : task.remainingTime !== undefined
-                                                    ? formatTime(task.remainingTime)
-                                                    : formatTime(task.estimatedTimeMinutes * 60)
-                                            }
-                                        </span>
-                                        <span className={`text-xs ${(timerRemaining !== undefined && timerRemaining < 0) ? 'text-red-200' : 'text-blue-200'
-                                            }`}>
-                                            {(timerRemaining !== undefined && timerRemaining < 0) ? 'overtime' : 'remaining'}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Show estimated time when not active/in-progress */}
-                                {task.status !== TaskStatus.InProgress && !isActive && (
-                                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                                        <Timer size={12} />
-                                        <span>
-                                            {task.remainingTime !== undefined
-                                                ? `Remaining: ${formatTime(task.remainingTime)}`
-                                                : `Est: ${task.estimatedTimeMinutes}m`
-                                            }
-                                        </span>
-                                    </div>
-                                )}
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
 
-                {hasExpandableContent && (
-                    <div
-                        className={`overflow-hidden transition-all duration-500 ease-in-out ${expanded ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'
-                            }`}
-                    >
-                        <div className="pt-4 border-t border-white/10 space-y-3">
-                            {task.description && (
-                                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Sparkles size={12} className="text-blue-300" />
-                                        <span className="text-xs font-semibold text-blue-200">AI Summary</span>
-                                    </div>
-                                    <p className="text-sm text-gray-300">{task.description}</p>
+                {/* Expandable Content */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expanded ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                    <div className="pt-4 border-t border-white/5 space-y-4 pl-14">
+                        {task.description && (
+                            <div className="bg-black/20 rounded-xl p-3 border border-white/5">
+                                <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-blue-300">
+                                    <Sparkles size={12} /> AI Summary
                                 </div>
-                            )}
-
-                            {totalSubtasks > 0 && (
-                                <div className="space-y-2">
-                                    {task.subtasks.map((st) => (
-                                        <div
-                                            key={st.id}
-                                            onClick={() => onToggleSubtask(st.id)}
-                                            className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-all transform hover:translate-x-1"
-                                        >
-                                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-200 ${st.isCompleted
-                                                ? 'bg-green-500 border-green-500'
-                                                : 'border-gray-500'
-                                                }`}>
-                                                {st.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
-                                            </div>
-                                            <span className={`text-sm transition-all duration-200 ${st.isCompleted ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
-                                                {st.title}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Add Subtask Input */}
-                            <div className="mt-3">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newSubtaskTitle}
-                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleAddSubtask();
-                                        }}
-                                        placeholder="Add a subtask..."
-                                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
-                                    />
-                                    <button
-                                        onClick={handleAddSubtask}
-                                        disabled={!newSubtaskTitle.trim()}
-                                        className="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-400/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-                                        title="Add Subtask"
-                                    >
-                                        <Plus size={14} />
-                                        <span className="text-sm font-medium">Add</span>
-                                    </button>
-                                </div>
+                                <p className="text-sm text-gray-400 leading-relaxed">{task.description}</p>
                             </div>
+                        )}
 
-                            <div className="flex justify-end pt-2">
-                                <button
-                                    onClick={onDelete}
-                                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-400/30 text-sm font-medium transition-all flex items-center gap-2 hover:scale-105"
+                        <div className="space-y-2">
+                            {task.subtasks?.map((st) => (
+                                <div
+                                    key={st.id}
+                                    onClick={() => onToggleSubtask(st.id)}
+                                    className="group/sub flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
                                 >
-                                    <Trash2 size={14} />
-                                    Delete
-                                </button>
-                            </div>
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${st.isCompleted
+                                        ? 'bg-green-500 border-green-500'
+                                        : 'border-gray-600 group-hover/sub:border-gray-400'
+                                        }`}>
+                                        {st.isCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
+                                    </div>
+                                    <span className={`text-sm transition-colors ${st.isCompleted ? 'text-gray-500 line-through' : 'text-gray-300 group-hover/sub:text-white'}`}>
+                                        {st.title}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Add Subtask */}
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newSubtaskTitle}
+                                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                                placeholder="Add a subtask..."
+                                className="flex-1 bg-transparent border-b border-white/10 py-1 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                            />
+                            <button
+                                onClick={handleAddSubtask}
+                                disabled={!newSubtaskTitle.trim()}
+                                className="text-xs font-medium text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Add
+                            </button>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
