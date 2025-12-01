@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Youtube, Calculator, StickyNote, Music } from "lucide-react";
+import { Youtube, Calculator, StickyNote, Music, Globe } from "lucide-react";
 
 // UI Components
 import Sidebar from "./components/Sidebar";
@@ -9,6 +9,8 @@ import NotificationSystem from "./components/Notifications";
 import TopNavBar from "./components/TopNavBar";
 import { Dock } from "./components/Dock";
 import { Window } from "./components/Window";
+import { BrowserApp } from "./components/BrowserApp";
+import { CalculatorApp } from "./components/CalculatorApp";
 
 // Pages
 import Dashboard from "./components/Dashboard";
@@ -56,10 +58,20 @@ const App: React.FC = () => {
   const [activeWindow, setActiveWindow] = useState<string | null>(null);
   const [iconPositions, setIconPositions] = useState<Record<string, DOMRect>>({});
   const [windowZIndices, setWindowZIndices] = useState<Record<string, number>>({});
+  const [windowModes, setWindowModes] = useState<Record<string, 'normal' | 'maximized' | 'left' | 'right'>>({});
+  const [windowPositions, setWindowPositions] = useState<Record<string, { x: number; y: number }>>({});
   const baseZIndex = 1000;
 
   // 🎯 Mini-Apps Configuration
   const dockApps = React.useMemo(() => [
+    {
+      id: 'browser',
+      title: 'Browser',
+      icon: Globe,
+      width: 1024,
+      height: 768,
+      component: <BrowserApp />
+    },
     {
       id: 'youtube',
       title: 'YouTube',
@@ -81,14 +93,7 @@ const App: React.FC = () => {
       icon: Calculator,
       width: 320,
       height: 480,
-      component: (
-        <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-800 to-gray-900 text-white">
-          <div className="text-center">
-            <Calculator size={48} className="mx-auto mb-4 opacity-50" />
-            <p className="text-sm opacity-70">Calculator coming soon</p>
-          </div>
-        </div>
-      )
+      component: <CalculatorApp />
     },
     {
       id: 'notes',
@@ -156,6 +161,29 @@ const App: React.FC = () => {
   const handleWindowMinimize = useCallback((appId: string) => {
     setMinimizedWindows(prev => [...prev, appId]);
     setActiveWindow(prev => prev === appId ? null : prev);
+  }, []);
+
+
+
+  const handleWindowMaximize = useCallback((appId: string) => {
+    setWindowModes(prev => ({
+      ...prev,
+      [appId]: prev[appId] === 'maximized' ? 'normal' : 'maximized'
+    }));
+  }, []);
+
+  const handleWindowSnap = useCallback((appId: string, mode: 'left' | 'right' | 'normal') => {
+    setWindowModes(prev => ({
+      ...prev,
+      [appId]: mode
+    }));
+  }, []);
+
+  const handleWindowMove = useCallback((appId: string, x: number, y: number) => {
+    setWindowPositions(prev => ({
+      ...prev,
+      [appId]: { x, y }
+    }));
   }, []);
 
   const handleWindowFocus = useCallback((appId: string) => {
@@ -572,8 +600,13 @@ const App: React.FC = () => {
               isActive={activeWindow === app.id}
               zIndex={windowZIndices[app.id] || baseZIndex}
               iconRect={iconPositions[app.id]}
+              mode={windowModes[app.id] || 'normal'}
+              position={windowPositions[app.id]}
               onClose={() => handleWindowClose(app.id)}
               onMinimize={() => handleWindowMinimize(app.id)}
+              onMaximize={() => handleWindowMaximize(app.id)}
+              onSnap={(mode) => handleWindowSnap(app.id, mode)}
+              onMove={(x, y) => handleWindowMove(app.id, x, y)}
               onFocus={() => handleWindowFocus(app.id)}
             />
           ))}

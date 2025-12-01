@@ -372,7 +372,7 @@ function TasksPage() {
 
         setTimeout(() => {
             setTasks(prev => prev.map(t =>
-                t.id === id ? { ...t, status: TaskStatus.Done } : t
+                t.id === id ? { ...t, status: TaskStatus.Done, completedAt: Date.now() } : t
             ));
             setExitingTasks(prev => {
                 const next = { ...prev };
@@ -552,6 +552,12 @@ function TasksPage() {
                                 />
                             </div>
                         </div>
+                        <button
+                            onClick={() => useAppStore.getState().setActivePage('Analytics')}
+                            className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white rounded-xl px-4 py-2 text-sm font-medium transition-all"
+                        >
+                            View Analytics
+                        </button>
                     </div>
                 </div>
             </div>

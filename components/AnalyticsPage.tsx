@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { Task, TaskPriority, TaskStatus } from '../types';
+import { Task, Priority, TaskStatus } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 // ===============================
@@ -67,22 +67,7 @@ const ParticleBackground: React.FC = () => {
 // ===============================
 // Helper Functions
 // ===============================
-const parseDurationToSeconds = (duration: string | undefined): number => {
-  if (!duration) return 0;
-  let totalSeconds = 0;
-  const hourMatch = duration.match(/(\d+)\s*hours?/);
-  const minMatch = duration.match(/(\d+)\s*min/);
-  if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
-  if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
-  if (totalSeconds === 0) {
-    const num = parseInt(duration);
-    if (!isNaN(num)) {
-      if (duration.includes("hour")) return num * 3600;
-      if (duration.includes("min")) return num * 60;
-    }
-  }
-  return totalSeconds;
-};
+
 
 const calculateChange = (current: number, previous: number): { change: string, changeType: 'increase' | 'decrease' } => {
   if (previous === 0) {
@@ -168,24 +153,31 @@ const WeeklyFocusChart: React.FC = () => {
     const weekData: { name: string, minutes: number }[] = dayNames.map(name => ({ name, minutes: 0 }));
 
     const today = new Date();
+    // Calculate start of week (Monday)
+    const day = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
 
     const completedThisWeek = tasks.filter(task =>
-      task.status === TaskStatus.DONE &&
+      task.status === TaskStatus.Done &&
       task.completedAt &&
       task.completedAt >= startOfWeek.getTime()
     );
 
     completedThisWeek.forEach(task => {
-      if (task.duration && task.completedAt) {
-        const completedDate = new Date(task.completedAt);
+      if (task.timeSpentMinutes || task.estimatedTimeMinutes) {
+        const completedDate = new Date(task.completedAt!);
         const dayIndex = completedDate.getDay();
-        const durationSeconds = parseDurationToSeconds(task.duration);
+        // Use timeSpentMinutes if available (actual), otherwise estimated
+        const durationMinutes = task.timeSpentMinutes || task.estimatedTimeMinutes || 0;
+
         // Adjust index: Sunday is 0, but we want Mon-Sun order
         const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-        weekData[adjustedIndex].minutes += durationSeconds / 60;
+        if (adjustedIndex >= 0 && adjustedIndex < 7) {
+          weekData[adjustedIndex].minutes += durationMinutes;
+        }
       }
     });
 
@@ -435,7 +427,9 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ tasks }) => {
                   </div>
                 </div>
               </div>
-              <span className="text-white/40 font-mono text-sm whitespace-nowrap">{task.duration}</span>
+              <span className="text-white/40 font-mono text-sm whitespace-nowrap">
+                {task.timeSpentMinutes ? `${Math.round(task.timeSpentMinutes)}m` : `${task.estimatedTimeMinutes}m`}
+              </span>
             </div>
           </div>
         ))}
@@ -449,7 +443,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ tasks }) => {
 // ===============================
 const AnalyticsPage: React.FC = () => {
   const tasks = useAppStore(state => state.tasks);
-  const completedTasks = useMemo(() => tasks.filter(t => t.status === TaskStatus.DONE && t.completedAt), [tasks]);
+  const completedTasks = useMemo(() => tasks.filter(t => t.status === TaskStatus.Done && t.completedAt), [tasks]);
 
   // KPI Calculations
   const kpiData = useMemo(() => {
@@ -464,12 +458,12 @@ const AnalyticsPage: React.FC = () => {
     const completedLastMonthCount = tasksLastMonth.length;
     const completedChange = calculateChange(completedThisMonthCount, completedLastMonthCount);
 
-    const focusHoursThisMonth = tasksThisMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
-    const focusHoursLastMonth = tasksLastMonth.reduce((sum, t) => sum + parseDurationToSeconds(t.duration), 0) / 3600;
+    const focusHoursThisMonth = tasksThisMonth.reduce((sum, t) => sum + (t.timeSpentMinutes || t.estimatedTimeMinutes || 0), 0) / 60;
+    const focusHoursLastMonth = tasksLastMonth.reduce((sum, t) => sum + (t.timeSpentMinutes || t.estimatedTimeMinutes || 0), 0) / 60;
     const focusChange = calculateChange(focusHoursThisMonth, focusHoursLastMonth);
 
-    const highPriorityThisMonth = tasksThisMonth.filter(t => t.priority === TaskPriority.HIGH).length;
-    const highPriorityLastMonth = tasksLastMonth.filter(t => t.priority === TaskPriority.HIGH).length;
+    const highPriorityThisMonth = tasksThisMonth.filter(t => t.priority === Priority.High).length;
+    const highPriorityLastMonth = tasksLastMonth.filter(t => t.priority === Priority.High).length;
     const priorityChange = calculateChange(highPriorityThisMonth, highPriorityLastMonth);
 
     return [
@@ -523,7 +517,7 @@ const AnalyticsPage: React.FC = () => {
   const { productivityData, totalFocusHours } = useMemo(() => {
     const categoryTimes: { [key: string]: number } = {};
     completedTasks.forEach(task => {
-      const seconds = parseDurationToSeconds(task.duration);
+      const seconds = (task.timeSpentMinutes || task.estimatedTimeMinutes || 0) * 60;
       categoryTimes[task.category] = (categoryTimes[task.category] || 0) + seconds;
     });
 

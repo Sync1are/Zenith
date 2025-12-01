@@ -69,7 +69,7 @@ interface AppState {
   timerRemaining: number; // seconds
 
   // Logging
-  sessionHistory: { name: string; minutes: number }[];
+  sessionHistory: { date: string; minutes: number }[];
   logSession: (minutes: number) => void;
 
   // Internal helper to compute minutes spent in the current run without mutating Task type
@@ -337,14 +337,14 @@ export const useAppStore = create<AppState>()(
       // ---------- Logging ----------
       logSession: (minutes) => {
         if (!minutes || minutes <= 0) return;
-        const today = new Date().toLocaleDateString("en-US", { weekday: "short" }); // e.g. Mon, Tue
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         set((state) => {
           const history = [...state.sessionHistory];
-          const idx = history.findIndex((h) => h.name === today);
+          const idx = history.findIndex((h) => h.date === today);
           if (idx >= 0) {
             history[idx] = { ...history[idx], minutes: history[idx].minutes + minutes };
           } else {
-            history.push({ name: today, minutes });
+            history.push({ date: today, minutes });
           }
           return { sessionHistory: history };
         });
@@ -447,7 +447,9 @@ export const useAppStore = create<AppState>()(
           if (t.id !== activeTaskId) return t;
           // Allow negative values for overtime
           const taskRemaining = (t.remainingTime ?? newRemaining) - 1;
-          return { ...t, remainingTime: taskRemaining };
+          // Update timeSpentMinutes (accumulate 1 second = 1/60 minutes)
+          const timeSpent = (t.timeSpentMinutes || 0) + (1 / 60);
+          return { ...t, remainingTime: taskRemaining, timeSpentMinutes: timeSpent };
         });
 
         // Log session if we just crossed zero or are in overtime? 

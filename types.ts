@@ -33,6 +33,7 @@ export interface Task {
   timeSpentMinutes?: number;
   remainingTime?: number; // in seconds
   createdAt: Date;
+  completedAt?: number;
   subtasks: Subtask[];
   category: string;
 }
