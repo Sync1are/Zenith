@@ -15,6 +15,7 @@ import { CalculatorApp } from "./components/CalculatorApp";
 // Pages
 import Dashboard from "./components/Dashboard";
 import Tasks from "./components/TasksPage";
+import HabitsPage from "./components/HabitsPage";
 import CalendarPage from "./components/CalendarPage";
 import FocusPage from "./components/FocusPage";
 import SettingsPage from "./components/SettingsPage";
@@ -434,6 +435,7 @@ const App: React.FC = () => {
     switch (activePage) {
       case "Dashboard": return <Dashboard />;
       case "Tasks": return <Tasks />;
+      case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
       case "Focus": return <FocusPage />;
       case "Analytics": return <AnalyticsPage />;

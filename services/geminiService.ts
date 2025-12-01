@@ -73,3 +73,42 @@ Provide 3-5 specific, actionable subtasks. Keep the response concise and practic
         return null;
     }
 }
+
+import { Habit } from '../types';
+
+export async function generateRoutine(goal: string): Promise<Habit[]> {
+    try {
+        const prompt = `Create a daily habit routine for the following goal: "${goal}".
+        
+        Return a JSON array of 3-7 specific, actionable daily habits.
+        Format:
+        [
+            { "title": "Habit Title", "category": "Health/Productivity/Mindfulness/etc" },
+            ...
+        ]
+        
+        Keep titles short and punchy (under 5 words).`;
+
+        const response = await callOpenRouter([
+            { role: 'user', content: prompt }
+        ]);
+
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error("No JSON array found in response");
+        }
+
+        const rawHabits = JSON.parse(jsonMatch[0]);
+
+        return rawHabits.map((h: any) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            title: h.title,
+            category: h.category || 'Personal',
+            createdAt: new Date().toISOString()
+        }));
+
+    } catch (error) {
+        console.error("Error generating routine:", error);
+        throw error;
+    }
+}

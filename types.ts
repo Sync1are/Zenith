@@ -127,3 +127,23 @@ declare global {
     }
   }
 }
+
+export interface Habit {
+  id: string;
+  title: string;
+  category?: string;
+  createdAt: string;
+}
+
+export interface CompletionLog {
+  [habitId: string]: {
+    [dateStr: string]: boolean;
+  };
+}
+
+export interface DayColumn {
+  dateStr: string;
+  dayName: string;
+  dayNumber: string;
+  isToday: boolean;
+}
