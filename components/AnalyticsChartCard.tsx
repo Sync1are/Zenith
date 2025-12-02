@@ -1,35 +1,21 @@
 import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppStore } from '../store/useAppStore';
 import { TaskStatus } from '../types';
-
-const parseDurationToSeconds = (duration: string | undefined): number => {
-  if (!duration) return 0;
-  let totalSeconds = 0;
-  const hourMatch = duration.match(/(\d+)\s*hours?/);
-  const minMatch = duration.match(/(\d+)\s*min/);
-  if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
-  if (minMatch) totalSeconds += parseInt(minMatch[1]) * 60;
-  if (totalSeconds === 0) {
-    const num = parseInt(duration);
-    if (!isNaN(num)) {
-      if (duration.includes("hour")) return num * 3600;
-      if (duration.includes("min")) return num * 60;
-    }
-  }
-  return totalSeconds;
-};
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AnalyticsChartCard: React.FC = () => {
   const tasks = useAppStore(state => state.tasks);
 
   const chartData = useMemo(() => {
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const weekData: { name: string, minutes: number }[] = dayNames.map(name => ({ name, minutes: 0 }));
 
     const today = new Date();
+    // Calculate start of week (Monday)
+    const day = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
 
     const completedThisWeek = tasks.filter(task =>
@@ -39,61 +25,68 @@ const AnalyticsChartCard: React.FC = () => {
     );
 
     completedThisWeek.forEach(task => {
-      if (task.duration && task.completedAt) {
-        const completedDate = new Date(task.completedAt);
+      if (task.timeSpentMinutes || task.estimatedTimeMinutes) {
+        const completedDate = new Date(task.completedAt!);
         const dayIndex = completedDate.getDay();
-        const durationSeconds = parseDurationToSeconds(task.duration);
-        weekData[dayIndex].minutes += durationSeconds / 60;
+        // Use timeSpentMinutes if available (actual), otherwise estimated
+        const durationMinutes = task.timeSpentMinutes || task.estimatedTimeMinutes || 0;
+
+        // Adjust index: Sunday is 0, but we want Mon-Sun order
+        const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+        if (adjustedIndex >= 0 && adjustedIndex < 7) {
+          weekData[adjustedIndex].minutes += durationMinutes;
+        }
       }
     });
 
-    const orderedWeekData = [...weekData.slice(1), weekData[0]].map(d => ({
+    return weekData.map(d => ({
       ...d,
       minutes: Math.round(d.minutes)
     }));
-
-    return orderedWeekData;
   }, [tasks]);
 
+  const totalMinutes = chartData.reduce((a, b) => a + b.minutes, 0);
+
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="font-semibold text-[var(--text)]">Weekly Focus Time</h3>
-        <div className="text-xs text-[var(--subtle)]">
-          {chartData.reduce((a, b) => a + b.minutes, 0)} min
+    <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-white">Weekly Focus Time</h2>
+        <div className="text-sm font-bold text-white/60">
+          {totalMinutes} min total
         </div>
       </div>
 
-      <div className="flex-grow">
+      <div className="flex-1 min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
+                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
               </linearGradient>
             </defs>
 
             <Tooltip
               formatter={(v) => `${v} min`}
               contentStyle={{
-                backgroundColor: "rgba(0,0,0,0.8)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "0.5rem",
-                backdropFilter: "blur(4px)"
+                background: 'rgba(28, 28, 30, 0.95)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '0.75rem',
+                backdropFilter: 'blur(10px)',
+                color: '#fff'
               }}
-              labelStyle={{ color: "var(--text)" }}
+              labelStyle={{ color: '#fff' }}
             />
 
             <XAxis
               dataKey="name"
-              tick={{ fill: "var(--subtle)" }}
+              tick={{ fill: 'rgba(255,255,255,0.5)' }}
               fontSize={12}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "var(--subtle)" }}
+              tick={{ fill: 'rgba(255,255,255,0.5)' }}
               fontSize={12}
               axisLine={false}
               tickLine={false}
@@ -102,14 +95,22 @@ const AnalyticsChartCard: React.FC = () => {
             <Area
               type="monotone"
               dataKey="minutes"
-              stroke="var(--accent)"
-              strokeWidth={2}
+              stroke="#8B5CF6"
+              strokeWidth={3}
               fillOpacity={1}
               fill="url(#colorFocus)"
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      <style>{`
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+            backdrop-filter: blur(12px) saturate(1.1);
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+      `}</style>
     </div>
   );
 };

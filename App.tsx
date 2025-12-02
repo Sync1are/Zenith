@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Youtube, Calculator, StickyNote, Music, Globe } from "lucide-react";
+import { Youtube, Calculator, StickyNote, Music, Globe, Sparkles } from "lucide-react";
 
 // UI Components
 import Sidebar from "./components/Sidebar";
@@ -11,6 +11,7 @@ import { Dock } from "./components/Dock";
 import { Window } from "./components/Window";
 import { BrowserApp } from "./components/BrowserApp";
 import { CalculatorApp } from "./components/CalculatorApp";
+import EnvironmentStoreApp from "./components/EnvironmentStoreApp";
 
 // Pages
 import Dashboard from "./components/Dashboard";
@@ -125,6 +126,14 @@ const App: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: 'environment-store',
+      title: 'Environment Store',
+      icon: Sparkles,
+      width: 1200,
+      height: 800,
+      component: <EnvironmentStoreApp />
     },
   ], []);
 

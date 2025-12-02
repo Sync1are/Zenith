@@ -334,7 +334,7 @@ const RadialProgressChart: React.FC<RadialChartProps> = ({ data, totalHours }) =
             {data.map((item, idx) => {
               const pct = item.value;
               const segmentLength = (pct / 100) * circumference;
-              const offset = circumference - (accumulatedPct / 100) * circumference;
+              const offset = - (accumulatedPct / 100) * circumference;
               accumulatedPct += pct;
 
               return (
