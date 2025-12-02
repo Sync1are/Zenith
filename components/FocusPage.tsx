@@ -7,6 +7,8 @@ import SpotifyCard from "../components/SpotifyCard";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 import { TaskModal } from "./tasks/TaskModals";
 import { useSuperFocus } from "../hooks/useSuperFocus";
+import { ENVIRONMENTS } from "../data/environments";
+import AmbientPlayer from "./AmbientPlayer";
 
 // ===============================
 // 1. Particle Background
@@ -133,7 +135,7 @@ const DurationChips = () => {
 
 // --- Timer Content (The part that swoops in/out) ---
 // --- Timer Content (The part that swoops in/out) ---
-const TimerContent: React.FC<{ taskId: number | null }> = ({ taskId }) => {
+const TimerContent: React.FC<{ taskId: string | null }> = ({ taskId }) => {
   const tasks = useAppStore((s) => s.tasks);
   const timerRemaining = useAppStore((s) => s.timerRemaining);
   const timerActive = useAppStore((s) => s.timerActive);
@@ -227,7 +229,7 @@ const FocusTimer: React.FC<{ direction: number }> = ({ direction }) => {
 
   // --- Arc Transition State Logic ---
   const [displayTaskId, setDisplayTaskId] = useState(activeTaskId);
-  const [exitingTaskId, setExitingTaskId] = useState<number | null>(null);
+  const [exitingTaskId, setExitingTaskId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync activeTaskId changes to our internal transition state
@@ -359,7 +361,7 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
 
   const available = useMemo(() => tasks.filter((t) => t.status !== TaskStatus.Done), [tasks]);
 
-  const handleTaskClick = (taskId: number, idx: number) => {
+  const handleTaskClick = (taskId: string, idx: number) => {
     if (activeTaskId === taskId && timerActive) return;
     startTask(taskId);
     setTimerActive(true);
@@ -424,77 +426,50 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
 
 // --- Session Environment Panel ---
 const SessionEnv: React.FC = () => {
-  const environment = useFocusStore((s) => s.environment);
-  const setEnvironment = useFocusStore((s) => s.setEnvironment);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [volume, setVolume] = useState(0.5);
+  const savedIds = useFocusStore((s) => s.savedEnvironmentIds);
+  const activeEnvironmentId = useFocusStore((s) => s.activeEnvironmentId);
+  const setActiveEnvironmentId = useFocusStore((s) => s.setActiveEnvironmentId);
+  const environmentVolume = useFocusStore((s) => s.environmentVolume);
+  const setEnvironmentVolume = useFocusStore((s) => s.setEnvironmentVolume);
 
-  const environments = [
-    { id: "rain", name: "Rain", icon: "🌧️", color: "from-blue-500 to-cyan-500", url: "https://cdn.pixabay.com/download/audio/2025/06/04/audio_df889d8576.mp3?filename=relaxing-ambient-music-rain-354479.mp3" },
-    { id: "ocean", name: "Ocean", icon: "🌊", color: "from-teal-500 to-blue-500", url: "https://cdn.pixabay.com/download/audio/2025/08/17/audio_7f0f710ebf.mp3?filename=ocean-vibes-391210.mp3" },
-    { id: "forest", name: "Forest", icon: "🌲", color: "from-green-500 to-emerald-500", url: "https://cdn.pixabay.com/download/audio/2025/07/16/audio_152c624e23.mp3?filename=ambient-forest-rain-375365.mp3" },
-    { id: "fireplace", name: "Fire", icon: "🔥", color: "from-orange-500 to-red-500", url: "https://cdn.pixabay.com/download/audio/2025/03/30/audio_574326194d.mp3?filename=ambient-burning-castle-320841.mp3" },
-    { id: "cafe", name: "Café", icon: "☕", color: "from-amber-500 to-orange-500", url: "https://cdn.pixabay.com/download/audio/2025/06/13/audio_14102ea978.mp3?filename=dreamy-cafe-music-347413.mp3" },
-    { id: "space", name: "Starry Night", icon: "🌌", color: "from-purple-500 to-indigo-500", url: "https://cdn.pixabay.com/download/audio/2022/03/24/audio_07969e45f9.mp3?filename=space-chillout-14194.mp3" },
-  ];
+  // Import from data/environments
+  // const { ENVIRONMENTS } = require("../data/environments");
 
-  useEffect(() => {
-    // Cleanup previous audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-
-    if (environment !== "none") {
-      const env = environments.find(e => e.id === environment);
-      if (env) {
-        const audio = new Audio(env.url);
-        audio.loop = true;
-        audio.volume = volume;
-        audio.play().catch(e => console.error("Audio play failed:", e));
-        audioRef.current = audio;
-      }
-    }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [environment]);
-
-  // Update volume when slider changes
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
+  const savedEnvironments = useMemo(() => {
+    return ENVIRONMENTS.filter((e: any) => savedIds.includes(e.id));
+  }, [savedIds]);
 
   return (
     <div className="rounded-[22px] p-6 glass-panel w-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-bold">Session Env</h3>
-        {environment !== "none" && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {environments.map((env) => (
-          <button
-            key={env.id}
-            onClick={() => setEnvironment(environment === env.id ? "none" : env.id as any)}
-            className={`p-3 rounded-xl transition-all flex flex-col items-center gap-2 ${environment === env.id
-              ? `bg-gradient-to-br ${env.color} shadow-lg text-white`
-              : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80"
-              }`}
-          >
-            <span className="text-2xl filter drop-shadow-md">{env.icon}</span>
-            <span className="text-[10px] font-medium uppercase tracking-wide">{env.name}</span>
-          </button>
-        ))}
+        {activeEnvironmentId && <span className="text-[10px] text-green-400 font-mono animate-pulse">• ACTIVE</span>}
       </div>
 
+      {savedEnvironments.length === 0 ? (
+        <div className="text-center py-4 text-white/40 text-xs">
+          No environments selected. Visit the Environment Store to add some.
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {savedEnvironments.map((env: any) => (
+            <button
+              key={env.id}
+              onClick={() => setActiveEnvironmentId(activeEnvironmentId === env.id ? null : env.id)}
+              className={`p-3 rounded-xl transition-all flex flex-col items-center gap-2 ${activeEnvironmentId === env.id
+                ? `bg-gradient-to-br ${env.color || 'from-zinc-700 to-zinc-900'} shadow-lg text-white`
+                : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80"
+                }`}
+            >
+              <span className="text-2xl filter drop-shadow-md">{env.icon || '🎵'}</span>
+              <span className="text-[10px] font-medium uppercase tracking-wide truncate w-full text-center">{env.title.split(' ')[0]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Volume Slider */}
-      {environment !== "none" && (
+      {activeEnvironmentId && (
         <div className="mt-4 pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -506,8 +481,8 @@ const SessionEnv: React.FC = () => {
                 min="0"
                 max="1"
                 step="0.01"
-                value={volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                value={environmentVolume}
+                onChange={(e) => setEnvironmentVolume(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer outline-none
                   [&::-webkit-slider-thumb]:appearance-none 
                   [&::-webkit-slider-thumb]:w-3.5 
@@ -526,11 +501,11 @@ const SessionEnv: React.FC = () => {
                   [&::-moz-range-thumb]:shadow-lg
                   hover:bg-white/15 transition-colors"
                 style={{
-                  background: `linear-gradient(to right, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) ${volume * 100}%, rgba(255,255,255,0.1) ${volume * 100}%, rgba(255,255,255,0.1) 100%)`
+                  background: `linear-gradient(to right, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) ${environmentVolume * 100}%, rgba(255,255,255,0.1) ${environmentVolume * 100}%, rgba(255,255,255,0.1) 100%)`
                 }}
               />
             </div>
-            <span className="text-[10px] font-mono text-white/40 w-8 text-right">{Math.round(volume * 100)}%</span>
+            <span className="text-[10px] font-mono text-white/40 w-8 text-right">{Math.round(environmentVolume * 100)}%</span>
           </div>
         </div>
       )}
@@ -558,7 +533,7 @@ const FocusPage: React.FC = () => {
 
   const handleSaveTask = (taskData: any) => {
     addTask({
-      id: Date.now(),
+      id: Date.now().toString(),
       title: taskData.title,
       category: taskData.category || "General",
       priority: taskData.priority || TaskPriority.MEDIUM,
@@ -578,6 +553,7 @@ const FocusPage: React.FC = () => {
         <div className="absolute inset-[-20px] opacity-30 animate-spin-slow bg-[conic-gradient(from_0deg,transparent,rgba(147,51,234,0.1),transparent)]" />
       </div>
       <ParticleBackground />
+      <AmbientPlayer />
 
       <div className="relative z-10 h-full w-full flex items-center justify-center p-6 lg:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(500px,1fr)_380px] gap-8 lg:gap-12 w-full max-w-[1600px] items-center">

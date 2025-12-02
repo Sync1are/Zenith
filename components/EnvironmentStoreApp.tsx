@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import {
@@ -12,150 +13,8 @@ import {
     Check,
     Trash2
 } from 'lucide-react';
-
-// -----------------------------------------------------------------------------
-// TYPES
-// -----------------------------------------------------------------------------
-
-export interface Environment {
-    id: string;
-    title: string;
-    description: string;
-    category: 'Nature' | 'Urban' | 'Sci-Fi' | 'Abstract';
-    thumbnailUrl: string;
-    audio: boolean;
-    video: boolean;
-    tags: string[];
-}
-
-// -----------------------------------------------------------------------------
-// CONSTANTS
-// -----------------------------------------------------------------------------
-
-export const MAX_SELECTION = 6;
-
-export const ENVIRONMENTS: Environment[] = [
-    {
-        id: 'env-1',
-        title: 'Neon Tokyo Rain',
-        description: 'Cyberpunk city streets under heavy rain with distant synth sounds.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/10/800/600',
-        audio: true,
-        video: true,
-        tags: ['rain', 'city', 'night', 'cyberpunk']
-    },
-    {
-        id: 'env-2',
-        title: 'Nordic Cabin',
-        description: 'Crackling fireplace inside a wooden cabin during a snowstorm.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/11/800/600',
-        audio: true,
-        video: true,
-        tags: ['fire', 'snow', 'cozy', 'winter']
-    },
-    {
-        id: 'env-3',
-        title: 'Orbital Station',
-        description: 'Low hum of spaceship engines looking down at Earth.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/12/800/600',
-        audio: true,
-        video: true,
-        tags: ['space', 'scifi', 'drone', 'calm']
-    },
-    {
-        id: 'env-4',
-        title: 'Bamboo Forest',
-        description: 'Wind rustling through tall bamboo stalks with bird calls.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/13/800/600',
-        audio: true,
-        video: false,
-        tags: ['wind', 'forest', 'zen']
-    },
-    {
-        id: 'env-5',
-        title: 'Deep Sea Lab',
-        description: 'Underwater observatory with muted sonar pings.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/14/800/600',
-        audio: true,
-        video: true,
-        tags: ['water', 'deep', 'blue']
-    },
-    {
-        id: 'env-6',
-        title: 'Parisian Cafe',
-        description: 'Ambient chatter and clinking cups on a sunny afternoon.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/15/800/600',
-        audio: true,
-        video: true,
-        tags: ['coffee', 'people', 'busy']
-    },
-    {
-        id: 'env-7',
-        title: 'Quantum Field',
-        description: 'Abstract visualizers syncing to alpha waves.',
-        category: 'Abstract',
-        thumbnailUrl: 'https://picsum.photos/id/16/800/600',
-        audio: true,
-        video: true,
-        tags: ['trippy', 'focus', 'math']
-    },
-    {
-        id: 'env-8',
-        title: 'Autumn Creek',
-        description: 'Running water over pebbles with falling orange leaves.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/17/800/600',
-        audio: true,
-        video: true,
-        tags: ['water', 'autumn', 'peaceful']
-    },
-    {
-        id: 'env-9',
-        title: 'Subway Commute',
-        description: 'Rhythmic chugging of a train moving through tunnels.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/18/800/600',
-        audio: true,
-        video: true,
-        tags: ['train', 'travel', 'rhythm']
-    },
-    {
-        id: 'env-10',
-        title: 'Mars Colony',
-        description: 'Red dust storms outside a reinforced biodome.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/19/800/600',
-        audio: true,
-        video: true,
-        tags: ['mars', 'dust', 'isolation']
-    },
-    {
-        id: 'env-11',
-        title: 'White Noise Void',
-        description: 'Pure static visual and audio for deep concentration.',
-        category: 'Abstract',
-        thumbnailUrl: 'https://picsum.photos/id/20/800/600',
-        audio: true,
-        video: false,
-        tags: ['static', 'noise', 'pure']
-    },
-    {
-        id: 'env-12',
-        title: 'Tropical Beach',
-        description: 'Waves gently crashing on sand at sunset.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/28/800/600',
-        audio: true,
-        video: true,
-        tags: ['ocean', 'summer', 'sunset']
-    }
-];
+import { useFocusStore } from '../store/useFocusStore';
+import { ENVIRONMENTS, Environment, MAX_SELECTION } from '../data/environments';
 
 // -----------------------------------------------------------------------------
 // SERVICE (GEMINI)
@@ -497,26 +356,16 @@ const MagicMixModal: React.FC<MagicMixModalProps> = ({ isOpen, onClose, onApply 
 // -----------------------------------------------------------------------------
 
 const EnvironmentStoreApp: React.FC = () => {
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const savedIds = useFocusStore((s) => s.savedEnvironmentIds);
+    const setSavedIds = useFocusStore((s) => s.setSavedEnvironmentIds);
+    const toggleSavedId = useFocusStore((s) => s.toggleSavedEnvironmentId);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('All');
     const [isMagicModalOpen, setIsMagicModalOpen] = useState(false);
 
-    const toggleEnvironment = (id: string) => {
-        setSelectedIds(prev => {
-            if (prev.includes(id)) {
-                return prev.filter(item => item !== id);
-            } else {
-                if (prev.length >= MAX_SELECTION) {
-                    return prev;
-                }
-                return [...prev, id];
-            }
-        });
-    };
-
     const handleMagicApply = (newIds: string[]) => {
-        setSelectedIds(newIds);
+        setSavedIds(newIds);
     };
 
     const categories = ['All', 'Nature', 'Urban', 'Sci-Fi', 'Abstract'];
@@ -530,8 +379,8 @@ const EnvironmentStoreApp: React.FC = () => {
         });
     }, [searchTerm, activeCategory]);
 
-    const selectedEnvironments = ENVIRONMENTS.filter(env => selectedIds.includes(env.id));
-    const isMaxReached = selectedIds.length >= MAX_SELECTION;
+    const selectedEnvironments = ENVIRONMENTS.filter(env => savedIds.includes(env.id));
+    const isMaxReached = savedIds.length >= MAX_SELECTION;
 
     return (
         <div className="h-full overflow-y-auto bg-zinc-950 text-zinc-200 pb-32">
@@ -604,9 +453,9 @@ const EnvironmentStoreApp: React.FC = () => {
                         <EnvironmentCard
                             key={env.id}
                             environment={env}
-                            isSelected={selectedIds.includes(env.id)}
-                            onToggle={toggleEnvironment}
-                            disabled={isMaxReached && !selectedIds.includes(env.id)}
+                            isSelected={savedIds.includes(env.id)}
+                            onToggle={toggleSavedId}
+                            disabled={isMaxReached && !savedIds.includes(env.id)}
                         />
                     ))}
 
@@ -623,8 +472,8 @@ const EnvironmentStoreApp: React.FC = () => {
             {/* Floating Dock */}
             <SelectionDock
                 selectedEnvs={selectedEnvironments}
-                onRemove={toggleEnvironment}
-                onClear={() => setSelectedIds([])}
+                onRemove={toggleSavedId}
+                onClear={() => setSavedIds([])}
                 onMagicClick={() => setIsMagicModalOpen(true)}
             />
 

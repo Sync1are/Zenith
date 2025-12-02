@@ -1,6 +1,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { ENVIRONMENTS } from "../data/environments";
 
 export type Priority = "HIGH" | "MEDIUM" | "LOW";
 export type TaskStatus = "IDLE" | "RUNNING" | "DONE";
@@ -17,15 +18,17 @@ export interface Task {
 
 export type FocusMode = "Pomodoro" | "Deep Work" | "Short Break" | "Long Break";
 
-export type EnvironmentId = "none" | "cafe" | "rain" | "forest" | "space" | "ocean" | "library" | "fireplace";
-
 interface FocusStore {
   tasks: Task[];
   activeTaskId: number | null;
   focusMode: FocusMode;
   timerRemaining: number; // seconds
   timerActive: boolean;
-  environment: EnvironmentId; // New state
+
+  // Environment State
+  savedEnvironmentIds: string[]; // The 6 selected environments in the dock
+  activeEnvironmentId: string | null; // The currently playing environment
+  environmentVolume: number; // Global volume for the environment
 
   // Actions
   setTasks: (tasks: Task[]) => void;
@@ -38,7 +41,12 @@ interface FocusStore {
   setTimerRemaining: (seconds: number) => void;
   toggleTimerActive: () => void;
   resetTimer: () => void;
-  setEnvironment: (env: EnvironmentId) => void; // New action
+
+  // Environment Actions
+  setSavedEnvironmentIds: (ids: string[]) => void;
+  toggleSavedEnvironmentId: (id: string) => void;
+  setActiveEnvironmentId: (id: string | null) => void;
+  setEnvironmentVolume: (vol: number) => void;
 }
 
 // Default durations by focus mode (seconds)
@@ -49,6 +57,9 @@ const DURATIONS: Record<FocusMode, number> = {
   "Long Break": 15 * 60,
 };
 
+// Default saved environments (first 6)
+const DEFAULT_SAVED_IDS = ENVIRONMENTS.slice(0, 6).map(e => e.id);
+
 export const useFocusStore = create<FocusStore>()(
   persist(
     (set, get) => ({
@@ -57,7 +68,10 @@ export const useFocusStore = create<FocusStore>()(
       focusMode: "Pomodoro",
       timerRemaining: DURATIONS["Pomodoro"],
       timerActive: false,
-      environment: "fireplace", // Default environment
+
+      savedEnvironmentIds: DEFAULT_SAVED_IDS,
+      activeEnvironmentId: null,
+      environmentVolume: 0.5,
 
       setTasks: (tasks) => set({ tasks }),
 
@@ -103,14 +117,27 @@ export const useFocusStore = create<FocusStore>()(
         set({ timerRemaining: DURATIONS[mode], timerActive: false });
       },
 
-      setEnvironment: (env) => set({ environment: env }),
+      setSavedEnvironmentIds: (ids) => set({ savedEnvironmentIds: ids }),
+
+      toggleSavedEnvironmentId: (id) => set((state) => {
+        const current = state.savedEnvironmentIds;
+        if (current.includes(id)) {
+          return { savedEnvironmentIds: current.filter(i => i !== id) };
+        } else {
+          if (current.length >= 6) return {}; // Max 6
+          return { savedEnvironmentIds: [...current, id] };
+        }
+      }),
+
+      setActiveEnvironmentId: (id) => set({ activeEnvironmentId: id }),
+      setEnvironmentVolume: (vol) => set({ environmentVolume: vol }),
     }),
     {
       name: "zenith-focus-storage",
       partialize: (state) => ({
-        // Persist environment selection
-        environment: state.environment,
-        // Also persist focus mode and tasks if you want
+        savedEnvironmentIds: state.savedEnvironmentIds,
+        activeEnvironmentId: state.activeEnvironmentId,
+        environmentVolume: state.environmentVolume,
         focusMode: state.focusMode,
         tasks: state.tasks,
       }),
