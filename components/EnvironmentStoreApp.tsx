@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import {
@@ -12,150 +13,8 @@ import {
     Check,
     Trash2
 } from 'lucide-react';
-
-// -----------------------------------------------------------------------------
-// TYPES
-// -----------------------------------------------------------------------------
-
-export interface Environment {
-    id: string;
-    title: string;
-    description: string;
-    category: 'Nature' | 'Urban' | 'Sci-Fi' | 'Abstract';
-    thumbnailUrl: string;
-    audio: boolean;
-    video: boolean;
-    tags: string[];
-}
-
-// -----------------------------------------------------------------------------
-// CONSTANTS
-// -----------------------------------------------------------------------------
-
-export const MAX_SELECTION = 6;
-
-export const ENVIRONMENTS: Environment[] = [
-    {
-        id: 'env-1',
-        title: 'Neon Tokyo Rain',
-        description: 'Cyberpunk city streets under heavy rain with distant synth sounds.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/10/800/600',
-        audio: true,
-        video: true,
-        tags: ['rain', 'city', 'night', 'cyberpunk']
-    },
-    {
-        id: 'env-2',
-        title: 'Nordic Cabin',
-        description: 'Crackling fireplace inside a wooden cabin during a snowstorm.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/11/800/600',
-        audio: true,
-        video: true,
-        tags: ['fire', 'snow', 'cozy', 'winter']
-    },
-    {
-        id: 'env-3',
-        title: 'Orbital Station',
-        description: 'Low hum of spaceship engines looking down at Earth.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/12/800/600',
-        audio: true,
-        video: true,
-        tags: ['space', 'scifi', 'drone', 'calm']
-    },
-    {
-        id: 'env-4',
-        title: 'Bamboo Forest',
-        description: 'Wind rustling through tall bamboo stalks with bird calls.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/13/800/600',
-        audio: true,
-        video: false,
-        tags: ['wind', 'forest', 'zen']
-    },
-    {
-        id: 'env-5',
-        title: 'Deep Sea Lab',
-        description: 'Underwater observatory with muted sonar pings.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/14/800/600',
-        audio: true,
-        video: true,
-        tags: ['water', 'deep', 'blue']
-    },
-    {
-        id: 'env-6',
-        title: 'Parisian Cafe',
-        description: 'Ambient chatter and clinking cups on a sunny afternoon.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/15/800/600',
-        audio: true,
-        video: true,
-        tags: ['coffee', 'people', 'busy']
-    },
-    {
-        id: 'env-7',
-        title: 'Quantum Field',
-        description: 'Abstract visualizers syncing to alpha waves.',
-        category: 'Abstract',
-        thumbnailUrl: 'https://picsum.photos/id/16/800/600',
-        audio: true,
-        video: true,
-        tags: ['trippy', 'focus', 'math']
-    },
-    {
-        id: 'env-8',
-        title: 'Autumn Creek',
-        description: 'Running water over pebbles with falling orange leaves.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/17/800/600',
-        audio: true,
-        video: true,
-        tags: ['water', 'autumn', 'peaceful']
-    },
-    {
-        id: 'env-9',
-        title: 'Subway Commute',
-        description: 'Rhythmic chugging of a train moving through tunnels.',
-        category: 'Urban',
-        thumbnailUrl: 'https://picsum.photos/id/18/800/600',
-        audio: true,
-        video: true,
-        tags: ['train', 'travel', 'rhythm']
-    },
-    {
-        id: 'env-10',
-        title: 'Mars Colony',
-        description: 'Red dust storms outside a reinforced biodome.',
-        category: 'Sci-Fi',
-        thumbnailUrl: 'https://picsum.photos/id/19/800/600',
-        audio: true,
-        video: true,
-        tags: ['mars', 'dust', 'isolation']
-    },
-    {
-        id: 'env-11',
-        title: 'White Noise Void',
-        description: 'Pure static visual and audio for deep concentration.',
-        category: 'Abstract',
-        thumbnailUrl: 'https://picsum.photos/id/20/800/600',
-        audio: true,
-        video: false,
-        tags: ['static', 'noise', 'pure']
-    },
-    {
-        id: 'env-12',
-        title: 'Tropical Beach',
-        description: 'Waves gently crashing on sand at sunset.',
-        category: 'Nature',
-        thumbnailUrl: 'https://picsum.photos/id/28/800/600',
-        audio: true,
-        video: true,
-        tags: ['ocean', 'summer', 'sunset']
-    }
-];
+import { useFocusStore } from '../store/useFocusStore';
+import { ENVIRONMENTS, Environment, MAX_SELECTION } from '../data/environments';
 
 // -----------------------------------------------------------------------------
 // SERVICE (GEMINI)
@@ -230,51 +89,78 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
     onToggle,
     disabled
 }) => {
+    const [isVisible, setIsVisible] = React.useState(false);
+    const cardRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                }
+            },
+            { rootMargin: '50px' } // Start loading slightly before card is visible
+        );
+
+        if (cardRef.current) {
+            observer.observe(cardRef.current);
+        }
+
+        return () => {
+            if (cardRef.current) {
+                observer.unobserve(cardRef.current);
+            }
+        };
+    }, []);
+
     return (
         <div
+            ref={cardRef}
             onClick={() => {
                 if (!disabled || isSelected) {
                     onToggle(environment.id);
                 }
             }}
             className={`
-        group relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-300
-        ${isSelected ? 'ring-2 ring-offset-4 ring-offset-zinc-950 ring-white' : ''}
-        ${disabled && !isSelected ? 'opacity-40 grayscale pointer-events-none' : 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50'}
+        group relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-500 ease-out
+        ${isSelected ? 'ring-2 ring-offset-4 ring-offset-zinc-950 ring-white shadow-2xl shadow-white/10' : ''}
+        ${disabled && !isSelected ? 'opacity-40 grayscale pointer-events-none' : 'hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/50 hover:scale-[1.02]'}
       `}
         >
             {/* Image Container */}
             <div className="relative aspect-[4/3] overflow-hidden bg-zinc-900">
+                {/* Use thumbnail for card preview */}
                 <img
                     src={environment.thumbnailUrl}
                     alt={environment.title}
+                    loading="lazy"
                     className={`
-            w-full h-full object-cover transition-transform duration-700 ease-out
-            ${isSelected ? 'scale-105' : 'group-hover:scale-110'}
+            w-full h-full object-cover transition-all duration-700 ease-out
+            ${isSelected ? 'scale-110 brightness-75' : 'group-hover:scale-110 group-hover:brightness-90'}
           `}
                 />
 
                 {/* Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity duration-500" />
 
                 {/* Selected Indicator Overlay */}
                 {isSelected && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center animate-in fade-in duration-200">
-                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg transform scale-100 transition-transform">
-                            <Check size={24} className="text-black" strokeWidth={3} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                        <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl shadow-white/30 transform scale-100 transition-transform duration-300 hover:scale-110">
+                            <Check size={28} className="text-black" strokeWidth={3} />
                         </div>
                     </div>
                 )}
 
                 {/* Top Badges */}
-                <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
                     {environment.video && (
-                        <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
+                        <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-200 hover:scale-110">
                             <Video size={14} />
                         </div>
                     )}
                     {environment.audio && (
-                        <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
+                        <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-200 hover:scale-110">
                             <Music size={14} />
                         </div>
                     )}
@@ -497,26 +383,16 @@ const MagicMixModal: React.FC<MagicMixModalProps> = ({ isOpen, onClose, onApply 
 // -----------------------------------------------------------------------------
 
 const EnvironmentStoreApp: React.FC = () => {
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const savedIds = useFocusStore((s) => s.savedEnvironmentIds);
+    const setSavedIds = useFocusStore((s) => s.setSavedEnvironmentIds);
+    const toggleSavedId = useFocusStore((s) => s.toggleSavedEnvironmentId);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('All');
     const [isMagicModalOpen, setIsMagicModalOpen] = useState(false);
 
-    const toggleEnvironment = (id: string) => {
-        setSelectedIds(prev => {
-            if (prev.includes(id)) {
-                return prev.filter(item => item !== id);
-            } else {
-                if (prev.length >= MAX_SELECTION) {
-                    return prev;
-                }
-                return [...prev, id];
-            }
-        });
-    };
-
     const handleMagicApply = (newIds: string[]) => {
-        setSelectedIds(newIds);
+        setSavedIds(newIds);
     };
 
     const categories = ['All', 'Nature', 'Urban', 'Sci-Fi', 'Abstract'];
@@ -530,17 +406,17 @@ const EnvironmentStoreApp: React.FC = () => {
         });
     }, [searchTerm, activeCategory]);
 
-    const selectedEnvironments = ENVIRONMENTS.filter(env => selectedIds.includes(env.id));
-    const isMaxReached = selectedIds.length >= MAX_SELECTION;
+    const selectedEnvironments = ENVIRONMENTS.filter(env => savedIds.includes(env.id));
+    const isMaxReached = savedIds.length >= MAX_SELECTION;
 
     return (
-        <div className="h-full overflow-y-auto bg-zinc-950 text-zinc-200 pb-32">
+        <div className="h-full overflow-y-auto bg-zinc-950 text-zinc-200 pb-32 scroll-smooth">
 
             {/* Navbar */}
-            <nav className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50">
+            <nav className="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/50 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-lg shadow-white/20">
                             <span className="text-black font-bold text-lg">Z</span>
                         </div>
                         <span className="font-medium text-lg tracking-tight text-white">Zenith</span>
@@ -549,7 +425,7 @@ const EnvironmentStoreApp: React.FC = () => {
                     <div className="hidden md:flex items-center gap-6">
                         <button
                             onClick={() => setIsMagicModalOpen(true)}
-                            className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                            className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-all duration-200 hover:scale-105"
                         >
                             <Sparkles size={16} />
                             <span>AI Curator</span>
@@ -565,16 +441,16 @@ const EnvironmentStoreApp: React.FC = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
 
                     {/* Categories */}
-                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
                         {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
                                 className={`
-                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
+                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ease-out
                   ${activeCategory === cat
-                                        ? 'bg-white text-black'
-                                        : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
+                                        ? 'bg-white text-black shadow-lg shadow-white/20 scale-105'
+                                        : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 hover:scale-105'
                                     }
                 `}
                             >
@@ -585,7 +461,7 @@ const EnvironmentStoreApp: React.FC = () => {
 
                     {/* Search */}
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none transition-colors duration-200">
                             <Search size={16} className="text-zinc-500" />
                         </div>
                         <input
@@ -593,7 +469,7 @@ const EnvironmentStoreApp: React.FC = () => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search environments..."
-                            className="w-full md:w-64 bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-zinc-600 transition-all placeholder-zinc-600"
+                            className="w-full md:w-64 bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-zinc-600 transition-all duration-300 placeholder-zinc-600 hover:border-zinc-700"
                         />
                     </div>
                 </div>
@@ -604,9 +480,9 @@ const EnvironmentStoreApp: React.FC = () => {
                         <EnvironmentCard
                             key={env.id}
                             environment={env}
-                            isSelected={selectedIds.includes(env.id)}
-                            onToggle={toggleEnvironment}
-                            disabled={isMaxReached && !selectedIds.includes(env.id)}
+                            isSelected={savedIds.includes(env.id)}
+                            onToggle={toggleSavedId}
+                            disabled={isMaxReached && !savedIds.includes(env.id)}
                         />
                     ))}
 
@@ -623,8 +499,8 @@ const EnvironmentStoreApp: React.FC = () => {
             {/* Floating Dock */}
             <SelectionDock
                 selectedEnvs={selectedEnvironments}
-                onRemove={toggleEnvironment}
-                onClear={() => setSelectedIds([])}
+                onRemove={toggleSavedId}
+                onClear={() => setSavedIds([])}
                 onMagicClick={() => setIsMagicModalOpen(true)}
             />
 

@@ -211,7 +211,7 @@ const TaskList: React.FC = () => {
             </div>
 
             {/* Items */}
-            <div className="max-h-[380px] overflow-y-auto">
+            <div className="max-h-[240px] overflow-y-auto">
                 {sortedTasks.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
                         <p className="text-lg mb-2">No tasks yet</p>

@@ -83,11 +83,18 @@ export async function generateRoutine(goal: string): Promise<Habit[]> {
         Return a JSON array of 3-7 specific, actionable daily habits.
         Format:
         [
-            { "title": "Habit Title", "category": "Health/Productivity/Mindfulness/etc" },
+            { 
+                "title": "Habit Title", 
+                "category": "Health/Productivity/Mindfulness/etc",
+                "icon": "Emoji",
+                "description": "Short motivation or instruction",
+                "color": "Tailwind gradient class (e.g., 'from-orange-500 to-red-500')",
+                "frequency": "Everyday/Weekdays/Weekends/3x/Week"
+            },
             ...
         ]
         
-        Keep titles short and punchy (under 5 words).`;
+        Keep titles short and punchy (under 5 words). Use relevant emojis for icons.`;
 
         const response = await callOpenRouter([
             { role: 'user', content: prompt }
@@ -104,6 +111,10 @@ export async function generateRoutine(goal: string): Promise<Habit[]> {
             id: Math.random().toString(36).substr(2, 9),
             title: h.title,
             category: h.category || 'Personal',
+            icon: h.icon || '📝',
+            description: h.description || '',
+            color: h.color || 'from-blue-500 to-cyan-500',
+            frequency: h.frequency || 'Everyday',
             createdAt: new Date().toISOString()
         }));
 

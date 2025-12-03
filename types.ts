@@ -133,6 +133,11 @@ export interface Habit {
   title: string;
   category?: string;
   createdAt: string;
+  // New fields
+  icon?: string;
+  description?: string;
+  color?: string;
+  frequency?: string;
 }
 
 export interface CompletionLog {

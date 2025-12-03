@@ -550,7 +550,7 @@ const SmartHomeCard: React.FC = () => {
 
                     {/* SUPER Focus Mode Card */}
                     <motion.div
-                        className="info-box p-4"
+                        className="info-box p-4 h-full"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
@@ -591,7 +591,7 @@ const SmartHomeCard: React.FC = () => {
 
                     {/* Remaining Tasks Card */}
                     <motion.div
-                        className="info-box p-4"
+                        className="info-box p-4 h-full"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
