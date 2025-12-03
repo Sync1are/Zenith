@@ -109,7 +109,6 @@ export const ENVIRONMENTS: Environment[] = [
         thumbnailUrl: 'https://picsum.photos/id/16/800/600',
         audio: true,
         video: true,
-
         tags: ['trippy', 'focus', 'math'],
         audioUrl: '', // TODO: Add URL
         color: 'from-pink-500 to-rose-500',

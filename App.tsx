@@ -549,7 +549,7 @@ const App: React.FC = () => {
             </AnimatePresence>
 
             <main className="flex-1 overflow-y-auto w-full">
-              <div className={`max-w-full px-6 lg:px-10 py-6 transition-all duration-500 ${!superFocus.isActive ? 'md:pl-24' : 'pl-0'}`}>
+              <div className={`max-w-full px-6 lg:px-10 pt-6 pb-5 transition-all duration-500 ${!superFocus.isActive ? 'md:pl-24' : 'pl-0'}`}>
                 {/* Hide Header in Super Focus Mode */}
                 <AnimatePresence>
                   {!superFocus.isActive && (
