@@ -1,32 +1,28 @@
-
-import React, { useState, useMemo } from 'react';
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import React, { useState, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
-    SlidersHorizontal,
     Sparkles,
     Loader2,
     X,
     Video,
-    Music,
-    Plus,
+    Volume2,
     Check,
-    Trash2
+    Trash2,
+    Play
 } from 'lucide-react';
 import { useFocusStore } from '../store/useFocusStore';
 import { ENVIRONMENTS, Environment, MAX_SELECTION } from '../data/environments';
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 // -----------------------------------------------------------------------------
-// SERVICE (GEMINI)
+// AI CURATOR SERVICE
 // -----------------------------------------------------------------------------
 
 const getSmartSelection = async (mood: string): Promise<string[]> => {
     try {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        if (!apiKey) {
-            console.warn("VITE_GEMINI_API_KEY is not set");
-            return [];
-        }
+        if (!apiKey) return [];
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
@@ -35,45 +31,25 @@ const getSmartSelection = async (mood: string): Promise<string[]> => {
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.STRING
-                    }
+                    items: { type: SchemaType.STRING }
                 }
             }
         });
 
         const availableEnvList = ENVIRONMENTS.map(e => ({
-            id: e.id,
-            title: e.title,
-            description: e.description,
-            tags: e.tags.join(", ")
+            id: e.id, title: e.title, description: e.description, tags: e.tags.join(", ")
         }));
 
-        const prompt = `
-      I have a list of Environments: ${JSON.stringify(availableEnvList)}.
-      
-      User Mood: "${mood}".
-      
-      Select exactly 6 distinct environment IDs from the list that best match this mood.
-      Return ONLY a JSON array of strings (the IDs).
-    `;
-
+        const prompt = `Select exactly 6 environment IDs from this list that best match the mood "${mood}": ${JSON.stringify(availableEnvList)}. Return ONLY a JSON array of ID strings.`;
         const result = await model.generateContent(prompt);
-        const text = result.response.text();
-
-        if (!text) return [];
-
-        const selectedIds = JSON.parse(text);
-        return selectedIds;
-
-    } catch (error) {
-        console.error("Gemini Selection Error:", error);
+        return JSON.parse(result.response.text() || '[]');
+    } catch {
         return [];
     }
 };
 
 // -----------------------------------------------------------------------------
-// COMPONENT: EnvironmentCard
+// ENVIRONMENT CARD COMPONENT
 // -----------------------------------------------------------------------------
 
 interface EnvironmentCardProps {
@@ -81,209 +57,253 @@ interface EnvironmentCardProps {
     isSelected: boolean;
     onToggle: (id: string) => void;
     disabled: boolean;
+    index: number;
 }
 
 const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
-    environment,
-    isSelected,
-    onToggle,
-    disabled
+    environment, isSelected, onToggle, disabled, index
 }) => {
-    const [isVisible, setIsVisible] = React.useState(false);
-    const cardRef = React.useRef<HTMLDivElement>(null);
+    const [isHovered, setIsHovered] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
+    // Play video on hover
     React.useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsVisible(true);
-                }
-            },
-            { rootMargin: '50px' } // Start loading slightly before card is visible
-        );
-
-        if (cardRef.current) {
-            observer.observe(cardRef.current);
-        }
-
-        return () => {
-            if (cardRef.current) {
-                observer.unobserve(cardRef.current);
+        if (videoRef.current) {
+            if (isHovered && environment.videoUrl) {
+                videoRef.current.play().catch(() => { });
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
             }
-        };
-    }, []);
+        }
+    }, [isHovered, environment.videoUrl]);
 
     return (
-        <div
-            ref={cardRef}
-            onClick={() => {
-                if (!disabled || isSelected) {
-                    onToggle(environment.id);
-                }
-            }}
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.4 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={() => !disabled && onToggle(environment.id)}
             className={`
-        group relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-500 ease-out
-        ${isSelected ? 'ring-2 ring-offset-4 ring-offset-zinc-950 ring-white shadow-2xl shadow-white/10' : ''}
-        ${disabled && !isSelected ? 'opacity-40 grayscale pointer-events-none' : 'hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/50 hover:scale-[1.02]'}
-      `}
+                group relative cursor-pointer rounded-[22px] overflow-hidden glass-panel transition-all duration-500
+                ${isSelected
+                    ? 'ring-2 ring-[var(--accent)] shadow-[0_0_30px_rgba(99,102,241,0.2)]'
+                    : 'hover:shadow-2xl hover:scale-[1.02]'
+                }
+                ${disabled && !isSelected ? 'opacity-40 pointer-events-none grayscale' : ''}
+            `}
         >
-            {/* Image Container */}
-            <div className="relative aspect-[4/3] overflow-hidden bg-zinc-900">
-                {/* Use thumbnail for card preview */}
+            {/* Media Container */}
+            <div className="relative aspect-[16/10] overflow-hidden">
+                {/* Thumbnail Image */}
                 <img
                     src={environment.thumbnailUrl}
                     alt={environment.title}
-                    loading="lazy"
                     className={`
-            w-full h-full object-cover transition-all duration-700 ease-out
-            ${isSelected ? 'scale-110 brightness-75' : 'group-hover:scale-110 group-hover:brightness-90'}
-          `}
+                        absolute inset-0 w-full h-full object-cover transition-all duration-700
+                        ${isHovered ? 'scale-110 blur-sm opacity-0' : 'scale-100'}
+                    `}
                 />
 
-                {/* Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity duration-500" />
-
-                {/* Selected Indicator Overlay */}
-                {isSelected && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center animate-in fade-in zoom-in duration-300">
-                        <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl shadow-white/30 transform scale-100 transition-transform duration-300 hover:scale-110">
-                            <Check size={28} className="text-black" strokeWidth={3} />
-                        </div>
-                    </div>
+                {/* Video Preview (plays on hover) */}
+                {environment.videoUrl && (
+                    <video
+                        ref={videoRef}
+                        src={environment.videoUrl}
+                        muted
+                        loop
+                        playsInline
+                        className={`
+                            absolute inset-0 w-full h-full object-cover transition-all duration-700
+                            ${isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-100'}
+                        `}
+                    />
                 )}
 
-                {/* Top Badges */}
-                <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent opacity-90" />
+
+                {/* Selection Indicator */}
+                <AnimatePresence>
+                    {isSelected && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+                        >
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                className="w-14 h-14 rounded-full bg-[var(--accent)] flex items-center justify-center shadow-2xl"
+                            >
+                                <Check size={28} className="text-white" strokeWidth={3} />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Badges */}
+                <div className="absolute top-3 right-3 flex gap-2">
                     {environment.video && (
-                        <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-200 hover:scale-110">
-                            <Video size={14} />
+                        <div className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center">
+                            <Video size={12} className="text-white/80" />
                         </div>
                     )}
                     {environment.audio && (
-                        <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-200 hover:scale-110">
-                            <Music size={14} />
+                        <div className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center">
+                            <Volume2 size={12} className="text-white/80" />
                         </div>
                     )}
                 </div>
+
+                {/* Play indicator on hover */}
+                {!isSelected && isHovered && environment.videoUrl && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="absolute top-3 left-3"
+                    >
+                        <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                            <Play size={10} fill="white" className="text-white ml-0.5" />
+                        </div>
+                    </motion.div>
+                )}
             </div>
 
-            {/* Content Info (Overlaid on bottom) */}
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="text-xs font-medium text-zinc-400 mb-1">{environment.category}</p>
-                <div className="flex items-center justify-between">
-                    <h3 className="text-white font-semibold text-lg leading-tight">{environment.title}</h3>
-                    {!isSelected && (
-                        <button className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:text-black hover:border-white">
-                            <Plus size={16} />
-                        </button>
-                    )}
+            {/* Content */}
+            <div className="p-4">
+                <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-[var(--accent)]">
+                    {environment.category}
+                </span>
+                <h3 className="text-[var(--text)] font-semibold mt-1 truncate">
+                    {environment.title}
+                </h3>
+                <p className="text-[var(--subtle)] text-xs mt-1 line-clamp-2">
+                    {environment.description}
+                </p>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1 mt-3">
+                    {environment.tags.slice(0, 3).map(tag => (
+                        <span key={tag} className="px-2 py-0.5 rounded-full bg-white/5 text-[var(--subtle)] text-[9px]">
+                            {tag}
+                        </span>
+                    ))}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
 // -----------------------------------------------------------------------------
-// COMPONENT: SelectionDock
+// SELECTION DOCK COMPONENT
 // -----------------------------------------------------------------------------
 
 interface SelectionDockProps {
     selectedEnvs: Environment[];
     onRemove: (id: string) => void;
     onClear: () => void;
-    onMagicClick: () => void;
+    onMix: () => void;
 }
 
-const SelectionDock: React.FC<SelectionDockProps> = ({ selectedEnvs, onRemove, onClear, onMagicClick }) => {
-    const filledCount = selectedEnvs.length;
+const SelectionDock: React.FC<SelectionDockProps> = ({ selectedEnvs, onRemove, onClear, onMix }) => {
+    const count = selectedEnvs.length;
 
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-fit px-4">
-            <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-full p-2 pl-6 shadow-2xl flex items-center gap-6">
+        <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+        >
+            <div className="glass-panel rounded-full px-4 py-2.5 flex items-center gap-4">
 
-                {/* Counter Info */}
-                <div className="flex flex-col min-w-[60px]">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Capacity</span>
-                    <div className="flex items-baseline gap-1">
-                        <span className={`text-xl font-bold ${filledCount === MAX_SELECTION ? 'text-white' : 'text-zinc-200'}`}>
-                            {filledCount}
+                {/* Capacity */}
+                <div className="pl-2 flex flex-col items-center min-w-[50px]">
+                    <span className="text-[8px] font-bold text-[var(--subtle)] uppercase tracking-widest">Slots</span>
+                    <div className="flex items-baseline">
+                        <span className={`text-lg font-bold ${count === MAX_SELECTION ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>
+                            {count}
                         </span>
-                        <span className="text-sm text-zinc-600">/{MAX_SELECTION}</span>
+                        <span className="text-[var(--subtle)] text-sm">/{MAX_SELECTION}</span>
                     </div>
                 </div>
 
-                {/* Separator */}
-                <div className="w-px h-8 bg-zinc-800" />
+                <div className="w-px h-10 bg-[var(--border)]" />
 
-                {/* Slots Container */}
-                <div className="flex items-center gap-3">
+                {/* Selected Environments */}
+                <div className="flex items-center gap-2">
                     {selectedEnvs.map((env) => (
-                        <div key={env.id} className="group relative">
-                            {/* Remove Badge */}
-                            <button
-                                onClick={() => onRemove(env.id)}
-                                className="absolute -top-1 -right-1 z-10 w-5 h-5 bg-zinc-800 rounded-full border border-zinc-700 text-zinc-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500"
-                            >
-                                <X size={10} strokeWidth={3} />
-                            </button>
-
-                            {/* Circle Preview */}
-                            <div className="w-12 h-12 rounded-full border-2 border-zinc-800 overflow-hidden relative group-hover:border-zinc-600 transition-colors cursor-default">
+                        <motion.div
+                            key={env.id}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="group relative"
+                        >
+                            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--border)] group-hover:border-[var(--accent)] transition-colors">
                                 <img src={env.thumbnailUrl} alt={env.title} className="w-full h-full object-cover" />
                             </div>
-
-                            {/* Tooltip */}
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black px-2 py-1 rounded text-[10px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRemove(env.id); }}
+                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--card)] border border-[var(--border)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:border-red-500"
+                            >
+                                <X size={8} className="text-[var(--text)]" />
+                            </button>
+                            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[var(--card)] rounded text-[8px] text-[var(--text)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--border)]">
                                 {env.title}
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
 
-                    {/* Empty Slots */}
-                    {Array.from({ length: MAX_SELECTION - filledCount }).map((_, i) => (
-                        <div key={`empty-${i}`} className="w-12 h-12 rounded-full border-2 border-dashed border-zinc-800 flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                    {/* Empty slots */}
+                    {Array.from({ length: MAX_SELECTION - count }).map((_, i) => (
+                        <div key={`empty-${i}`} className="w-10 h-10 rounded-full border-2 border-dashed border-[var(--border)] flex items-center justify-center opacity-50">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--border)]" />
                         </div>
                     ))}
                 </div>
+
+                <div className="w-px h-10 bg-[var(--border)]" />
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pl-4 border-l border-zinc-800">
-                    {filledCount > 0 && (
+                <div className="flex items-center gap-2 pr-2">
+                    {count > 0 && (
                         <button
                             onClick={onClear}
-                            className="p-3 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition-colors"
+                            className="p-2 rounded-full hover:bg-white/10 text-[var(--subtle)] hover:text-red-400 transition-colors"
                             title="Clear All"
                         >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                         </button>
                     )}
-
                     <button
-                        onClick={onMagicClick}
-                        className="flex items-center gap-2 bg-white text-black px-5 py-3 rounded-full font-semibold text-sm hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5"
+                        onClick={onMix}
+                        className="flex items-center gap-2 bg-[var(--accent)] hover:opacity-90 text-white px-4 py-2 rounded-full font-semibold text-sm transition-all shadow-lg"
                     >
-                        <Sparkles size={16} />
-                        <span>Mix</span>
+                        <Sparkles size={14} />
+                        <span>AI Mix</span>
                     </button>
                 </div>
-
             </div>
-        </div>
+        </motion.div>
     );
 };
 
 // -----------------------------------------------------------------------------
-// COMPONENT: MagicMixModal
+// AI CURATOR MODAL
 // -----------------------------------------------------------------------------
 
-interface MagicMixModalProps {
+interface AICuratorModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApply: (ids: string[]) => void;
 }
 
-const MagicMixModal: React.FC<MagicMixModalProps> = ({ isOpen, onClose, onApply }) => {
+const AICuratorModal: React.FC<AICuratorModalProps> = ({ isOpen, onClose, onApply }) => {
     const [mood, setMood] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -302,65 +322,87 @@ const MagicMixModal: React.FC<MagicMixModalProps> = ({ isOpen, onClose, onApply 
             if (ids.length === 6) {
                 onApply(ids);
                 onClose();
+                setMood('');
             } else {
-                setError('Could not find enough matches. Try a different term.');
+                setError('Could not find enough matches. Try different keywords.');
             }
-        } catch (err) {
-            setError('Connection failed. Please try again.');
+        } catch {
+            setError('AI service unavailable. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    const suggestions = ['Rainy night coding', 'Peaceful nature retreat', 'Futuristic workspace', 'Cozy winter evening'];
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            />
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal */}
-            <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-
-                <div className="p-8">
+            <motion.div
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                className="relative w-full max-w-lg glass-panel rounded-[22px] overflow-hidden"
+            >
+                <div className="p-6">
+                    {/* Header */}
                     <div className="flex justify-between items-start mb-6">
-                        <div>
-                            <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center mb-4 text-white">
-                                <Sparkles size={24} />
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center shadow-lg">
+                                <Sparkles size={24} className="text-white" />
                             </div>
-                            <h2 className="text-2xl font-semibold text-white">AI Curator</h2>
-                            <p className="text-zinc-400 mt-2 text-sm leading-relaxed">
-                                Describe your desired atmosphere, and we will build the perfect 6-slot environment for you.
-                            </p>
+                            <div>
+                                <h2 className="text-xl font-bold text-[var(--text)]">AI Curator</h2>
+                                <p className="text-[var(--subtle)] text-sm">Describe your ideal focus atmosphere</p>
+                            </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-zinc-500 hover:text-white transition-colors p-2 rounded-full hover:bg-zinc-800"
+                            className="p-2 rounded-full hover:bg-white/10 text-[var(--subtle)] hover:text-[var(--text)] transition-colors"
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
                     </div>
 
+                    {/* Form */}
                     <form onSubmit={handleSubmit}>
-                        <div className="relative mb-6">
-                            <input
-                                type="text"
-                                value={mood}
-                                onChange={(e) => setMood(e.target.value)}
-                                placeholder="e.g., 'Cyberpunk rainy night' or 'Quiet forest reading'"
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-zinc-600"
-                                autoFocus
-                            />
-                            {error && (
-                                <p className="text-red-400 text-xs mt-3 ml-1">{error}</p>
-                            )}
+                        <input
+                            type="text"
+                            value={mood}
+                            onChange={(e) => setMood(e.target.value)}
+                            placeholder="e.g., 'Calm forest with rain sounds'"
+                            className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--subtle)] focus:outline-none focus:border-[var(--accent)] transition-colors mb-4"
+                            autoFocus
+                        />
+
+                        {/* Quick suggestions */}
+                        <div className="flex flex-wrap gap-2 mb-5">
+                            {suggestions.map(s => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setMood(s)}
+                                    className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-[var(--subtle)] hover:text-[var(--text)] text-xs transition-colors border border-[var(--border)]"
+                                >
+                                    {s}
+                                </button>
+                            ))}
                         </div>
+
+                        {error && (
+                            <p className="text-red-400 text-sm mb-4">{error}</p>
+                        )}
 
                         <button
                             type="submit"
                             disabled={isLoading || !mood.trim()}
-                            className="w-full bg-white text-black font-semibold text-sm rounded-xl py-4 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
                         >
                             {isLoading ? (
                                 <>
@@ -368,18 +410,21 @@ const MagicMixModal: React.FC<MagicMixModalProps> = ({ isOpen, onClose, onApply 
                                     <span>Curating...</span>
                                 </>
                             ) : (
-                                <span>Generate Collection</span>
+                                <>
+                                    <Sparkles size={16} />
+                                    <span>Generate Collection</span>
+                                </>
                             )}
                         </button>
                     </form>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 
 // -----------------------------------------------------------------------------
-// MAIN APP COMPONENT
+// MAIN COMPONENT
 // -----------------------------------------------------------------------------
 
 const EnvironmentStoreApp: React.FC = () => {
@@ -389,11 +434,7 @@ const EnvironmentStoreApp: React.FC = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('All');
-    const [isMagicModalOpen, setIsMagicModalOpen] = useState(false);
-
-    const handleMagicApply = (newIds: string[]) => {
-        setSavedIds(newIds);
-    };
+    const [isCuratorOpen, setIsCuratorOpen] = useState(false);
 
     const categories = ['All', 'Nature', 'Urban', 'Sci-Fi', 'Abstract'];
 
@@ -410,49 +451,47 @@ const EnvironmentStoreApp: React.FC = () => {
     const isMaxReached = savedIds.length >= MAX_SELECTION;
 
     return (
-        <div className="h-full overflow-y-auto bg-zinc-950 text-zinc-200 pb-32 scroll-smooth">
+        <div className="min-h-full text-[var(--text)] pb-32 overflow-y-auto">
 
-            {/* Navbar */}
-            <nav className="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/50 transition-all duration-300">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-lg shadow-white/20">
-                            <span className="text-black font-bold text-lg">Z</span>
+            {/* Header */}
+            <header className="sticky top-0 z-40 glass-panel border-b border-[var(--border)]">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-lg">
+                            <span className="text-white font-bold text-sm">Z</span>
                         </div>
-                        <span className="font-medium text-lg tracking-tight text-white">Zenith</span>
+                        <div>
+                            <h1 className="font-bold text-lg text-[var(--text)]">Environment Store</h1>
+                            <p className="text-[var(--subtle)] text-xs">Curate your focus atmosphere</p>
+                        </div>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-6">
-                        <button
-                            onClick={() => setIsMagicModalOpen(true)}
-                            className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-all duration-200 hover:scale-105"
-                        >
-                            <Sparkles size={16} />
-                            <span>AI Curator</span>
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setIsCuratorOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-[var(--border)] text-sm font-medium text-[var(--subtle)] hover:text-[var(--text)] transition-all"
+                    >
+                        <Sparkles size={14} />
+                        <span>AI Curator</span>
+                    </button>
                 </div>
-            </nav>
+            </header>
 
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-6 py-8">
-
-                {/* Controls */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-
+            {/* Filters */}
+            <div className="max-w-7xl mx-auto px-6 py-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     {/* Categories */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                         {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
                                 className={`
-                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ease-out
-                  ${activeCategory === cat
-                                        ? 'bg-white text-black shadow-lg shadow-white/20 scale-105'
-                                        : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 hover:scale-105'
+                                    px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300
+                                    ${activeCategory === cat
+                                        ? 'bg-[var(--accent)] text-white shadow-lg'
+                                        : 'bg-white/5 text-[var(--subtle)] hover:bg-white/10 hover:text-[var(--text)] border border-[var(--border)]'
                                     }
-                `}
+                                `}
                             >
                                 {cat}
                             </button>
@@ -461,55 +500,59 @@ const EnvironmentStoreApp: React.FC = () => {
 
                     {/* Search */}
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none transition-colors duration-200">
-                            <Search size={16} className="text-zinc-500" />
-                        </div>
+                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--subtle)]" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search environments..."
-                            className="w-full md:w-64 bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-zinc-600 transition-all duration-300 placeholder-zinc-600 hover:border-zinc-700"
+                            className="w-full md:w-64 bg-white/5 border border-[var(--border)] rounded-full py-2.5 pl-10 pr-4 text-sm text-[var(--text)] placeholder-[var(--subtle)] focus:outline-none focus:border-[var(--accent)] transition-colors"
                         />
                     </div>
                 </div>
+            </div>
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredEnvironments.map(env => (
+            {/* Grid */}
+            <main className="max-w-7xl mx-auto px-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {filteredEnvironments.map((env, index) => (
                         <EnvironmentCard
                             key={env.id}
                             environment={env}
                             isSelected={savedIds.includes(env.id)}
                             onToggle={toggleSavedId}
                             disabled={isMaxReached && !savedIds.includes(env.id)}
+                            index={index}
                         />
                     ))}
-
-                    {filteredEnvironments.length === 0 && (
-                        <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-500">
-                            <SlidersHorizontal size={40} className="mb-4 opacity-20" />
-                            <p className="text-lg font-medium">No environments found</p>
-                            <p className="text-sm mt-1">Try adjusting your filters</p>
-                        </div>
-                    )}
                 </div>
+
+                {filteredEnvironments.length === 0 && (
+                    <div className="text-center py-20 text-[var(--subtle)]">
+                        <p className="text-lg font-medium">No environments found</p>
+                        <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                    </div>
+                )}
             </main>
 
-            {/* Floating Dock */}
+            {/* Selection Dock */}
             <SelectionDock
                 selectedEnvs={selectedEnvironments}
                 onRemove={toggleSavedId}
                 onClear={() => setSavedIds([])}
-                onMagicClick={() => setIsMagicModalOpen(true)}
+                onMix={() => setIsCuratorOpen(true)}
             />
 
-            {/* Modals */}
-            <MagicMixModal
-                isOpen={isMagicModalOpen}
-                onClose={() => setIsMagicModalOpen(false)}
-                onApply={handleMagicApply}
-            />
+            {/* AI Curator Modal */}
+            <AnimatePresence>
+                {isCuratorOpen && (
+                    <AICuratorModal
+                        isOpen={isCuratorOpen}
+                        onClose={() => setIsCuratorOpen(false)}
+                        onApply={setSavedIds}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };
