@@ -51,7 +51,7 @@ const AnalyticsChartCard: React.FC = () => {
   const totalTasks = chartData.reduce((a, b) => a + b.tasksCompleted, 0);
 
   return (
-    <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
+    <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-6 rounded-2xl h-full flex flex-col shadow-2xl">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-xl font-bold text-white">Weekly Analytics</h2>
@@ -141,14 +141,6 @@ const AnalyticsChartCard: React.FC = () => {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <style>{`
-        .glass-panel {
-            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
-            backdrop-filter: blur(12px) saturate(1.1);
-            border: 1px solid rgba(255,255,255,0.10);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        }
-      `}</style>
     </div>
   );
 };

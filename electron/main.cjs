@@ -33,8 +33,9 @@ function createWindow() {
     });
 
     responseHeaders['Content-Security-Policy'] = [
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.tailwindcss.com https://unpkg.com https://aistudiocdn.com https://*.spotify.com https://accounts.spotify.com https://*.youtube.com https://youtube.com https://www.youtube.com https://img.youtube.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai;",
-      "connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai;",
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.tailwindcss.com https://unpkg.com https://aistudiocdn.com https://*.spotify.com https://accounts.spotify.com https://*.youtube.com https://youtube.com https://www.youtube.com https://img.youtube.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai https://accounts.google.com https://*.google.com https://www.gstatic.com;",
+      "connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai https://accounts.google.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com;",
+      "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://accounts.google.com;",
       "media-src 'self' data: blob: https: https://cdn.pixabay.com;"
     ];
 

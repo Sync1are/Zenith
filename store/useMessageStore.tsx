@@ -92,6 +92,7 @@ interface MessageState {
     sendFriendRequest: (username: string) => Promise<void>;
     acceptFriendRequest: (senderId: string) => Promise<void>;
     rejectFriendRequest: (senderId: string) => Promise<void>;
+    removeFriend: (friendId: string) => Promise<void>;
 
     sendMessage: (receiverId: string, text: string, type?: 'text' | 'call_invite' | 'personal_call', metadata?: { sessionCode?: string; callId?: string; callStatus?: string }) => Promise<void>;
     subscribeToUsers: () => () => void;
@@ -507,6 +508,37 @@ export const useMessageStore = create<MessageState>()(
                             ...state.currentUser,
                             friendRequests: (state.currentUser.friendRequests || []).filter(
                                 (id) => id !== senderId
+                            ),
+                        }
+                        : null,
+                }));
+            },
+
+            removeFriend: async (friendId: string) => {
+                const { currentUser } = get();
+                if (!currentUser) return;
+
+                // Use batch to remove friend from both users atomically
+                const batch = writeBatch(db);
+                const meRef = doc(db, "users", currentUser.id);
+                const friendRef = doc(db, "users", friendId);
+
+                batch.update(meRef, {
+                    friends: arrayRemove(friendId),
+                });
+                batch.update(friendRef, {
+                    friends: arrayRemove(currentUser.id),
+                });
+
+                await batch.commit();
+
+                // Optimistic local state update
+                set((state) => ({
+                    currentUser: state.currentUser
+                        ? {
+                            ...state.currentUser,
+                            friends: (state.currentUser.friends || []).filter(
+                                (id) => id !== friendId
                             ),
                         }
                         : null,

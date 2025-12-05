@@ -23,6 +23,7 @@ import CalendarPage from "./components/CalendarPage";
 import FocusPage from "./components/FocusPage";
 import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
+import ChatApp from "./components/ChatApp";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
 
@@ -246,7 +247,7 @@ const App: React.FC = () => {
   const isLoading = useMessageStore((s) => s.isLoading);
 
   // 🌙 Mobile drawer
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(true);
 
   // 🌙 TopNav Server Tabs
   const [activeServerId, setActiveServerId] = useState("home");
@@ -470,7 +471,7 @@ const App: React.FC = () => {
       case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
       case "Focus": return <FocusPage />;
-
+      case "Messages": return <ChatApp />;
       case "Settings": return <SettingsPage />;
       default:
         return (
@@ -571,11 +572,12 @@ const App: React.FC = () => {
               )}
             </AnimatePresence>
 
+
             <main className="flex-1 overflow-y-auto w-full">
-              <div className={`max-w-full px-6 lg:px-10 pt-6 pb-5 transition-all duration-500 ${!superFocus.isActive ? 'md:pl-24' : 'pl-0'}`}>
-                {/* Hide Header in Super Focus Mode */}
+              <div className={`max-w-full ${activePage === 'Messages' ? 'px-0 pt-0 pb-0 md:pl-20' : 'px-6 lg:px-10 pt-6 pb-5'} transition-all duration-500 ${!superFocus.isActive && activePage !== 'Messages' ? 'md:pl-24' : 'pl-0'}`}>
+                {/* Hide Header in Super Focus Mode or Messages Page */}
                 <AnimatePresence>
-                  {!superFocus.isActive && (
+                  {!superFocus.isActive && activePage !== 'Messages' && (
                     <motion.div
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -602,7 +604,7 @@ const App: React.FC = () => {
                       duration: 0.2,
                       ease: "easeOut"                // Natural deceleration
                     }}
-                    className="w-full h-full"
+                    className={activePage === 'Messages' ? 'w-full h-full' : 'w-full h-full'}
                   >
                     {renderContent()}
                   </motion.div>
@@ -611,6 +613,7 @@ const App: React.FC = () => {
 
               </div>
             </main>
+
 
           </div>
 

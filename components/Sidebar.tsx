@@ -5,7 +5,7 @@ import {
     TasksIcon,
     CalendarIcon,
     FocusIcon,
-
+    MessagesIcon,
     SettingsIcon,
     HabitsIcon
 } from "./icons/IconComponents";
@@ -25,7 +25,7 @@ const navItems = [
     { label: "Habits", icon: <HabitsIcon className="h-6 w-6" /> },
     { label: "Calendar", icon: <CalendarIcon className="h-6 w-6" /> },
     { label: "Focus", icon: <FocusIcon className="h-6 w-6" /> },
-
+    { label: "Messages", icon: <MessagesIcon className="h-6 w-6" /> },
     { label: "Settings", icon: <SettingsIcon className="h-6 w-6" /> }
 ];
 
