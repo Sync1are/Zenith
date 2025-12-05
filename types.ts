@@ -36,6 +36,12 @@ export interface Task {
   completedAt?: number;
   subtasks: Subtask[];
   category: string;
+  // Recurring task fields
+  isRecurring?: boolean;
+  recurrenceType?: 'daily' | 'weekly';
+  recurrenceDays?: number[]; // 0-6 for Sunday-Saturday (for weekly)
+  parentTaskId?: string; // Reference to the template task
+  isTemplate?: boolean; // Mark the original recurring task as template
 }
 
 

@@ -8,6 +8,8 @@ import TitleBar from "./components/TitleBar";
 import NotificationSystem from "./components/Notifications";
 import TopNavBar from "./components/TopNavBar";
 import { Dock } from "./components/Dock";
+import { AllAppsPopup } from "./components/AllAppsPopup";
+import { ContextMenu } from "./components/ContextMenu";
 import { Window } from "./components/Window";
 import { BrowserApp } from "./components/BrowserApp";
 import { CalculatorApp } from "./components/CalculatorApp";
@@ -23,7 +25,7 @@ import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
-import AnalyticsPage from "./components/AnalyticsPage";
+
 
 // Stores
 import { useAppStore } from "./store/useAppStore";
@@ -63,6 +65,18 @@ const App: React.FC = () => {
   const [windowModes, setWindowModes] = useState<Record<string, 'normal' | 'maximized' | 'left' | 'right'>>({});
   const [windowPositions, setWindowPositions] = useState<Record<string, { x: number; y: number }>>({});
   const baseZIndex = 1000;
+
+  // ✨ All Apps Popup State
+  const [isAllAppsOpen, setIsAllAppsOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    appId: string | null;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, appId: null });
+
+  // Get pinned apps from store
+  const pinnedAppIds = useAppStore((s) => s.pinnedAppIds);
+  const togglePinApp = useAppStore((s) => s.togglePinApp);
 
   // 🎯 Mini-Apps Configuration
   const dockApps = React.useMemo(() => [
@@ -136,6 +150,15 @@ const App: React.FC = () => {
       component: <EnvironmentStoreApp />
     },
   ], []);
+
+  // Filter dock apps to show only pinned ones (or all if none pinned)
+  const visibleDockApps = React.useMemo(() => {
+    if (pinnedAppIds.length === 0) {
+      // Default to first 6 apps if none pinned
+      return dockApps.slice(0, 6);
+    }
+    return dockApps.filter(app => pinnedAppIds.includes(app.id));
+  }, [dockApps, pinnedAppIds]);
 
   // Handle window actions
   const handleAppClick = useCallback((appId: string) => {
@@ -447,7 +470,7 @@ const App: React.FC = () => {
       case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
       case "Focus": return <FocusPage />;
-      case "Analytics": return <AnalyticsPage />;
+
       case "Settings": return <SettingsPage />;
       default:
         return (
@@ -626,14 +649,53 @@ const App: React.FC = () => {
           <AnimatePresence>
             {!superFocus.isActive && (
               <Dock
-                apps={dockApps}
+                apps={visibleDockApps}
                 openAppIds={openWindows}
                 activeAppId={activeWindow}
                 onAppClick={handleAppClick}
                 onLayout={setIconPositions}
+                onAllAppsClick={() => setIsAllAppsOpen(true)}
+                onAppContextMenu={(e, app) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    isOpen: true,
+                    position: { x: e.clientX, y: e.clientY },
+                    appId: app.id
+                  });
+                }}
               />
             )}
           </AnimatePresence>
+
+          {/* All Apps Popup */}
+          <AllAppsPopup
+            isOpen={isAllAppsOpen}
+            apps={dockApps}
+            pinnedAppIds={pinnedAppIds}
+            onClose={() => setIsAllAppsOpen(false)}
+            onAppClick={handleAppClick}
+            onContextMenu={(e, app) => {
+              e.preventDefault();
+              setContextMenu({
+                isOpen: true,
+                position: { x: e.clientX, y: e.clientY },
+                appId: app.id
+              });
+            }}
+          />
+
+          {/* Context Menu */}
+          <ContextMenu
+            isOpen={contextMenu.isOpen}
+            position={contextMenu.position}
+            isPinned={contextMenu.appId ? pinnedAppIds.includes(contextMenu.appId) : false}
+            onPin={() => {
+              if (contextMenu.appId) {
+                togglePinApp(contextMenu.appId);
+              }
+            }}
+            onClose={() => setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, appId: null })}
+          />
 
         </div>
       )}

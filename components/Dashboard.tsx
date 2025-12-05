@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import AiCoachCard from './AiCoachCard';
+import AnalyticsPieChart from './AnalyticsPieChart';
 import StatCard from './StatCard';
 import AnalyticsChartCard from './AnalyticsChartCard';
 import TaskList from './TaskList';
@@ -56,7 +56,7 @@ const Dashboard: React.FC = () => {
                 {/* Top Row - AI Coach + Analytics Chart (50/50) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="min-w-0">
-                        <AiCoachCard />
+                        <AnalyticsPieChart />
                     </div>
                     <div className="min-w-0">
                         <AnalyticsChartCard />

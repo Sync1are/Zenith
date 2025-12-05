@@ -9,6 +9,8 @@ interface DockProps {
     onAppClick: (id: string) => void;
     isBooting?: boolean;
     onLayout?: (positions: Record<string, DOMRect>) => void;
+    onAllAppsClick?: () => void;
+    onAppContextMenu?: (e: React.MouseEvent, app: AppConfig) => void;
 }
 
 export const Dock = React.memo<DockProps>(({
@@ -17,7 +19,9 @@ export const Dock = React.memo<DockProps>(({
     activeAppId,
     onAppClick,
     isBooting,
-    onLayout
+    onLayout,
+    onAllAppsClick,
+    onAppContextMenu
 }) => {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(true);
@@ -130,6 +134,7 @@ export const Dock = React.memo<DockProps>(({
                             else iconRefs.current.delete(app.id);
                         }}
                         onClick={() => onAppClick(app.id)}
+                        onContextMenu={(e) => onAppContextMenu?.(e, app)}
                         onMouseEnter={() => setHoveredId(app.id)}
                         className="relative w-12 h-12 flex items-center justify-center rounded-xl transition-transform duration-200 group"
                     >
@@ -190,6 +195,7 @@ export const Dock = React.memo<DockProps>(({
 
                 {/* App Launcher */}
                 <button
+                    onClick={onAllAppsClick}
                     className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/20 transition-colors text-gray-600"
                     title="All Apps"
                     onMouseEnter={() => setHoveredId(null)}
@@ -200,8 +206,8 @@ export const Dock = React.memo<DockProps>(({
                         <div className="w-1 h-1 bg-current rounded-full" />
                         <div className="w-1 h-1 bg-current rounded-full" />
                     </div>
-                </button>
-            </motion.div>
-        </div>
+                </button >
+            </motion.div >
+        </div >
     );
 });

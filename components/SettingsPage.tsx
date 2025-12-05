@@ -1,66 +1,156 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSpotifyStore } from "../store/useSpotifyStore";
 import { useSettingsStore, ThemeKey } from "../store/useSettingsStore";
 import { useMessageStore } from "../store/useMessageStore";
 import { useAppStore } from "../store/useAppStore";
 import ThemeGrid from "../components/ThemeGrid";
-// Small primitives
-const Label: React.FC<{ children: React.ReactNode; hint?: string }> = ({ children, hint }) => (
-  <div>
-    <p className="font-medium text-[var(--text)]">{children}</p>
-    {hint ? <p className="text-sm text-[var(--subtle)]">{hint}</p> : null}
+import {
+  User,
+  Settings,
+  Palette,
+  Target,
+  Bell,
+  Music,
+  Database,
+  LogOut,
+  Upload,
+  X,
+  Check,
+  ChevronRight,
+  Download,
+  Trash2,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
+
+// ============================================
+// SETTINGS CATEGORIES
+// ============================================
+const CATEGORIES = [
+  { id: "profile", label: "Profile", icon: User, desc: "Your identity" },
+  { id: "general", label: "General", icon: Settings, desc: "App behavior" },
+  { id: "appearance", label: "Appearance", icon: Palette, desc: "Theme & effects" },
+  { id: "focus", label: "Focus", icon: Target, desc: "Productivity" },
+  { id: "notifications", label: "Notifications", icon: Bell, desc: "Alerts" },
+  { id: "music", label: "Music", icon: Music, desc: "Spotify" },
+  { id: "data", label: "Data", icon: Database, desc: "Export & reset" },
+  { id: "account", label: "Account", icon: LogOut, desc: "Session" },
+] as const;
+
+type CategoryId = (typeof CATEGORIES)[number]["id"];
+
+// ============================================
+// REUSABLE PRIMITIVES
+// ============================================
+const SettingRow: React.FC<{
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}> = ({ label, hint, children }) => (
+  <div className="flex items-center justify-between py-4 border-b border-white/5 last:border-0">
+    <div className="flex-1 mr-4">
+      <p className="font-medium text-[var(--text)]">{label}</p>
+      {hint && <p className="text-sm text-[var(--subtle)] mt-0.5">{hint}</p>}
+    </div>
+    {children}
   </div>
-);
-
-const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-center justify-between py-2">{children}</div>
-);
-
-const Section: React.FC<{ title: string; desc?: string; children: React.ReactNode }> = ({
-  title,
-  desc,
-  children,
-}) => (
-  <section className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-5 shadow-xl">
-    <header className="mb-3">
-      <h2 className="text-sm tracking-wide uppercase text-[var(--subtle)]">{title}</h2>
-      {desc ? <p className="mt-0.5 text-sm text-[var(--subtle)]">{desc}</p> : null}
-    </header>
-    <div className="space-y-4">{children}</div>
-  </section>
 );
 
 const Toggle: React.FC<{
   enabled: boolean;
   onChange: (v: boolean) => void;
-  label?: string;
-  rightHint?: string;
-}> = ({ enabled, onChange, label, rightHint }) => (
-  <div className="flex items-center gap-3">
-    {rightHint ? <span className="hidden text-xs text-[var(--subtle)] sm:block">{rightHint}</span> : null}
+}> = ({ enabled, onChange }) => (
+  <button
+    type="button"
+    aria-pressed={enabled}
+    onClick={() => onChange(!enabled)}
+    className={`
+      relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]
+      ${enabled ? "bg-[var(--accent)]" : "bg-white/10"}
+    `}
+  >
+    <span
+      className={`
+        inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-300
+        ${enabled ? "translate-x-6" : "translate-x-1"}
+      `}
+    />
+  </button>
+);
 
-    <button
-      type="button"
-      aria-pressed={enabled}
-      aria-label={label}
-      onClick={() => onChange(!enabled)}
-      className={[
-        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-        enabled ? "bg-emerald-500" : "bg-[var(--border)]",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "inline-block h-4 w-4 transform rounded-full bg-white transition",
-          enabled ? "translate-x-6" : "translate-x-1",
-        ].join(" ")}
-      />
-    </button>
+const GlassCard: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = "",
+}) => (
+  <div
+    className={`
+      relative rounded-2xl overflow-hidden
+      bg-gradient-to-br from-white/[0.07] to-white/[0.02]
+      border border-white/10
+      backdrop-blur-xl
+      shadow-[0_8px_32px_rgba(0,0,0,0.3)]
+      ${className}
+    `}
+  >
+    {/* Subtle top highlight */}
+    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    {children}
   </div>
 );
 
-// Avatar Uploader
+// Smooth height animation wrapper
+const AnimatedHeight: React.FC<{ children: React.ReactNode; activeKey: string }> = ({ children, activeKey }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | "auto">("auto");
+  const isFirstRender = useRef(true);
+
+  useLayoutEffect(() => {
+    if (!contentRef.current) return;
+
+    const newHeight = contentRef.current.scrollHeight;
+
+    if (isFirstRender.current) {
+      // On first render, just set the height without animation
+      setHeight(newHeight);
+      isFirstRender.current = false;
+    } else {
+      // Animate to new height
+      setHeight(newHeight);
+    }
+  }, [activeKey]);
+
+  // Re-measure on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (contentRef.current) {
+        setHeight(contentRef.current.scrollHeight);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        height: height === "auto" ? "auto" : `${height}px`,
+        transition: isFirstRender.current ? "none" : "height 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+        overflow: "hidden",
+      }}
+    >
+      <div ref={contentRef}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// AVATAR UPLOADER COMPONENT
+// ============================================
 const AvatarUploader: React.FC<{
   objectUrl: string | null;
   setObjectUrl: (url: string | null) => void;
@@ -73,7 +163,7 @@ const AvatarUploader: React.FC<{
 
   useEffect(() => {
     return () => {
-      if (objectUrl && objectUrl.startsWith('blob:')) URL.revokeObjectURL(objectUrl);
+      if (objectUrl && objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
     };
   }, [objectUrl]);
 
@@ -92,11 +182,9 @@ const AvatarUploader: React.FC<{
       return;
     }
 
-    // Local preview
     const url = URL.createObjectURL(file);
     setObjectUrl(url);
 
-    // Upload
     setIsUploading(true);
     try {
       await onUpload(file);
@@ -105,7 +193,6 @@ const AvatarUploader: React.FC<{
     } catch (err: any) {
       console.error("Upload failed", err);
       setError(err.message || "Upload failed");
-      // Revert preview on failure if needed, or keep it so they can retry
     } finally {
       setIsUploading(false);
     }
@@ -123,7 +210,7 @@ const AvatarUploader: React.FC<{
   };
 
   const onRemove = () => {
-    if (objectUrl && objectUrl.startsWith('blob:')) URL.revokeObjectURL(objectUrl);
+    if (objectUrl && objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
     setObjectUrl(null);
     if (inputRef.current) inputRef.current.value = "";
     setSuccess(false);
@@ -131,69 +218,84 @@ const AvatarUploader: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--card)] group">
-        {objectUrl ? (
-          <img src={objectUrl} alt="Avatar preview" className="h-full w-full object-cover" />
-        ) : (
-          <div className="grid h-full w-full place-items-center">
-            <span className="text-[11px] text-[var(--subtle)]">No Avatar</span>
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      {/* Avatar Preview */}
+      <div className="relative group">
+        <div
+          className={`
+            h-24 w-24 rounded-full overflow-hidden
+            bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5
+            border-2 border-white/10 shadow-xl
+            ${isUploading ? "animate-pulse" : ""}
+          `}
+        >
+          {objectUrl ? (
+            <img src={objectUrl} alt="Avatar" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center">
+              <User className="h-10 w-10 text-[var(--subtle)]" />
+            </div>
+          )}
+        </div>
+        {isUploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
           </div>
         )}
-
-        {isUploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          </div>
+        {objectUrl && !isUploading && (
+          <button
+            onClick={onRemove}
+            className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-rose-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+          >
+            <X className="h-3 w-3 text-white" />
+          </button>
         )}
       </div>
 
-      <div className="flex-1">
+      {/* Upload Area */}
+      <div className="flex-1 w-full">
         <div
-          className={`flex items-center justify-between gap-3 rounded-lg border border-dashed p-3 transition-colors ${isUploading ? "bg-[var(--bg)] border-[var(--border)] opacity-50 pointer-events-none" : "bg-[var(--card)] border-[var(--border)]"
-            }`}
+          className={`
+            flex items-center justify-center gap-4 p-4 rounded-xl
+            border-2 border-dashed border-white/10 hover:border-[var(--accent)]/50
+            bg-white/[0.02] hover:bg-white/[0.04]
+            transition-all duration-300 cursor-pointer
+            ${isUploading ? "pointer-events-none opacity-50" : ""}
+          `}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
+          onClick={openPicker}
         >
-          <p className="text-sm text-[var(--subtle)]">
-            Drag & drop or{" "}
-            <button className="underline underline-offset-2 text-[var(--accent)] hover:opacity-80" onClick={openPicker}>
-              browse
-            </button>
-          </p>
-
-          <div className="flex gap-2">
-            <button
-              onClick={openPicker}
-              disabled={isUploading}
-              className="rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)] hover:bg-[var(--bg)] disabled:opacity-50"
-            >
-              {isUploading ? "Uploading..." : "Upload"}
-            </button>
-
-            {objectUrl ? (
-              <button
-                onClick={onRemove}
-                disabled={isUploading}
-                className="rounded-md border border-[var(--border)] bg-rose-600/10 px-3 py-2 text-rose-300 hover:bg-rose-600/20 disabled:opacity-50"
-              >
-                Remove
-              </button>
-            ) : null}
-          </div>
-
-          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onInput} />
+          <Upload className="h-5 w-5 text-[var(--subtle)]" />
+          <span className="text-sm text-[var(--subtle)]">
+            Drag & drop or <span className="text-[var(--accent)]">browse</span>
+          </span>
         </div>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onInput} />
 
-        {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
-        {success ? <p className="mt-2 text-xs text-emerald-400">Avatar updated successfully!</p> : null}
-        <p className="mt-2 text-xs text-[var(--subtle)]">PNG, JPG, WEBP, GIF, SVG. Max 5MB.</p>
+        {error && (
+          <p className="mt-2 text-xs text-rose-400 flex items-center gap-1">
+            <X className="h-3 w-3" /> {error}
+          </p>
+        )}
+        {success && (
+          <p className="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+            <Check className="h-3 w-3" /> Avatar updated!
+          </p>
+        )}
+        <p className="mt-2 text-xs text-[var(--subtle)]">PNG, JPG, WEBP, GIF, SVG • Max 5MB</p>
       </div>
     </div>
   );
 };
 
+// ============================================
+// MAIN SETTINGS PAGE
+// ============================================
 const SettingsPage: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<CategoryId>("profile");
+
+  // Store hooks
   const spotify = useSpotifyStore((s) => s.spotify);
   const connectSpotify = useSpotifyStore((s) => s.connect);
   const disconnectSpotify = useSpotifyStore((s) => s.disconnect);
@@ -226,8 +328,12 @@ const SettingsPage: React.FC = () => {
     resetSettings,
   } = useSettingsStore();
 
-  // Use currentUser.avatar if available, otherwise fallback to local preview or default
   const displayAvatar = currentUser?.avatar || avatarObjectUrl;
+
+  // Confirmation states
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const resetApp = useAppStore((s) => s.resetApp);
 
   const onExport = () => {
     const s = useSettingsStore.getState();
@@ -255,7 +361,6 @@ const SettingsPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const [confirmClear, setConfirmClear] = useState(false);
   const onClearAll = () => {
     if (!confirmClear) {
       setConfirmClear(true);
@@ -265,9 +370,6 @@ const SettingsPage: React.FC = () => {
     resetSettings();
     setConfirmClear(false);
   };
-
-  const [confirmReset, setConfirmReset] = useState(false);
-  const resetApp = useAppStore((s) => s.resetApp);
 
   const onResetApp = () => {
     if (!confirmReset) {
@@ -280,189 +382,344 @@ const SettingsPage: React.FC = () => {
     setConfirmReset(false);
   };
 
+  // ========================================
+  // CONTENT SECTIONS
+  // ========================================
+  const renderContent = () => {
+    switch (activeCategory) {
+      case "profile":
+        return (
+          <div className="space-y-6">
+            <AvatarUploader
+              objectUrl={displayAvatar}
+              setObjectUrl={setAvatarFilePreview}
+              onUpload={uploadAvatar}
+            />
+            <div className="pt-4">
+              <label className="block text-sm font-medium text-[var(--subtle)] mb-2">
+                Display Name
+              </label>
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Enter your name"
+                className="
+                  w-full px-4 py-3 rounded-xl
+                  bg-white/5 border border-white/10
+                  text-[var(--text)] placeholder:text-[var(--subtle)]
+                  focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]
+                  transition-all duration-200
+                "
+              />
+            </div>
+          </div>
+        );
 
+      case "general":
+        return (
+          <div>
+            <SettingRow label="Auto-start Timer" hint="Timer starts automatically when starting a task">
+              <Toggle enabled={autoStartTimer} onChange={setAutoStartTimer} />
+            </SettingRow>
+            <SettingRow label="Animations" hint="Enable motion for transitions and UI feedback">
+              <Toggle enabled={animations} onChange={setAnimations} />
+            </SettingRow>
+            <SettingRow label="Click Sound" hint="Play a soft click sound on every mouse click">
+              <Toggle enabled={clickSoundEnabled} onChange={setClickSoundEnabled} />
+            </SettingRow>
+          </div>
+        );
+
+      case "appearance":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-[var(--subtle)] mb-4">Theme</h3>
+              <ThemeGrid />
+            </div>
+            <div className="pt-4 border-t border-white/5">
+              <SettingRow label="Glass Mode" hint="Frosted panels and translucency effects">
+                <Toggle enabled={glassMode} onChange={setGlassMode} />
+              </SettingRow>
+            </div>
+          </div>
+        );
+
+      case "focus":
+        return (
+          <div>
+            <SettingRow label="Daily Focus Goal" hint="Target hours to focus each day">
+              <select
+                value={dailyFocusGoal}
+                onChange={(e) => setDailyFocusGoal(parseInt(e.target.value, 10))}
+                className="
+                  px-4 py-2 rounded-xl
+                  bg-white/5 border border-white/10
+                  text-[var(--text)]
+                  focus:outline-none focus:border-[var(--accent)]
+                  cursor-pointer
+                "
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                  <option key={h} value={h} className="bg-[var(--card)]">
+                    {h} {h === 1 ? "hour" : "hours"}
+                  </option>
+                ))}
+              </select>
+            </SettingRow>
+            <SettingRow label="Break Reminders" hint="Get notified when it's time to take a break">
+              <Toggle enabled={breakReminders} onChange={setBreakReminders} />
+            </SettingRow>
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div>
+            <SettingRow label="Desktop Notifications" hint="System-level notifications">
+              <Toggle enabled={desktopNotifications} onChange={setDesktopNotifications} />
+            </SettingRow>
+            <SettingRow label="Task Completed Alerts" hint="Sound when finishing a task">
+              <Toggle enabled={taskCompletedAlerts} onChange={setTaskCompletedAlerts} />
+            </SettingRow>
+          </div>
+        );
+
+      case "music":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`
+                    h-10 w-10 rounded-full flex items-center justify-center
+                    ${spotify?.accessToken ? "bg-emerald-500/20" : "bg-white/5"}
+                  `}
+                >
+                  <Music
+                    className={`h-5 w-5 ${spotify?.accessToken ? "text-emerald-400" : "text-[var(--subtle)]"
+                      }`}
+                  />
+                </div>
+                <div>
+                  <p className="font-medium text-[var(--text)]">Spotify</p>
+                  <p className="text-sm text-[var(--subtle)]">
+                    {spotify?.accessToken ? "Connected" : "Not connected"}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`
+                  px-3 py-1 rounded-full text-xs font-medium
+                  ${spotify?.accessToken
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  }
+                `}
+              >
+                {spotify?.accessToken ? "Active" : "Inactive"}
+              </span>
+            </div>
+
+            {spotify?.accessToken ? (
+              <button
+                onClick={() => disconnectSpotify?.()}
+                className="
+                  w-full py-3 rounded-xl
+                  bg-rose-500/10 border border-rose-500/20
+                  text-rose-400 font-medium
+                  hover:bg-rose-500/20 transition-colors
+                "
+              >
+                Disconnect Spotify
+              </button>
+            ) : (
+              <button
+                onClick={() => connectSpotify?.()}
+                className="
+                  w-full py-3 rounded-xl
+                  bg-emerald-500 text-white font-medium
+                  hover:bg-emerald-600 transition-colors
+                  shadow-lg shadow-emerald-500/20
+                "
+              >
+                Connect Spotify
+              </button>
+            )}
+          </div>
+        );
+
+      case "data":
+        return (
+          <div className="space-y-4">
+            {/* Export */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <div className="flex items-center gap-3">
+                <Download className="h-5 w-5 text-blue-400" />
+                <div>
+                  <p className="font-medium text-[var(--text)]">Export Data</p>
+                  <p className="text-sm text-[var(--subtle)]">Download settings as JSON</p>
+                </div>
+              </div>
+              <button
+                onClick={onExport}
+                className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+              >
+                Export
+              </button>
+            </div>
+
+            {/* Clear Settings */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+              <div className="flex items-center gap-3">
+                <Trash2 className="h-5 w-5 text-orange-400" />
+                <div>
+                  <p className="font-medium text-orange-300">Clear Settings</p>
+                  <p className="text-sm text-[var(--subtle)]">Reset preferences only</p>
+                </div>
+              </div>
+              <button
+                onClick={onClearAll}
+                className={`
+                  px-4 py-2 rounded-lg font-medium transition-all
+                  ${confirmClear
+                    ? "bg-orange-500 text-white animate-pulse"
+                    : "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                  }
+                `}
+              >
+                {confirmClear ? "Confirm?" : "Clear"}
+              </button>
+            </div>
+
+            {/* Reset All */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-rose-500/5 border border-rose-500/20">
+              <div className="flex items-center gap-3">
+                <RotateCcw className="h-5 w-5 text-rose-400" />
+                <div>
+                  <p className="font-medium text-rose-300">Reset All Data</p>
+                  <p className="text-sm text-[var(--subtle)]">Clear everything permanently</p>
+                </div>
+              </div>
+              <button
+                onClick={onResetApp}
+                className={`
+                  px-4 py-2 rounded-lg font-medium transition-all
+                  ${confirmReset
+                    ? "bg-rose-500 text-white animate-pulse"
+                    : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                  }
+                `}
+              >
+                {confirmReset ? "⚠️ Confirm?" : "Reset"}
+              </button>
+            </div>
+          </div>
+        );
+
+      case "account":
+        return (
+          <div>
+            <button
+              onClick={() => useMessageStore.getState().logout()}
+              className="
+                w-full py-4 rounded-xl
+                bg-rose-500/10 border border-rose-500/20
+                text-rose-400 font-medium
+                hover:bg-rose-500/20 transition-all
+                flex items-center justify-center gap-3
+              "
+            >
+              <LogOut className="h-5 w-5" />
+              Sign Out
+            </button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const activeItem = CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
-    <div className="space-y-8">
-      {/* Profile */}
-      <Section title="User Profile" desc="Your public identity in Zenith">
-        <AvatarUploader
-          objectUrl={displayAvatar}
-          setObjectUrl={setAvatarFilePreview}
-          onUpload={uploadAvatar}
-        />
-        <div>
-          <p className="mb-1 text-sm text-[var(--subtle)]">Display Name</p>
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Enter your name"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-          />
+    <div className="h-full flex flex-col lg:flex-row gap-6">
+      {/* Sidebar */}
+      <GlassCard className="lg:w-64 flex-shrink-0">
+        <div className="p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--subtle)] px-3 mb-3">
+            Settings
+          </h2>
+          <nav className="space-y-1">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                    transition-all duration-200 group
+                    ${isActive
+                      ? "bg-[var(--accent)] text-white shadow-lg shadow-[var(--accent)]/20"
+                      : "text-[var(--subtle)] hover:text-[var(--text)] hover:bg-white/5"
+                    }
+                  `}
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-[var(--subtle)] group-hover:text-[var(--accent)]"}`} />
+                  <span className="font-medium flex-1 text-left">{cat.label}</span>
+                  <ChevronRight
+                    className={`h-4 w-4 transition-transform ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-50"
+                      }`}
+                  />
+                </button>
+              );
+            })}
+          </nav>
         </div>
-      </Section>
+      </GlassCard>
 
-      {/* General */}
-      <Section title="General" desc="Core app behavior">
-        <Row>
-          <Label hint="Timer starts automatically when starting a task">Auto-start Timer</Label>
-          <Toggle enabled={autoStartTimer} onChange={setAutoStartTimer} rightHint={autoStartTimer ? "On" : "Off"} />
-        </Row>
-
-        <Row>
-          <Label hint="Enable motion for transitions and UI feedback">Animations</Label>
-          <Toggle enabled={animations} onChange={setAnimations} rightHint={animations ? "On" : "Off"} />
-        </Row>
-
-        <Row>
-          <Label hint="Play a soft click sound on every mouse click">Click Sound</Label>
-          <Toggle enabled={clickSoundEnabled} onChange={setClickSoundEnabled} rightHint={clickSoundEnabled ? "On" : "Off"} />
-        </Row>
-      </Section>
-
-      {/* Appearance */}
-      <Section title="Appearance" desc="Visual theme and effects">
-
-        <ThemeGrid />
-
-
-        <Row>
-          <Label hint="Frosted panels and translucency">Glass Mode</Label>
-          <Toggle enabled={glassMode} onChange={setGlassMode} rightHint={glassMode ? "On" : "Off"} />
-        </Row>
-      </Section>
-
-      {/* Productivity */}
-      <Section title="Focus & Productivity" desc="Targets and healthy pacing">
-        <Row>
-          <Label hint="Hours to focus daily">Daily Focus Goal</Label>
-          <select
-            className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-            value={dailyFocusGoal}
-            onChange={(e) => setDailyFocusGoal(parseInt(e.target.value, 10))}
-          >
-            {[1, 2, 3, 4, 5, 6].map((h) => (
-              <option key={h} value={h}>
-                {h} hrs
-              </option>
-            ))}
-          </select>
-        </Row>
-
-        <Row>
-          <Label hint="Get notified when it's time to take a break">Break Reminders</Label>
-          <Toggle enabled={breakReminders} onChange={setBreakReminders} rightHint={breakReminders ? "On" : "Off"} />
-        </Row>
-      </Section>
-
-      {/* Notifications */}
-      <Section title="Notifications" desc="System notifications and alerts">
-        <Row>
-          <Label>Desktop Notifications</Label>
-          <Toggle
-            enabled={desktopNotifications}
-            onChange={setDesktopNotifications}
-            rightHint={desktopNotifications ? "On" : "Off"}
-          />
-        </Row>
-
-        <Row>
-          <Label>Task Completed Alerts</Label>
-          <Toggle
-            enabled={taskCompletedAlerts}
-            onChange={setTaskCompletedAlerts}
-            rightHint={taskCompletedAlerts ? "On" : "Off"}
-          />
-        </Row>
-      </Section>
-
-      {/* Spotify */}
-      <Section title="Music Integration" desc="Connect your Spotify for ambient focus music">
-        <Row>
-          <p className="font-medium text-[var(--text)]">Spotify Status</p>
-
-          <span
-            className={`rounded-md px-2.5 py-1 text-xs ${spotify?.accessToken
-              ? "bg-emerald-600/10 text-emerald-300"
-              : "bg-rose-600/10 text-rose-300"
-              }`}
-          >
-            {spotify?.accessToken ? "Connected" : "Not Connected"}
-          </span>
-        </Row>
-
-        {spotify?.accessToken ? (
-          <button
-            onClick={() => disconnectSpotify?.()}
-            className="w-full rounded-lg border border-[var(--border)] bg-rose-600/10 px-4 py-2 text-rose-300 hover:bg-rose-600/20"
-          >
-            Disconnect Spotify
-          </button>
-        ) : (
-          <button
-            onClick={() => connectSpotify?.()}
-            className="w-full rounded-lg border border-[var(--border)] bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
-          >
-            Connect Spotify
-          </button>
-        )}
-      </Section>
-
-      {/* Data Management */}
-      <Section title="Data Management" desc="Export or reset your preferences">
-        <div className="flex items-center justify-between rounded-lg border border-blue-700 bg-blue-900/20 p-4">
-          <div>
-            <p className="font-medium text-[var(--text)]">Export Your Data</p>
-            <p className="text-sm text-[var(--subtle)]">Download a JSON file of settings</p>
+      {/* Content */}
+      <GlassCard className="flex-1 min-w-0">
+        <div className="p-6">
+          {/* Header */}
+          <div className="mb-6 pb-4 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              {activeItem && <activeItem.icon className="h-6 w-6 text-[var(--accent)]" />}
+              <div>
+                <h1 className="text-xl font-bold text-[var(--text)]">{activeItem?.label}</h1>
+                <p className="text-sm text-[var(--subtle)]">{activeItem?.desc}</p>
+              </div>
+            </div>
           </div>
-          <button className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" onClick={onExport}>
-            Export
-          </button>
-        </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-rose-700 bg-rose-900/20 p-4">
-          <div>
-            <p className="font-medium text-rose-300">Clear Settings</p>
-            <p className="text-sm text-[var(--subtle)]">Resets settings only</p>
-          </div>
-          <button
-            onClick={onClearAll}
-            className={`rounded-lg px-4 py-2 ${confirmClear ? "bg-rose-700 text-white" : "bg-rose-600 text-white hover:bg-rose-700"
-              }`}
-            title={confirmClear ? "Click again to confirm" : ""}
-          >
-            {confirmClear ? "Click to Confirm" : "Clear"}
-          </button>
+          {/* Section Content with smooth height animation */}
+          <AnimatedHeight activeKey={activeCategory}>
+            <div key={activeCategory} className="animate-slideIn">
+              {renderContent()}
+            </div>
+          </AnimatedHeight>
         </div>
+      </GlassCard>
 
-        <div className="flex items-center justify-between rounded-lg border border-orange-700 bg-orange-900/20 p-4">
-          <div>
-            <p className="font-medium text-orange-300">Reset All App Data</p>
-            <p className="text-sm text-[var(--subtle)]">Clears tasks, settings, and all data</p>
-          </div>
-          <button
-            onClick={onResetApp}
-            className={`rounded-lg px-4 py-2 font-medium ${confirmReset ? "bg-orange-700 text-white" : "bg-orange-600 text-white hover:bg-orange-700"
-              }`}
-            title={confirmReset ? "Click again to confirm" : ""}
-          >
-            {confirmReset ? "⚠️ Confirm Reset" : "Reset All"}
-          </button>
-        </div>
-      </Section>
-
-      {/* Account */}
-      <Section title="Account" desc="Manage your account session">
-        <button
-          onClick={() => useMessageStore.getState().logout()}
-          className="w-full rounded-lg border border-rose-600/20 bg-rose-600/10 px-4 py-3 text-rose-400 hover:bg-rose-600/20 transition-colors font-medium flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Log Out
-        </button>
-      </Section>
+      {/* Inline animation keyframes */}
+      <style>{`
+        @keyframes slideIn {
+          0% { 
+            opacity: 0; 
+            transform: translateX(16px);
+          }
+          100% { 
+            opacity: 1; 
+            transform: translateX(0);
+          }
+        }
+        .animate-slideIn {
+          animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+      `}</style>
     </div>
   );
 };

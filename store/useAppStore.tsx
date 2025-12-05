@@ -150,6 +150,10 @@ interface AppState {
   endPersonalCall: (reason?: 'user_ended' | 'no_answer' | 'declined') => void;
   handleIncomingPersonalCall: (callerId: string, callId: string) => void;
 
+  // Pinned Apps
+  pinnedAppIds: string[];
+  togglePinApp: (appId: string) => void;
+
   // Ticker
   tick: () => void;
 }
@@ -213,6 +217,16 @@ export const useAppStore = create<AppState>()(
         personalCall: { isActive: true, mode: 'incoming', callId, otherUserId: callerId }
       })),
 
+      // Pinned Apps
+      pinnedAppIds: [],
+      togglePinApp: (appId) => set((state) => {
+        const isPinned = state.pinnedAppIds.includes(appId);
+        return {
+          pinnedAppIds: isPinned
+            ? state.pinnedAppIds.filter(id => id !== appId)
+            : [...state.pinnedAppIds, appId]
+        };
+      }),
       // Legacy single token (implicit flow) — consider migrating to spotify.{...}
       spotifyToken: null,
       setSpotifyToken: (token) => set({ spotifyToken: token }),
@@ -495,7 +509,10 @@ export const useAppStore = create<AppState>()(
 
         // PKCE tokens
         spotify: state.spotify,
-        // do NOT persist lastStartRemaining across reloads; it’s per-run
+
+        // Pinned Apps
+        pinnedAppIds: state.pinnedAppIds,
+        // do NOT persist lastStartRemaining across reloads; it's per-run
       }),
     }
   )

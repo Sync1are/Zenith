@@ -77,7 +77,7 @@ const CompactView: React.FC = () => {
 
                         <div className="grid grid-cols-3 gap-3 w-full mb-6">
                             <div className="bg-white/[0.03] border border-white/20 rounded-xl p-2 flex flex-col items-center justify-center backdrop-blur-sm">
-                                <span className="text-lg font-bold text-white">{tasks.filter(t => t.status === 'completed').length}</span>
+                                <span className="text-lg font-bold text-white">{tasks.filter(t => t.status === TaskStatus.Done).length}</span>
                                 <span className="text-[10px] text-white/50">Done</span>
                             </div>
                             <div className="bg-white/[0.03] border border-white/20 rounded-xl p-2 flex flex-col items-center justify-center backdrop-blur-sm">

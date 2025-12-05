@@ -201,7 +201,7 @@ export const Window: React.FC<WindowProps> = ({
                         zIndex,
                         position: 'absolute',
                         left: `calc(50% - ${width / 2}px)`,
-                        top: '100px',
+                        top: `calc(50% - ${height / 2}px)`,
                         transformOrigin: "center center",
                         boxShadow: isDragging
                             ? '0 25px 50px rgba(0,0,0,0.25)'

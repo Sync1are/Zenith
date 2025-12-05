@@ -8,7 +8,7 @@ const AnalyticsChartCard: React.FC = () => {
 
   const chartData = useMemo(() => {
     const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const weekData: { name: string, minutes: number }[] = dayNames.map(name => ({ name, minutes: 0 }));
+    const weekData: { name: string, minutes: number, tasksCompleted: number }[] = dayNames.map(name => ({ name, minutes: 0, tasksCompleted: 0 }));
 
     const today = new Date();
     // Calculate start of week (Monday)
@@ -25,17 +25,19 @@ const AnalyticsChartCard: React.FC = () => {
     );
 
     completedThisWeek.forEach(task => {
-      if (task.timeSpentMinutes || task.estimatedTimeMinutes) {
-        const completedDate = new Date(task.completedAt!);
-        const dayIndex = completedDate.getDay();
-        // Use timeSpentMinutes if available (actual), otherwise estimated
-        const durationMinutes = task.timeSpentMinutes || task.estimatedTimeMinutes || 0;
+      const completedDate = new Date(task.completedAt!);
+      const dayIndex = completedDate.getDay();
 
-        // Adjust index: Sunday is 0, but we want Mon-Sun order
-        const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-        if (adjustedIndex >= 0 && adjustedIndex < 7) {
-          weekData[adjustedIndex].minutes += durationMinutes;
-        }
+      // Adjust index: Sunday is 0, but we want Mon-Sun order
+      const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+
+      if (adjustedIndex >= 0 && adjustedIndex < 7) {
+        // Add minutes
+        const durationMinutes = task.timeSpentMinutes || task.estimatedTimeMinutes || 0;
+        weekData[adjustedIndex].minutes += durationMinutes;
+
+        // Add task count
+        weekData[adjustedIndex].tasksCompleted += 1;
       }
     });
 
@@ -46,13 +48,23 @@ const AnalyticsChartCard: React.FC = () => {
   }, [tasks]);
 
   const totalMinutes = chartData.reduce((a, b) => a + b.minutes, 0);
+  const totalTasks = chartData.reduce((a, b) => a + b.tasksCompleted, 0);
 
   return (
     <div className="glass-panel p-6 rounded-2xl h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-white">Weekly Focus Time</h2>
-        <div className="text-sm font-bold text-white/60">
-          {totalMinutes} min total
+        <div>
+          <h2 className="text-xl font-bold text-white">Weekly Analytics</h2>
+          <div className="flex gap-4 mt-1">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="text-xs text-white/60">{totalMinutes} min focus</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              <span className="text-xs text-white/60">{totalTasks} tasks done</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -64,10 +76,13 @@ const AnalyticsChartCard: React.FC = () => {
                 <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
                 <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
               </linearGradient>
+              <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#F97316" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#F97316" stopOpacity={0.1} />
+              </linearGradient>
             </defs>
 
             <Tooltip
-              formatter={(v) => `${v} min`}
               contentStyle={{
                 background: 'rgba(28, 28, 30, 0.95)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -86,19 +101,42 @@ const AnalyticsChartCard: React.FC = () => {
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: 'rgba(255,255,255,0.5)' }}
+              yAxisId="left"
+              tick={{ fill: 'rgba(139, 92, 246, 0.5)' }}
               fontSize={12}
               axisLine={false}
               tickLine={false}
+              width={30}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              tick={{ fill: 'rgba(249, 115, 22, 0.5)' }}
+              fontSize={12}
+              axisLine={false}
+              tickLine={false}
+              width={30}
             />
 
             <Area
+              yAxisId="left"
               type="monotone"
               dataKey="minutes"
+              name="Focus Minutes"
               stroke="#8B5CF6"
               strokeWidth={3}
               fillOpacity={1}
               fill="url(#colorFocus)"
+            />
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="tasksCompleted"
+              name="Tasks Completed"
+              stroke="#F97316"
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorTasks)"
             />
           </AreaChart>
         </ResponsiveContainer>
