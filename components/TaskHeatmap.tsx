@@ -40,25 +40,33 @@ export const TaskHeatmap: React.FC<TaskHeatmapProps> = ({ tasks, onDateClick }) 
 
         tasks.forEach(task => {
             // Created & Pending
-            const createdDate = new Date(task.createdAt);
-            createdDate.setHours(0, 0, 0, 0);
-            const createdStr = createdDate.toISOString().split('T')[0];
+            if (task.createdAt) {
+                const createdDate = new Date(task.createdAt);
+                // Validate the date is valid before calling toISOString()
+                if (!isNaN(createdDate.getTime())) {
+                    createdDate.setHours(0, 0, 0, 0);
+                    const createdStr = createdDate.toISOString().split('T')[0];
 
-            if (!stats[createdStr]) stats[createdStr] = { created: 0, completed: 0, pending: 0 };
-            stats[createdStr].created++;
+                    if (!stats[createdStr]) stats[createdStr] = { created: 0, completed: 0, pending: 0 };
+                    stats[createdStr].created++;
 
-            if (task.status !== TaskStatus.Done) {
-                stats[createdStr].pending++;
+                    if (task.status !== TaskStatus.Done) {
+                        stats[createdStr].pending++;
+                    }
+                }
             }
 
             // Completed
             if (task.status === TaskStatus.Done && task.completedAt) {
                 const completedDate = new Date(task.completedAt);
-                completedDate.setHours(0, 0, 0, 0);
-                const completedStr = completedDate.toISOString().split('T')[0];
+                // Validate the date is valid before calling toISOString()
+                if (!isNaN(completedDate.getTime())) {
+                    completedDate.setHours(0, 0, 0, 0);
+                    const completedStr = completedDate.toISOString().split('T')[0];
 
-                if (!stats[completedStr]) stats[completedStr] = { created: 0, completed: 0, pending: 0 };
-                stats[completedStr].completed++;
+                    if (!stats[completedStr]) stats[completedStr] = { created: 0, completed: 0, pending: 0 };
+                    stats[completedStr].completed++;
+                }
             }
         });
         return stats;

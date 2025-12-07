@@ -1180,11 +1180,6 @@ body {
   }
 }
 
---card: #151516;
---accent: #4f6cff;
---subtle: #757575;
---border: #222;
-}
 
 /* Nightfall */
 :root[data-theme='nightfall'] {
