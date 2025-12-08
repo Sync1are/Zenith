@@ -37,6 +37,7 @@ import { useMessageStore } from "./store/useMessageStore";
 import { useCalendarStore } from "./store/useCalendarStore";
 import { useFocusStore } from "./store/useFocusStore";
 import { useGoalStore } from "./store/useGoalStore";
+import { useHabitStore } from "./components/HabitsPage";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { useFirebaseSync } from "./utils/firebaseSync";
 import { playClickSound } from "./utils/clickSound";
@@ -320,6 +321,12 @@ const App: React.FC = () => {
   useFirebaseSync({
     collectionName: 'goals-state',
     store: useGoalStore,
+  });
+
+  // Habits Firebase Sync
+  useFirebaseSync({
+    collectionName: 'habits-state',
+    store: useHabitStore,
   });
 
   // Initialize Auth
