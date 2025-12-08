@@ -18,6 +18,7 @@ import EnvironmentStoreApp from "./components/EnvironmentStoreApp";
 // Pages
 import Dashboard from "./components/Dashboard";
 import Tasks from "./components/TasksPage";
+import GoalsPage from "./components/GoalsPage";
 import HabitsPage from "./components/HabitsPage";
 import CalendarPage from "./components/CalendarPage";
 import FocusPage from "./components/FocusPage";
@@ -35,6 +36,7 @@ import { useSpotifyStore } from "./store/useSpotifyStore";
 import { useMessageStore } from "./store/useMessageStore";
 import { useCalendarStore } from "./store/useCalendarStore";
 import { useFocusStore } from "./store/useFocusStore";
+import { useGoalStore } from "./store/useGoalStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { useFirebaseSync } from "./utils/firebaseSync";
 import { playClickSound } from "./utils/clickSound";
@@ -314,6 +316,12 @@ const App: React.FC = () => {
     }),
   });
 
+  // Goals Firebase Sync
+  useFirebaseSync({
+    collectionName: 'goals-state',
+    store: useGoalStore,
+  });
+
   // Initialize Auth
   useEffect(() => {
     const unsub = initAuth();
@@ -468,6 +476,7 @@ const App: React.FC = () => {
     switch (activePage) {
       case "Dashboard": return <Dashboard />;
       case "Tasks": return <Tasks />;
+      case "Goals": return <GoalsPage />;
       case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
       case "Focus": return <FocusPage />;
