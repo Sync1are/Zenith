@@ -19,6 +19,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.removeAllListeners('exit-super-focus-requested');
   },
 
+  // Open URL in external browser
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  // OAuth Callback Server
+  startOAuthServer: () => ipcRenderer.invoke('start-oauth-server'),
+  onSpotifyCallback: (callback) => {
+    ipcRenderer.on('spotify-oauth-callback', (event, data) => callback(data));
+  },
+  removeSpotifyCallbackListener: () => {
+    ipcRenderer.removeAllListeners('spotify-oauth-callback');
+  },
+
+  // Deep Link Handler (for custom protocol)
+  onSpotifyDeepLink: (callback) => {
+    ipcRenderer.on('spotify-deep-link', (event, data) => callback(data));
+  },
+  removeSpotifyDeepLinkListener: () => {
+    ipcRenderer.removeAllListeners('spotify-deep-link');
+  },
+
   // Secure Spotify
   spotify: {
     encryptToken: (token) => ipcRenderer.invoke('spotify-encrypt-token', token),

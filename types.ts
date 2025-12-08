@@ -110,6 +110,15 @@ declare global {
       exitSuperFocus: () => void;
       onExitSuperFocusRequested: (callback: () => void) => void;
       removeExitSuperFocusListener: () => void;
+      // Open URL in external browser
+      openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+      // OAuth Callback Server
+      startOAuthServer: () => Promise<{ success: boolean; port: number }>;
+      onSpotifyCallback: (callback: (data: { code: string | null; state: string | null; error: string | null }) => void) => void;
+      removeSpotifyCallbackListener: () => void;
+      // Deep Link Handler
+      onSpotifyDeepLink: (callback: (data: { code: string | null; state: string | null; error: string | null }) => void) => void;
+      removeSpotifyDeepLinkListener: () => void;
       // Compact Mode
       setNormalMode: () => void;
       onCompactModeExited: (callback: () => void) => void;

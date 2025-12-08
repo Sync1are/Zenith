@@ -2,7 +2,8 @@
 import { generateCodeChallenge, generateCodeVerifier, randomState } from "./pkce";
 
 export const SPOTIFY_CLIENT_ID = "c78fa3fb2fc34a76ae9f6771a403589f";
-export const REDIRECT_URI = "https://zenith-puce-iota.vercel.app/callback"; // use exact loopback root when not using a router
+export const REDIRECT_URI = "https://zenith-puce-iota.vercel.app/callback";
+
 
 export const SCOPES = [
   "user-read-playback-state",
@@ -31,7 +32,13 @@ export async function beginLogin() {
     state
   });
 
-  window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  const authUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
+
+  console.log('[Spotify Auth] Navigating to Spotify authorization...');
+
+  // Simply navigate the Electron window to Spotify auth
+  // After auth, Spotify redirects to the web URL, but we're still in Electron window
+  window.location.href = authUrl;
 }
 
 export async function handleAuthRedirectIfPresent(

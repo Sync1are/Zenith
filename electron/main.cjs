@@ -1,6 +1,7 @@
 // electron/main.cjs
 const { app, BrowserWindow, globalShortcut, ipcMain } = require("electron");
 const path = require("path");
+const http = require("http");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -19,30 +20,6 @@ function createWindow() {
       nodeIntegration: false,
       webviewTag: true, // Enable <webview> tag for mini-apps
     },
-  });
-
-  // Set Content Security Policy (CSP)
-  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    const responseHeaders = { ...details.responseHeaders };
-
-    // Remove existing CSP headers to avoid conflicts (browser takes most restrictive intersection)
-    Object.keys(responseHeaders).forEach(key => {
-      if (key.toLowerCase() === 'content-security-policy') {
-        delete responseHeaders[key];
-      }
-    });
-
-    responseHeaders['Content-Security-Policy'] = [
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.tailwindcss.com https://unpkg.com https://aistudiocdn.com https://*.spotify.com https://accounts.spotify.com https://*.youtube.com https://youtube.com https://www.youtube.com https://img.youtube.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai https://accounts.google.com https://*.google.com https://www.gstatic.com;",
-      "connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://www.googletagmanager.com https://api.dicebear.com https://cdn.pixabay.com https://openrouter.ai https://accounts.google.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com;",
-      "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://accounts.google.com;",
-      "media-src 'self' data: blob: https: https://cdn.pixabay.com;",
-      "img-src 'self' data: blob: https: https://*.scdn.co;",
-      "font-src 'self' data: https://*.scdn.co;",
-      "script-src-elem 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://aistudiocdn.com https://www.googletagmanager.com https://*.scdn.co;"
-    ];
-
-    callback({ responseHeaders });
   });
 
   mainWindow = win;
@@ -112,8 +89,81 @@ ipcMain.on("exit-super-focus", () => {
   isSuperFocusMode = false;
   mainWindow.setFullScreen(false);
 
-  // Unregister all shortcuts
   globalShortcut.unregisterAll();
+});
+
+// Open URL in external browser
+const { shell } = require("electron");
+ipcMain.handle('open-external', async (event, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to open external URL:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// OAuth Callback Server for Spotify
+let oauthServer = null;
+
+ipcMain.handle('start-oauth-server', async () => {
+  return new Promise((resolve, reject) => {
+    // Close existing server if any
+    if (oauthServer) {
+      oauthServer.close();
+      oauthServer = null;
+    }
+
+    oauthServer = http.createServer((req, res) => {
+      const url = new URL(req.url, `http://localhost:8888`);
+
+      if (url.pathname === '/callback') {
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+        const error = url.searchParams.get('error');
+
+        // Send success response to browser
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html>
+            <body style="background: #1a1a2e; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+              <div style="text-align: center;">
+                <h1>✓ Authorization Complete</h1>
+                <p>You can close this window and return to Zenith.</p>
+              </div>
+            </body>
+          </html>
+        `);
+
+        // Send the auth data to renderer
+        if (mainWindow) {
+          mainWindow.webContents.send('spotify-oauth-callback', { code, state, error });
+        }
+
+        // Close server after handling callback
+        setTimeout(() => {
+          if (oauthServer) {
+            oauthServer.close();
+            oauthServer = null;
+          }
+        }, 1000);
+      } else {
+        res.writeHead(404);
+        res.end('Not found');
+      }
+    });
+
+    oauthServer.listen(8888, 'localhost', () => {
+      console.log('OAuth callback server listening on http://localhost:8888');
+      resolve({ success: true, port: 8888 });
+    });
+
+    oauthServer.on('error', (error) => {
+      console.error('OAuth server error:', error);
+      reject(error);
+    });
+  });
 });
 
 // Secure Spotify Token Handlers
