@@ -54,6 +54,7 @@ import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
 import { useMigrationStore } from './store/useMigrationStore';
 import { useSuperFocus } from "./hooks/useSuperFocus";
+import { useDiscordPresence } from "./hooks/useDiscordPresence";
 
 const App: React.FC = () => {
   // 🌙 Navigation
@@ -61,6 +62,9 @@ const App: React.FC = () => {
   const setActivePage = useAppStore((s) => s.setActivePage);
   const compactMode = useAppStore((s) => s.compactMode);
   const superFocus = useSuperFocus();
+
+  // 🎮 Discord Rich Presence
+  useDiscordPresence(activePage);
 
   // 🎯 Window Management State
   const [openWindows, setOpenWindows] = useState<string[]>([]);

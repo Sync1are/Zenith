@@ -1,9 +1,27 @@
 import React from 'react';
 
 export const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="11" fill="#F97316" />
-        <path d="M12 7V12H16.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="moonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#7C3AED" />
+                <stop offset="50%" stopColor="#3B82F6" />
+                <stop offset="100%" stopColor="#22D3EE" />
+            </linearGradient>
+        </defs>
+        <path
+            d="M80 50C80 72.0914 62.0914 90 40 90C28.954 90 19.0463 85.5229 12 78.4767C19.0463 85.5229 28.954 90 40 90C62.0914 90 80 72.0914 80 50C80 27.9086 62.0914 10 40 10C28.954 10 19.0463 14.4771 12 21.5233C19.0463 14.4771 28.954 10 40 10C62.0914 10 80 27.9086 80 50Z"
+            fill="url(#moonGradient)"
+        />
+        <path
+            d="M88 50C88 76.5097 66.5097 98 40 98C26.1929 98 13.7749 92.4183 5 83.2C16.5 94 32 100 50 100C77.6142 100 100 77.6142 100 50C100 22.3858 77.6142 0 50 0C32 0 16.5 6 5 16.8C13.7749 7.58172 26.1929 2 40 2C66.5097 2 88 23.4903 88 50Z"
+            fill="url(#moonGradient)"
+            opacity="0.3"
+        />
+        <path
+            d="M75 50C75 69.33 59.33 85 40 85C26.7 85 15.3 77.2 10 66C17.2 78.5 30.5 87 46 87C67.54 87 85 69.54 85 48C85 31.5 74.5 17.5 60 11C69.2 18.5 75 30.5 75 44C75 46.02 75 48.02 75 50Z"
+            fill="url(#moonGradient)"
+        />
     </svg>
 );
 

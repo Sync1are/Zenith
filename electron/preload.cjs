@@ -54,5 +54,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   spotify: {
     encryptToken: (token) => ipcRenderer.invoke('spotify-encrypt-token', token),
     refreshToken: (encryptedToken) => ipcRenderer.invoke('spotify-refresh-token', encryptedToken),
-  }
+  },
+
+  // Discord Rich Presence
+  updateDiscordPresence: (data) => ipcRenderer.send('update-discord-presence', data),
 });

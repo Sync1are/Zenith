@@ -2,6 +2,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require("electron");
 const path = require("path");
 const http = require("http");
+const { initDiscordRPC, setActivity, destroyRPC } = require("./discordRPC.cjs");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -33,7 +34,17 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  // Initialize Discord Rich Presence
+  initDiscordRPC();
+});
+
+// Discord Rich Presence update handler
+ipcMain.on('update-discord-presence', (event, data) => {
+  setActivity(data);
+});
 
 ipcMain.on("minimize-window", () => {
   BrowserWindow.getFocusedWindow()?.minimize();
@@ -272,4 +283,6 @@ app.on("window-all-closed", () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  // Cleanup Discord RPC
+  destroyRPC();
 });

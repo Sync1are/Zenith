@@ -64,35 +64,42 @@ const TaskItem: React.FC<{ task: Task; onToggle: (id: string) => void; onDelete:
             <div className="col-span-3 flex items-center justify-between gap-2">
                 <div className="flex-1">
                     {(() => {
-                        let total = 0;
+                        // Calculate progress based on time spent vs estimated time
+                        const estimatedMinutes = task.estimatedTimeMinutes || 0;
+                        const timeSpentMinutes = task.timeSpentMinutes || 0;
 
-                        // Total duration calculation
-                        if (task.subtasks?.length) {
-                            total = task.subtasks.reduce((acc, st) => {
-                                const duration = (st as any).duration;
-                                if (!duration) return acc;
-                                const num = parseInt(duration);
-                                if (duration.includes("hour")) return acc + num * 3600;
-                                if (duration.includes("min")) return acc + num * 60;
-                                return acc + num;
-                            }, 0);
+                        // If task has subtasks, calculate from subtask completion
+                        let progress = 0;
+                        if (task.subtasks && task.subtasks.length > 0) {
+                            const completedSubtasks = task.subtasks.filter(st => st.isCompleted).length;
+                            progress = Math.round((completedSubtasks / task.subtasks.length) * 100);
+                        } else if (task.status === TaskStatus.Done) {
+                            // Task is complete
+                            progress = 100;
+                        } else if (estimatedMinutes > 0 && timeSpentMinutes > 0) {
+                            // Calculate based on time spent vs estimated
+                            progress = Math.min(99, Math.round((timeSpentMinutes / estimatedMinutes) * 100));
+                        } else if (task.remainingTime !== undefined && estimatedMinutes > 0) {
+                            // Fallback: calculate from remaining time
+                            const totalSeconds = estimatedMinutes * 60;
+                            const elapsed = totalSeconds - task.remainingTime;
+                            progress = Math.min(99, Math.round((elapsed / totalSeconds) * 100));
                         }
 
-                        if (total === 0) {
-                            if (task.estimatedTimeMinutes) {
-                                total = task.estimatedTimeMinutes * 60;
-                            }
-                        }
-
-                        const remaining = task.remainingTime ?? total;
-                        const progress = total > 0 ? Math.min(100, ((total - remaining) / total) * 100) : 0;
+                        // Ensure progress is never negative
+                        progress = Math.max(0, progress);
 
                         return (
                             <div className="flex items-center gap-3">
                                 {/* Progress Bar */}
                                 <div className="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden relative">
                                     <div
-                                        className={`h-2 transition-all duration-[1000ms] ease-linear ${isActive ? 'bg-orange-500' : 'bg-blue-500'}`}
+                                        className={`h-2 transition-all duration-[1000ms] ease-linear ${task.status === TaskStatus.Done
+                                            ? 'bg-green-500'
+                                            : isActive
+                                                ? 'bg-orange-500'
+                                                : 'bg-blue-500'
+                                            }`}
                                         style={{
                                             width: `${progress}%`,
                                             boxShadow: isActive ? '0 0 8px rgba(249, 115, 22, 0.6)' : 'none'
@@ -106,11 +113,14 @@ const TaskItem: React.FC<{ task: Task; onToggle: (id: string) => void; onDelete:
                                 </div>
 
                                 {/* Percentage */}
-                                {total > 0 && (
-                                    <span className={`text-xs font-mono w-10 text-right ${isActive ? 'text-orange-400 font-semibold' : 'text-gray-400'}`}>
-                                        {Math.round(progress)}%
-                                    </span>
-                                )}
+                                <span className={`text-xs font-mono w-10 text-right ${task.status === TaskStatus.Done
+                                    ? 'text-green-400 font-semibold'
+                                    : isActive
+                                        ? 'text-orange-400 font-semibold'
+                                        : 'text-gray-400'
+                                    }`}>
+                                    {progress}%
+                                </span>
                             </div>
                         );
                     })()}
@@ -139,6 +149,13 @@ const TaskList: React.FC = () => {
     const setTasks = useAppStore(state => state.setTasks);
     const deleteTask = useAppStore(state => state.deleteTask);
 
+    // Delete confirmation modal state
+    const [deleteConfirm, setDeleteConfirm] = React.useState<{ isOpen: boolean; taskId: string | null; taskTitle: string }>({
+        isOpen: false,
+        taskId: null,
+        taskTitle: ''
+    });
+
     const handleToggle = (id: string) => {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
@@ -153,10 +170,22 @@ const TaskList: React.FC = () => {
         ));
     };
 
-    const handleDelete = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            deleteTask(id);
+    const handleDeleteClick = (id: string) => {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            setDeleteConfirm({ isOpen: true, taskId: id, taskTitle: task.title });
         }
+    };
+
+    const confirmDelete = () => {
+        if (deleteConfirm.taskId) {
+            deleteTask(deleteConfirm.taskId);
+        }
+        setDeleteConfirm({ isOpen: false, taskId: null, taskTitle: '' });
+    };
+
+    const cancelDelete = () => {
+        setDeleteConfirm({ isOpen: false, taskId: null, taskTitle: '' });
     };
 
     // Sorting: Active task always comes first
@@ -187,43 +216,89 @@ const TaskList: React.FC = () => {
     });
 
     return (
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">📋 Task Completion History</h3>
-                <div className="flex items-center gap-3 text-sm">
-                    {activeTaskId && (
-                        <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full font-semibold">
-                            ⚡ 1 Active
+        <>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-white">📋 Task Completion History</h3>
+                    <div className="flex items-center gap-3 text-sm">
+                        {activeTaskId && (
+                            <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full font-semibold">
+                                ⚡ 1 Active
+                            </span>
+                        )}
+                        <span className="text-gray-400">
+                            {tasks.length} total
                         </span>
+                    </div>
+                </div>
+
+                {/* Header Row */}
+                <div className="grid grid-cols-12 gap-4 p-4 text-sm font-semibold text-white/90 drop-shadow-md border-b border-white/10">
+                    <div className="col-span-5">Task</div>
+                    <div className="col-span-2">Priority</div>
+                    <div className="col-span-2">Est. Duration</div>
+                    <div className="col-span-3">Progress</div>
+                </div>
+
+                {/* Items */}
+                <div className="max-h-[240px] overflow-y-auto">
+                    {sortedTasks.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <p className="text-lg mb-2">No tasks yet</p>
+                            <p className="text-sm">Create your first task to get started! 🚀</p>
+                        </div>
+                    ) : (
+                        sortedTasks.map(task => (
+                            <TaskItem key={task.id} task={task} onToggle={handleToggle} onDelete={handleDeleteClick} />
+                        ))
                     )}
-                    <span className="text-gray-400">
-                        {tasks.length} total
-                    </span>
                 </div>
             </div>
 
-            {/* Header Row */}
-            <div className="grid grid-cols-12 gap-4 p-4 text-sm font-semibold text-white/90 drop-shadow-md border-b border-white/10">
-                <div className="col-span-5">Task</div>
-                <div className="col-span-2">Priority</div>
-                <div className="col-span-2">Est. Duration</div>
-                <div className="col-span-3">Progress</div>
-            </div>
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={cancelDelete}
+                    />
 
-            {/* Items */}
-            <div className="max-h-[240px] overflow-y-auto">
-                {sortedTasks.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                        <p className="text-lg mb-2">No tasks yet</p>
-                        <p className="text-sm">Create your first task to get started! 🚀</p>
+                    {/* Modal */}
+                    <div className="relative bg-gradient-to-br from-gray-900/95 to-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <TrashIcon className="w-5 h-5 text-red-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Delete Task</h3>
+                        </div>
+
+                        {/* Content */}
+                        <p className="text-white/70 mb-2">Are you sure you want to delete this task?</p>
+                        <p className="text-white font-medium bg-white/5 rounded-lg px-3 py-2 mb-6 truncate">
+                            "{deleteConfirm.taskTitle}"
+                        </p>
+
+                        {/* Buttons */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={cancelDelete}
+                                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white rounded-xl font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-500/25"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
-                ) : (
-                    sortedTasks.map(task => (
-                        <TaskItem key={task.id} task={task} onToggle={handleToggle} onDelete={handleDelete} />
-                    ))
-                )}
-            </div>
-        </div>
+                </div>
+            )}
+        </>
     );
 };
 
