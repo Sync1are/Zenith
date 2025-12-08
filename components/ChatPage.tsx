@@ -23,89 +23,95 @@ const ChatPage: React.FC = () => {
     const { activeUserId, users, messages, sendMessage, setActiveUser, currentUser, subscribeToMessages } = useMessageStore();
     const { tasks, startPersonalCall, startStudySession } = useAppStore();
     const [inputText, setInputText] = useState("");
-    const [azeMessages, setAzeMessages] = useState<ChatMessage[]>([]);
-    const [isAzeLoading, setIsAzeLoading] = useState(false);
+    const [alexMessages, setAlexMessages] = useState<ChatMessage[]>([]);
+    const [isAlexLoading, setIsAlexLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
 
     const activeUser = users.find(u => u.id === activeUserId);
     const currentMessages = activeUserId ? (messages[activeUserId] || []) : [];
 
-    // Check if this is Aze AI chat
-    const isAzeChat = activeUserId === "aze-ai";
+    // Check if this is Alex AI chat
+    const isAlexChat = activeUserId === "alex-ai";
 
     // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [currentMessages, activeUserId, azeMessages]);
+    }, [currentMessages, activeUserId, alexMessages]);
 
-    // Load Aze chat history
+    // Get user-specific storage key for Alex chat history
+    const alexStorageKey = currentUser ? `alex-chat-history-${currentUser.id}` : null;
+
+    // Load Alex chat history (user-specific)
     useEffect(() => {
-        if (isAzeChat) {
-            const saved = localStorage.getItem('aze-chat-history');
+        if (isAlexChat && alexStorageKey) {
+            const saved = localStorage.getItem(alexStorageKey);
             if (saved) {
                 try {
-                    setAzeMessages(JSON.parse(saved));
+                    setAlexMessages(JSON.parse(saved));
                 } catch (e) {
-                    console.error('Failed to load Aze chat history');
+                    console.error('Failed to load Alex chat history');
                 }
+            } else {
+                // Clear messages when switching to a new user with no history
+                setAlexMessages([]);
             }
         }
-    }, [isAzeChat]);
+    }, [isAlexChat, alexStorageKey]);
 
-    // Save Aze chat history
+    // Save Alex chat history (user-specific)
     useEffect(() => {
-        if (isAzeChat && azeMessages.length > 0) {
-            localStorage.setItem('aze-chat-history', JSON.stringify(azeMessages));
+        if (isAlexChat && alexMessages.length > 0 && alexStorageKey) {
+            localStorage.setItem(alexStorageKey, JSON.stringify(alexMessages));
         }
-    }, [azeMessages, isAzeChat]);
+    }, [alexMessages, isAlexChat, alexStorageKey]);
 
     // Subscribe to messages for active user
     useEffect(() => {
-        if (activeUserId && !isAzeChat) {
+        if (activeUserId && !isAlexChat) {
             const unsub = subscribeToMessages(activeUserId);
             return () => unsub();
         }
-    }, [activeUserId, isAzeChat]);
+    }, [activeUserId, isAlexChat]);
 
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!inputText.trim() || !activeUserId) return;
 
-        // Handle Aze AI chat
-        if (isAzeChat) {
+        // Handle Alex AI chat
+        if (isAlexChat) {
             const userMessage: ChatMessage = {
                 id: Date.now(),
                 role: 'user',
                 content: inputText,
                 timestamp: Date.now()
             };
-            setAzeMessages(prev => [...prev, userMessage]);
+            setAlexMessages(prev => [...prev, userMessage]);
             setInputText("");
-            setIsAzeLoading(true);
+            setIsAlexLoading(true);
 
             try {
-                const response = await getChatResponse(inputText, azeMessages);
+                const response = await getChatResponse(inputText, alexMessages);
                 const aiMessage: ChatMessage = {
                     id: Date.now() + 1,
                     role: 'assistant',
                     content: response,
                     timestamp: Date.now()
                 };
-                setAzeMessages(prev => [...prev, aiMessage]);
+                setAlexMessages(prev => [...prev, aiMessage]);
             } catch (err) {
-                console.error('Aze error:', err);
+                console.error('Alex error:', err);
                 const errorMessage: ChatMessage = {
                     id: Date.now() + 1,
                     role: 'assistant',
                     content: "Sorry, I'm having trouble responding right now. Please try again!",
                     timestamp: Date.now()
                 };
-                setAzeMessages(prev => [...prev, errorMessage]);
+                setAlexMessages(prev => [...prev, errorMessage]);
             }
-            setIsAzeLoading(false);
+            setIsAlexLoading(false);
         } else {
             // Regular chat
             sendMessage(activeUserId, inputText);
@@ -136,7 +142,7 @@ const ChatPage: React.FC = () => {
         }
     };
 
-    if (!activeUser && !isAzeChat) return null;
+    if (!activeUser && !isAlexChat) return null;
 
     return (
         <motion.div
@@ -157,7 +163,7 @@ const ChatPage: React.FC = () => {
             {/* Header (Draggable Handle) */}
             <div
                 onPointerDown={(e) => dragControls.start(e)}
-                className={`flex items-center justify-between p-4 border-b border-white/5 bg-white/5 cursor-move select-none touch-none ${isAzeChat ? 'bg-gradient-to-r from-indigo-600/20 to-purple-600/20' : ''
+                className={`flex items-center justify-between p-4 border-b border-white/5 bg-white/5 cursor-move select-none touch-none ${isAlexChat ? 'bg-gradient-to-r from-indigo-600/20 to-purple-600/20' : ''
                     }`}
             >
                 <div className="flex items-center gap-3 pointer-events-none">
@@ -165,8 +171,8 @@ const ChatPage: React.FC = () => {
                         initial={{ scale: 0 }} animate={{ scale: 1 }}
                         className="relative"
                     >
-                        {isAzeChat ? (
-                            // Aze avatar
+                        {isAlexChat ? (
+                            // Alex avatar
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
                                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -192,13 +198,13 @@ const ChatPage: React.FC = () => {
                     </motion.div>
                     <div>
                         <h2 className="text-sm font-medium text-white">
-                            {isAzeChat ? (
+                            {isAlexChat ? (
                                 <span className="flex items-center gap-1.5">
-                                    <span>✨</span> Aze
+                                    <span>✨</span> Alex
                                 </span>
                             ) : activeUser.username}
                         </h2>
-                        {isAzeChat ? (
+                        {isAlexChat ? (
                             <p className="text-xs text-indigo-400">Your AI Study Buddy</p>
                         ) : (
                             <>
@@ -216,7 +222,7 @@ const ChatPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {!isAzeChat && (
+                    {!isAlexChat && (
                         <button
                             onClick={(e) => { e.stopPropagation(); handleCall(); }}
                             className="p-2 hover:bg-white/10 rounded-lg transition-colors text-indigo-400 hover:text-white cursor-pointer"
@@ -240,14 +246,14 @@ const ChatPage: React.FC = () => {
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={scrollRef}>
-                {isAzeChat ? (
-                    // Aze AI Chat Messages
+                {isAlexChat ? (
+                    // Alex AI Chat Messages
                     <>
-                        {azeMessages.length === 0 ? (
+                        {alexMessages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center px-4">
                                 <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }}>
                                     <span className="text-5xl mb-4 block">✨</span>
-                                    <h3 className="text-lg font-semibold text-white mb-2">Hi! I'm Aze</h3>
+                                    <h3 className="text-lg font-semibold text-white mb-2">Hi! I'm Alex</h3>
                                     <p className="text-sm mb-4">Your AI study buddy here to help you stay productive!</p>
                                     <div className="text-xs text-left space-y-2 bg-white/5 rounded-lg p-4 mt-4">
                                         <p className="text-indigo-400 font-medium">💡 Try asking me to:</p>
@@ -262,7 +268,7 @@ const ChatPage: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {azeMessages.map((msg) => (
+                                {alexMessages.map((msg) => (
                                     <motion.div
                                         key={msg.id}
                                         initial={{ opacity: 0, y: 10 }}
@@ -293,7 +299,7 @@ const ChatPage: React.FC = () => {
                                         </div>
                                     </motion.div>
                                 ))}
-                                {isAzeLoading && (
+                                {isAlexLoading && (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                                         <div className="bg-gradient-to-br from-indigo-600/30 to-purple-600/30 border border-indigo-500/30 px-4 py-3 rounded-2xl rounded-bl-none">
                                             <div className="flex gap-1">
@@ -411,7 +417,7 @@ const ChatPage: React.FC = () => {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         type="submit"
-                        disabled={!inputText.trim() || (isAzeChat && isAzeLoading)}
+                        disabled={!inputText.trim() || (isAlexChat && isAlexLoading)}
                         className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
                     >
                         <SendIcon className="w-5 h-5" />

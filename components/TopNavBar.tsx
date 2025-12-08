@@ -263,10 +263,10 @@ const TopNavBar: React.FC<{ activeServer: string; onSelect: (id: string) => void
   const personas: Persona[] = useMemo(() => {
     const list: Persona[] = [];
     list.push({
-      id: "aze-ai",
-      name: "Aze",
+      id: "alex-ai",
+      name: "Alex",
       role: "Study Buddy",
-      avatarUrl: "https://api.dicebear.com/7.x/bottts/svg?seed=aze",
+      avatarUrl: "https://api.dicebear.com/7.x/bottts/svg?seed=alex",
       status: Status.THINKING
     });
 

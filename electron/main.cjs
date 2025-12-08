@@ -124,7 +124,7 @@ ipcMain.handle('start-oauth-server', async () => {
             <body style="background: #1a1a2e; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
               <div style="text-align: center;">
                 <h1>✓ Authorization Complete</h1>
-                <p>You can close this window and return to Zenith.</p>
+                <p>You can close this window and return to Lumen.</p>
               </div>
             </body>
           </html>

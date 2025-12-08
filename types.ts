@@ -57,7 +57,7 @@ export interface AnalyticsData {
   previousWeek: number;
 }
 
-// Aze Chatbot types
+// Alex Chatbot types
 export interface ChatMessage {
   id: number;
   role: 'user' | 'assistant';

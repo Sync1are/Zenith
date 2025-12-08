@@ -247,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             className={`text-2xl font-bold whitespace-nowrap overflow-hidden transition-all duration-300
               ${isExpanded ? "opacity-100 ml-3 w-32" : "opacity-0 ml-0 w-0"}`}
                         >
-                            Zenith
+                            Lumen
                         </span>
                     </div>
 
@@ -329,7 +329,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex items-center justify-between text-white px-2 mb-6">
                     <div className="flex items-center">
                         <LogoIcon className="h-9 w-9" />
-                        <span className="text-2xl font-bold ml-3">Zenith</span>
+                        <span className="text-2xl font-bold ml-3">Lumen</span>
                     </div>
                     <button
                         onClick={() => setIsMobileDrawerOpen(false)}

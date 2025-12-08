@@ -47,7 +47,7 @@
   },
   "build": {
     "appId": "com.zenith.app",
-    "productName": "Zenith",
+    "productName": "Lumen",
     "directories": {
       "output": "release"
     },

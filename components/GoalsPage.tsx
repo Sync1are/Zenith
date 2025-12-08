@@ -41,7 +41,7 @@ export const generateSubgoalsForGoal = async (goalTitle: string, userInstruction
                 "Authorization": `Bearer ${API_KEY}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": typeof window !== 'undefined' ? window.location.origin : "",
-                "X-Title": "Zenith Goal Planner",
+                "X-Title": "Lumen Goal Planner",
             },
             body: JSON.stringify({
                 model: "openai/gpt-3.5-turbo",

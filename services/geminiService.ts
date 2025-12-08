@@ -19,7 +19,7 @@ async function callOpenRouter(messages: Array<{ role: string; content: string }>
             "Authorization": `Bearer ${API_KEY}`,
             "Content-Type": "application/json",
             "HTTP-Referer": typeof window !== 'undefined' ? window.location.origin : "",
-            "X-Title": "Zenith AI Task Planner",
+            "X-Title": "Lumen AI Task Planner",
         },
         body: JSON.stringify({
             model: "openai/gpt-3.5-turbo",

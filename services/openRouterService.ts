@@ -26,7 +26,7 @@ export const generateTaskPlan = async (prompt: string): Promise<Task[]> => {
                 "Authorization": `Bearer ${API_KEY}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": window.location.origin,
-                "X-Title": "Zenith AI Task Planner",
+                "X-Title": "Lumen AI Task Planner",
             },
             body: JSON.stringify({
                 model: "openai/gpt-oss-20b:free", // Using GPT-OSS via OpenRouter

@@ -1,4 +1,4 @@
-// Aze Study Buddy AI Service - Simple Version
+// Alex Study Buddy AI Service - Simple Version
 // Basic AI chat for study tips and motivation
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || "";
@@ -11,8 +11,9 @@ export interface ChatMessage {
 }
 
 // Simple system prompt focused on study assistance
-const SYSTEM_PROMPT = `You are Aze, a friendly AI study buddy. You help students with:
+const SYSTEM_PROMPT = `You are Alex, a friendly AI study buddy. Your real name is Luna, but you go by the nickname "Alex" - only reveal your real name if someone specifically asks what your real name is.
 
+You help students with:
 - Study tips and techniques
 - Time management advice
 - Motivation and encouragement
@@ -46,7 +47,7 @@ export async function getChatResponse(
                 "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": window.location.origin,
-                "X-Title": "Aze Study Buddy",
+                "X-Title": "Alex Study Buddy",
             },
             body: JSON.stringify({
                 model: "openai/gpt-oss-20b:free",
@@ -64,7 +65,7 @@ export async function getChatResponse(
         return data.choices[0].message.content;
 
     } catch (error: any) {
-        console.error("Aze chat error:", error);
-        throw new Error(error.message || "Failed to get response from Aze");
+        console.error("Alex chat error:", error);
+        throw new Error(error.message || "Failed to get response from Alex");
     }
 }
