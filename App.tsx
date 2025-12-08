@@ -27,6 +27,7 @@ import ChatPage from "./components/ChatPage";
 import ChatApp from "./components/ChatApp";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
+import CompactView from "./components/CompactView";
 
 
 // Stores
@@ -58,6 +59,7 @@ const App: React.FC = () => {
   // 🌙 Navigation
   const activePage = useAppStore((s) => s.activePage);
   const setActivePage = useAppStore((s) => s.setActivePage);
+  const compactMode = useAppStore((s) => s.compactMode);
   const superFocus = useSuperFocus();
 
   // 🎯 Window Management State
@@ -526,6 +528,11 @@ const App: React.FC = () => {
               onNavigateToSignup={() => setIsSignup(true)}
             />
           )}
+        </div>
+      ) : compactMode ? (
+        /* Compact View Mode - render above background */
+        <div className="relative z-20">
+          <CompactView />
         </div>
       ) : (
         /* Content Wrapper (z-10) */

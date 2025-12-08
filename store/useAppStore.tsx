@@ -154,6 +154,10 @@ interface AppState {
   pinnedAppIds: string[];
   togglePinApp: (appId: string) => void;
 
+  // Compact Mode
+  compactMode: boolean;
+  setCompactMode: (compact: boolean) => void;
+
   // Ticker
   tick: () => void;
 }
@@ -227,6 +231,11 @@ export const useAppStore = create<AppState>()(
             : [...state.pinnedAppIds, appId]
         };
       }),
+
+      // Compact Mode
+      compactMode: false,
+      setCompactMode: (compact) => set({ compactMode: compact }),
+
       // Legacy single token (implicit flow) — consider migrating to spotify.{...}
       spotifyToken: null,
       setSpotifyToken: (token) => set({ spotifyToken: token }),

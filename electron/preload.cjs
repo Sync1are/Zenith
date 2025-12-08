@@ -11,6 +11,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   enterSuperFocus: () => ipcRenderer.send("enter-super-focus"),
   exitSuperFocus: () => ipcRenderer.send("exit-super-focus"),
 
+  // Compact Mode
+  setCompactMode: () => ipcRenderer.send("set-compact-mode"),
+  setNormalMode: () => ipcRenderer.send("set-normal-mode"),
+  resizeCompactWindow: (height) => ipcRenderer.send("resize-compact-window", height),
+  onCompactModeExited: (callback) => {
+    ipcRenderer.on('compact-mode-exited', callback);
+  },
+  removeCompactModeListener: () => {
+    ipcRenderer.removeAllListeners('compact-mode-exited');
+  },
+
   // Listen for ESC key press from main process
   onExitSuperFocusRequested: (callback) => {
     ipcRenderer.on('exit-super-focus-requested', callback);

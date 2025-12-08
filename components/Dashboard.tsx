@@ -6,10 +6,12 @@ import TaskList from './TaskList';
 import SmartHomeCard from './SmartHomeCard';
 import { useAppStore } from "../store/useAppStore";
 import { TaskStatus } from "../types";
+import { Minimize2 } from 'lucide-react';
 
 
 const Dashboard: React.FC = () => {
     const tasks = useAppStore(state => state.tasks);
+    const setCompactMode = useAppStore(state => state.setCompactMode);
 
     // ---- Derived Stats ----
     const completedCount = tasks.filter(t => t.status === TaskStatus.Done).length;
@@ -44,8 +46,24 @@ const Dashboard: React.FC = () => {
         { label: 'Habit Streak', value: '—', iconBgColor: 'bg-purple-500' }, // We'll implement streak later
     ];
 
+    const handleCompactMode = () => {
+        if (window.electronAPI?.setCompactMode) {
+            window.electronAPI.setCompactMode();
+        }
+        setCompactMode(true);
+    };
+
     return (
-        <div className="flex flex-col lg:flex-row gap-6 h-full">
+        <div className="flex flex-col lg:flex-row gap-6 h-full relative">
+            {/* Compact Mode Button */}
+            <button
+                onClick={handleCompactMode}
+                className="absolute top-0 right-0 z-10 flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/70 hover:text-white text-sm font-medium transition-all"
+            >
+                <Minimize2 className="w-4 h-4" />
+                Compact
+            </button>
+
             {/* Left Column - Smart Home Card */}
             <div className="flex-shrink-0 w-full lg:w-80 xl:w-96 2xl:w-[28rem] flex flex-col">
                 <SmartHomeCard />
@@ -80,3 +98,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+

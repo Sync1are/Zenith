@@ -231,11 +231,51 @@ ipcMain.handle('spotify-refresh-token', async (event, encryptedToken) => {
   }
 });
 
+// Compact Mode handlers
+let normalBounds = null;
+
+ipcMain.on('set-compact-mode', () => {
+  if (!mainWindow) return;
+
+  normalBounds = mainWindow.getBounds();
+  mainWindow.setSize(300, 130);
+  mainWindow.setAlwaysOnTop(true, 'floating');
+  mainWindow.setResizable(false);
+  mainWindow.setBackgroundColor('#00000000');
+
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  mainWindow.setPosition(width - 320, height - 150);
+});
+
+ipcMain.on('resize-compact-window', (event, newHeight) => {
+  if (!mainWindow) return;
+  const targetHeight = Math.min(Math.max(newHeight, 130), 400);
+  const currentBounds = mainWindow.getBounds();
+  mainWindow.setSize(300, targetHeight);
+});
+
+ipcMain.on('set-normal-mode', () => {
+  if (!mainWindow) return;
+
+  mainWindow.setAlwaysOnTop(false);
+  mainWindow.setResizable(true);
+  mainWindow.setBackgroundColor('#111217');
+
+  if (normalBounds) {
+    mainWindow.setBounds(normalBounds);
+  } else {
+    mainWindow.maximize();
+  }
+
+  mainWindow.webContents.send('compact-mode-exited');
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("will-quit", () => {
-  // Unregister all shortcuts before app quits
   globalShortcut.unregisterAll();
 });
