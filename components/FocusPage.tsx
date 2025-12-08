@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { useFocusStore } from "../store/useFocusStore";
-import { TaskStatus, TaskPriority } from "../types";
+import { TaskStatus, TaskPriority, Priority } from "../types";
 import SpotifyCard from "../components/SpotifyCard";
 import { PlayIcon, PauseIcon } from "./icons/IconComponents";
 import { TaskModal } from "./tasks/TaskModals";
 import { useSuperFocus } from "../hooks/useSuperFocus";
 import { ENVIRONMENTS } from "../data/environments";
 import AmbientPlayer from "./AmbientPlayer";
+import SuperFocusEntryModal from "./SuperFocusEntryModal";
+import SuperFocusExitModal from "./SuperFocusExitModal";
 
 // ===============================
 // 1. Particle Background
@@ -139,33 +141,10 @@ const TimerContent: React.FC<{ taskId: string | null }> = ({ taskId }) => {
   const tasks = useAppStore((s) => s.tasks);
   const timerRemaining = useAppStore((s) => s.timerRemaining);
   const timerActive = useAppStore((s) => s.timerActive);
-  const superFocus = useSuperFocus();
 
   const activeTaskTitle = useMemo(() => tasks.find((t) => t.id === taskId)?.title || "—", [tasks, taskId]);
 
-  // --- SUPER FOCUS TIMER DISPLAY ---
-  if (superFocus.isActive) {
-    const elapsed = superFocus.elapsed;
-    const mins = Math.floor(elapsed / 60).toString().padStart(2, "0");
-    const secs = (elapsed % 60).toString().padStart(2, "0");
-
-    return (
-      <div className="flex flex-col items-center justify-center w-full h-full">
-        <p className="uppercase tracking-[0.2em] text-[10px] lg:text-xs text-orange-400 font-bold animate-pulse">SUPER FOCUS ACTIVE</p>
-        <p className="mt-2 text-sm lg:text-base text-white/80 font-medium max-w-[16rem] truncate text-center px-4">
-          {activeTaskTitle}
-        </p>
-        <div className="mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black tracking-tighter font-mono text-transparent bg-clip-text bg-gradient-to-b from-orange-300 to-red-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
-          {mins}:{secs}
-        </div>
-        <p className="mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] text-white/40">
-          Total Session Time
-        </p>
-      </div>
-    );
-  }
-
-  // --- STANDARD TIMER DISPLAY ---
+  // --- STANDARD TIMER DISPLAY (Always show task timer) ---
   const isOvertime = timerRemaining < 0;
   const absRemaining = Math.abs(timerRemaining);
   const minutes = Math.floor(absRemaining / 60).toString().padStart(2, "0");
@@ -521,6 +500,7 @@ const FocusPage: React.FC = () => {
   const lastIndex = useRef(0);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const addTask = useAppStore((s) => s.addTask);
+  const superFocus = useSuperFocus();
 
   const handleTaskSelect = (newIndex: number) => {
     if (newIndex > lastIndex.current) {
@@ -532,15 +512,21 @@ const FocusPage: React.FC = () => {
   };
 
   const handleSaveTask = (taskData: any) => {
+    // Parse duration string to get estimated minutes (e.g., "25 min" -> 25)
+    const durationStr = taskData.duration || "25 min";
+    const estimatedMinutes = parseInt(durationStr) || 25;
+
     addTask({
       id: Date.now().toString(),
       title: taskData.title,
       category: taskData.category || "General",
-      priority: taskData.priority || TaskPriority.MEDIUM,
-      duration: taskData.duration || "25 min",
-      status: TaskStatus.TODO,
-      isCompleted: false,
-      createdAt: Date.now(),
+      priority: taskData.priority || Priority.Medium,
+      status: TaskStatus.Todo,
+      estimatedTimeMinutes: estimatedMinutes,
+      timeSpentMinutes: 0,
+      remainingTime: estimatedMinutes * 60,
+      createdAt: new Date(),
+      subtasks: [],
     });
     setIsAddTaskOpen(false);
   };
@@ -554,6 +540,23 @@ const FocusPage: React.FC = () => {
       </div>
       <ParticleBackground />
       <AmbientPlayer />
+
+      {/* Floating Super Focus Session Timer */}
+      {superFocus.isActive && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 backdrop-blur-md shadow-lg"
+        >
+          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-orange-400 font-bold">Super Focus</span>
+            <span className="text-xl font-mono font-bold text-white">
+              {Math.floor(superFocus.elapsed / 60).toString().padStart(2, "0")}:{(superFocus.elapsed % 60).toString().padStart(2, "0")}
+            </span>
+          </div>
+        </motion.div>
+      )}
 
       <div className="relative z-10 h-full w-full flex items-center justify-center p-6 lg:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(500px,1fr)_380px] gap-8 lg:gap-12 w-full max-w-[1600px] items-center">
@@ -588,6 +591,23 @@ const FocusPage: React.FC = () => {
         isOpen={isAddTaskOpen}
         onClose={() => setIsAddTaskOpen(false)}
         onSave={handleSaveTask}
+      />
+
+      {/* Super Focus Entry Warning Modal */}
+      <SuperFocusEntryModal
+        isOpen={superFocus.showingEntryModal}
+        onConfirmEnter={superFocus.confirmEntry}
+        onCancel={superFocus.cancelEntry}
+        onDontAskAgain={() => superFocus.setSkipEntryWarning(true)}
+      />
+
+      {/* Super Focus Exit Confirmation Modal */}
+      <SuperFocusExitModal
+        isOpen={superFocus.showingExitModal}
+        elapsedMinutes={superFocus.elapsed / 60}
+        allTasksComplete={useAppStore.getState().tasks.filter(t => t.status !== TaskStatus.Done).length === 0}
+        onConfirmExit={superFocus.confirmExit}
+        onCancel={superFocus.cancelExit}
       />
 
       {/* Styles & Keyframes */}

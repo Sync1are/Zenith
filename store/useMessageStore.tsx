@@ -610,10 +610,26 @@ export const useMessageStore = create<MessageState>()(
                 const qUsers = query(collection(db, "users"), orderBy("lastActive", "desc"));
                 return onSnapshot(qUsers, (snap) => {
                     const list: User[] = [];
+                    const now = Date.now();
+                    const ONLINE_THRESHOLD = 2 * 60 * 1000; // 2 minutes in milliseconds
+
                     snap.forEach((docSnap) => {
                         const data = docSnap.data() as Partial<User>;
                         // Filter out current user from list
                         if (docSnap.id !== get().currentUser?.id) {
+                            const lastActive = typeof data.lastActive === "number" ? data.lastActive : 0;
+                            const storedStatus = (data.status as User["status"]) || "offline";
+
+                            // Compute effective status based on lastActive
+                            // If lastActive is more than 2 minutes ago, show as offline
+                            // unless the user explicitly set DND or invisible
+                            let effectiveStatus: User["status"] = storedStatus;
+                            if (storedStatus === "online" || storedStatus === "idle") {
+                                if (now - lastActive > ONLINE_THRESHOLD) {
+                                    effectiveStatus = "offline";
+                                }
+                            }
+
                             list.push({
                                 id: docSnap.id,
                                 username: data.username || "User",
@@ -621,10 +637,10 @@ export const useMessageStore = create<MessageState>()(
                                 avatar:
                                     data.avatar ||
                                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${docSnap.id}`,
-                                status: (data.status as User["status"]) || "offline",
+                                status: effectiveStatus,
                                 customStatus: data.customStatus,
                                 statusEmoji: data.statusEmoji,
-                                lastActive: typeof data.lastActive === "number" ? data.lastActive : 0,
+                                lastActive: lastActive,
                                 friends: data.friends || [],
                                 friendRequests: data.friendRequests || [],
                             });

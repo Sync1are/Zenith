@@ -1,4 +1,12 @@
 /* ============================
+   Global Smooth Scrolling
+   ============================ */
+html,
+* {
+  scroll-behavior: smooth;
+}
+
+/* ============================
    Custom Scrollbar
    ============================ */
 ::-webkit-scrollbar {

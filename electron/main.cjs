@@ -54,28 +54,18 @@ ipcMain.on("enter-super-focus", () => {
   if (!mainWindow) return;
 
   isSuperFocusMode = true;
-  mainWindow.setFullScreen(true);
 
-  // Block task switching
-  globalShortcut.register('Alt+Tab', () => { });
-  globalShortcut.register('Alt+Shift+Tab', () => { });
+  // Enable kiosk mode for true fullscreen lockdown on Windows
+  mainWindow.setKiosk(true);
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setVisibleOnAllWorkspaces(true);
+  mainWindow.focus();
 
-  // Block window close shortcuts
+  // Only block window close shortcuts - allow everything else
   globalShortcut.register('Alt+F4', () => { });
   globalShortcut.register('CommandOrControl+W', () => { });
-  globalShortcut.register('CommandOrControl+Q', () => { });
 
-  // Block all F-keys
-  for (let i = 1; i <= 12; i++) {
-    globalShortcut.register(`F${i}`, () => { });
-  }
-
-  // Block system shortcuts
-  globalShortcut.register('CommandOrControl+Shift+Esc', () => { }); // Task Manager
-  globalShortcut.register('CommandOrControl+L', () => { }); // Lock screen
-  globalShortcut.register('Alt+Space', () => { }); // Window menu
-
-  // ESC key - ONLY allowed key to exit
+  // ESC key to exit
   globalShortcut.register('Escape', () => {
     if (mainWindow) {
       mainWindow.webContents.send('exit-super-focus-requested');
@@ -87,7 +77,11 @@ ipcMain.on("exit-super-focus", () => {
   if (!mainWindow) return;
 
   isSuperFocusMode = false;
-  mainWindow.setFullScreen(false);
+
+  // Disable kiosk mode
+  mainWindow.setKiosk(false);
+  mainWindow.setAlwaysOnTop(false);
+  mainWindow.setVisibleOnAllWorkspaces(false);
 
   globalShortcut.unregisterAll();
 });

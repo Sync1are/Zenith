@@ -451,34 +451,8 @@ const App: React.FC = () => {
     handleAuthRedirectIfPresent(acceptTokens);
   }, [acceptTokens]);
 
-  // 🔒 SUPER FOCUS KEYBOARD LOCKDOWN
-  // Block ALL keyboard input except ESC key when in Super Focus mode
-  useEffect(() => {
-    if (!superFocus.isActive) return;
-
-    const blockKeyboard = (event: KeyboardEvent) => {
-      // Allow ONLY Escape key to work (for exiting Super Focus)
-      if (event.key === 'Escape') {
-        return; // Let Escape through - Electron handles it
-      }
-
-      // Block everything else
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-    };
-
-    // Attach to all keyboard events at capture phase (highest priority)
-    document.addEventListener('keydown', blockKeyboard, true);
-    document.addEventListener('keyup', blockKeyboard, true);
-    document.addEventListener('keypress', blockKeyboard, true);
-
-    return () => {
-      document.removeEventListener('keydown', blockKeyboard, true);
-      document.removeEventListener('keyup', blockKeyboard, true);
-      document.removeEventListener('keypress', blockKeyboard, true);
-    };
-  }, [superFocus.isActive]);
+  // Note: Keyboard blocking removed to allow typing in Super Focus mode
+  // The Electron-level kiosk mode still blocks Alt+F4, Ctrl+W, etc.
 
   // Page switcher
   const renderContent = useCallback(() => {
