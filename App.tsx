@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Youtube, Calculator, StickyNote, Music, Globe, Sparkles } from "lucide-react";
+import { Youtube, Calculator, StickyNote, Music, Globe, Sparkles, MessageCircle } from "lucide-react";
 
 // UI Components
 import Sidebar from "./components/Sidebar";
@@ -25,6 +25,7 @@ import FocusPage from "./components/FocusPage";
 import SettingsPage from "./components/SettingsPage";
 import ChatPage from "./components/ChatPage";
 import ChatApp from "./components/ChatApp";
+import MessagesApp from "./components/MessagesApp";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
 import CompactView from "./components/CompactView";
@@ -158,6 +159,14 @@ const App: React.FC = () => {
       width: 1200,
       height: 800,
       component: <EnvironmentStoreApp />
+    },
+    {
+      id: 'messages',
+      title: 'Messages',
+      icon: MessageCircle,
+      width: 500,
+      height: 600,
+      component: <MessagesApp />
     },
   ], []);
 
@@ -466,7 +475,7 @@ const App: React.FC = () => {
       case "Goals": return <GoalsPage />;
       case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
-      case "Focus": return <FocusPage />;
+      case "Focus": return <FocusPage onAppClick={handleAppClick} />;
       case "Messages": return <ChatApp />;
       case "Settings": return <SettingsPage />;
       default:
@@ -476,7 +485,7 @@ const App: React.FC = () => {
           </div>
         );
     }
-  }, [activePage]);
+  }, [activePage, handleAppClick]);
 
   // LOADING STATE
   if (isLoading) {

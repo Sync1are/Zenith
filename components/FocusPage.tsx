@@ -403,6 +403,51 @@ const FocusTaskCarousel: React.FC<{ onTaskSelect: (idx: number) => void; onAddTa
   );
 };
 
+// --- Quick Apps Panel ---
+const QuickApps: React.FC<{ onAppClick: (appId: string) => void }> = ({ onAppClick }) => {
+  const quickApps = [
+    { id: 'browser', name: 'Browser', icon: '🌐' },
+    { id: 'youtube', name: 'YouTube', icon: '▶️' },
+    { id: 'calculator', name: 'Calculator', icon: '🔢' },
+    { id: 'messages', name: 'Messages', icon: '💬' },
+  ];
+
+  return (
+    <div className="rounded-[22px] p-5 w-full glass-panel select-none flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em]">Quick Access</h3>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3">
+        {quickApps.map((app) => (
+          <motion.button
+            key={app.id}
+            onClick={() => onAppClick(app.id)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="
+              relative p-3 rounded-xl
+              bg-white/5 hover:bg-white/10
+              border border-white/10 hover:border-white/20
+              transition-all duration-200
+              flex flex-col items-center justify-center gap-2
+              group
+            "
+          >
+            {/* Icon */}
+            <div className="text-2xl opacity-70 group-hover:opacity-100 transition-opacity">{app.icon}</div>
+
+            {/* Label */}
+            <span className="text-[9px] font-medium text-white/50 group-hover:text-white/80 uppercase tracking-wider transition-colors">
+              {app.name}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Session Environment Panel ---
 const SessionEnv: React.FC = () => {
   const savedIds = useFocusStore((s) => s.savedEnvironmentIds);
@@ -495,12 +540,18 @@ const SessionEnv: React.FC = () => {
 // ===============================
 // 4. Main Page Layout
 // ===============================
-const FocusPage: React.FC = () => {
+const FocusPage: React.FC<{ onAppClick?: (appId: string) => void }> = ({ onAppClick }) => {
   const [direction, setDirection] = useState(0);
   const lastIndex = useRef(0);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const addTask = useAppStore((s) => s.addTask);
   const superFocus = useSuperFocus();
+
+  const handleAppClick = (appId: string) => {
+    if (onAppClick) {
+      onAppClick(appId);
+    }
+  };
 
   const handleTaskSelect = (newIndex: number) => {
     if (newIndex > lastIndex.current) {
@@ -562,8 +613,9 @@ const FocusPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(500px,1fr)_380px] gap-8 lg:gap-12 w-full max-w-[1600px] items-center">
 
           {/* LEFT */}
-          <div className="flex flex-col justify-center lg:-translate-y-4">
+          <div className="flex flex-col justify-center lg:-translate-y-4 gap-6">
             <FocusTaskCarousel onTaskSelect={handleTaskSelect} onAddTask={() => setIsAddTaskOpen(true)} />
+            <QuickApps onAppClick={handleAppClick} />
           </div>
 
           {/* CENTER */}
