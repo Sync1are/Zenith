@@ -58,4 +58,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Discord Rich Presence
   updateDiscordPresence: (data) => ipcRenderer.send('update-discord-presence', data),
+
+  // Auto-Update
+  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.send('download-update'),
+  installUpdate: () => ipcRenderer.send('install-update'),
+  onUpdateChecking: (callback) => ipcRenderer.on('update-checking', callback),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, data) => callback(data)),
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', callback),
+  onUpdateDownloadProgress: (callback) => ipcRenderer.on('update-download-progress', (event, data) => callback(data)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, data) => callback(data)),
+  onUpdateError: (callback) => ipcRenderer.on('update-error', (event, data) => callback(data)),
+  removeUpdateListeners: () => {
+    ipcRenderer.removeAllListeners('update-checking');
+    ipcRenderer.removeAllListeners('update-available');
+    ipcRenderer.removeAllListeners('update-not-available');
+    ipcRenderer.removeAllListeners('update-download-progress');
+    ipcRenderer.removeAllListeners('update-downloaded');
+    ipcRenderer.removeAllListeners('update-error');
+  },
 });

@@ -1,5 +1,6 @@
 // electron/main.cjs
 const { app, BrowserWindow, globalShortcut, ipcMain } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const http = require("http");
 const { initDiscordRPC, setActivity, destroyRPC } = require("./discordRPC.cjs");
@@ -7,6 +8,79 @@ const { initDiscordRPC, setActivity, destroyRPC } = require("./discordRPC.cjs");
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let isSuperFocusMode = false;
+
+// Auto-updater configuration
+autoUpdater.autoDownload = false; // Don't auto-download, let user decide
+autoUpdater.autoInstallOnAppQuit = true; // Install when app quits
+
+// Auto-updater event handlers
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for updates...');
+  if (mainWindow) {
+    mainWindow.webContents.send('update-checking');
+  }
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes
+    });
+  }
+});
+
+autoUpdater.on('update-not-available', () => {
+  console.log('No updates available');
+  if (mainWindow) {
+    mainWindow.webContents.send('update-not-available');
+  }
+});
+
+autoUpdater.on('download-progress', (progressInfo) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-download-progress', {
+      percent: progressInfo.percent,
+      transferred: progressInfo.transferred,
+      total: progressInfo.total
+    });
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded', {
+      version: info.version
+    });
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Update error:', err);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-error', {
+      message: err.message
+    });
+  }
+});
+
+// IPC handlers for updates
+ipcMain.on('check-for-updates', () => {
+  if (!isDev) {
+    autoUpdater.checkForUpdates();
+  }
+});
+
+ipcMain.on('download-update', () => {
+  autoUpdater.downloadUpdate();
+});
+
+ipcMain.on('install-update', () => {
+  autoUpdater.quitAndInstall(false, true);
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -39,6 +113,13 @@ app.whenReady().then(() => {
 
   // Initialize Discord Rich Presence
   initDiscordRPC();
+
+  // Check for updates after 10 seconds (avoid blocking startup)
+  if (!isDev) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates();
+    }, 10000);
+  }
 });
 
 // Discord Rich Presence update handler

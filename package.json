@@ -21,6 +21,7 @@
     "@fullpage/react-fullpage": "^0.1.49",
     "@google/generative-ai": "^0.24.1",
     "discord-rpc": "^4.0.1",
+    "electron-updater": "^6.6.2",
     "fast-average-color": "^9.5.0",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.24",
@@ -49,6 +50,11 @@
   "build": {
     "appId": "com.zenith.app",
     "productName": "Lumen",
+    "publish": {
+      "provider": "github",
+      "owner": "Sync1are",
+      "repo": "Zenith"
+    },
     "directories": {
       "output": "release"
     },
@@ -59,7 +65,8 @@
     "asar": true,
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "icon.ico",
+      "sign": null
     }
   }
 }

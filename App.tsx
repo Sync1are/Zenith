@@ -49,6 +49,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import LiveBackground from "./components/LiveBackground";
 import StudySessionModal from './components/StudySessionModal';
+import UpdateNotification from './components/UpdateNotification';
 
 import MigrationLoadingScreen from './components/MigrationLoadingScreen';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
@@ -498,6 +499,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col text-white relative">
+      {/* Auto-Update Notification */}
+      <UpdateNotification />
+
       {/* 🔄 Migration Loading Screen */}
       <MigrationLoadingScreen isVisible={isMigrating} />
 

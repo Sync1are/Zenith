@@ -127,6 +127,27 @@ declare global {
         encryptToken: (token: string) => Promise<string>;
         refreshToken: (encryptedToken: string) => Promise<any>;
       };
+      // Discord Rich Presence
+      updateDiscordPresence: (data: {
+        details?: string;
+        state?: string;
+        largeImageKey?: string;
+        largeImageText?: string;
+        smallImageKey?: string;
+        smallImageText?: string;
+      }) => void;
+
+      // Auto-Update
+      checkForUpdates: () => void;
+      downloadUpdate: () => void;
+      installUpdate: () => void;
+      onUpdateChecking: (callback: () => void) => void;
+      onUpdateAvailable: (callback: (data: { version: string; releaseDate: string; releaseNotes: string }) => void) => void;
+      onUpdateNotAvailable: (callback: () => void) => void;
+      onUpdateDownloadProgress: (callback: (data: { percent: number; transferred: number; total: number }) => void) => void;
+      onUpdateDownloaded: (callback: (data: { version: string }) => void) => void;
+      onUpdateError: (callback: (data: { message: string }) => void) => void;
+      removeUpdateListeners: () => void;
     };
   }
 
