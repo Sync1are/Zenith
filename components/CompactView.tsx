@@ -61,10 +61,10 @@ const CompactView: React.FC = () => {
         if (window.electronAPI?.resizeCompactWindow) {
             const taskCount = Math.min(otherTasks.length, 4);
             const completedHeight = completedTasks.length > 0 ? 30 : 0;
-            const spotifyHeight = 100; // Space for Spotify player (expanded to include margin)
+            const spotifyHeight = 70; // Adjusted for actual content height ~60px
             const extraHeight = isDropdownOpen ? 100 + (taskCount * 44) + completedHeight : 0;
-            // Base height increased to 150 to account for the margin between containers
-            window.electronAPI.resizeCompactWindow(150 + spotifyHeight + extraHeight);
+            // Base height 135 + 70 = 205 (approx correct for 130px top + 8px gap + 60px bottom)
+            window.electronAPI.resizeCompactWindow(135 + spotifyHeight + extraHeight);
         }
     }, [isDropdownOpen, otherTasks.length, completedTasks.length]);
 
@@ -353,7 +353,7 @@ const CompactView: React.FC = () => {
                         <span className="text-[#1DB954] text-xs font-medium">Connect Spotify</span>
                     </button>
                 ) : spotifyTrack ? (
-                    <div className="bg-white/5 border border-white/5 rounded-xl p-2 flex items-center gap-3 backdrop-blur-sm">
+                    <div className="flex items-center gap-3">
                         <img
                             src={spotifyTrack.album?.images?.[2]?.url || spotifyTrack.album?.images?.[0]?.url}
                             alt={spotifyTrack.album?.name}
@@ -388,7 +388,7 @@ const CompactView: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="h-[52px] flex items-center justify-center gap-2 bg-white/5 border border-white/5 rounded-xl text-white/40 text-xs">
+                    <div className="h-[52px] flex items-center justify-center gap-2 text-white/40 text-xs">
                         <Music className="w-4 h-4 opacity-50" />
                         <span>No music playing</span>
                     </div>

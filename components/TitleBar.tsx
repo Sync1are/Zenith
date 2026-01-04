@@ -1,5 +1,5 @@
 // src/components/TitleBar.tsx
-import { X, Square, Minus, PictureInPicture2 } from "lucide-react";
+import { X, Square, Minus, AppWindow } from "lucide-react";
 
 const TitleBar = () => {
   return (
@@ -17,11 +17,11 @@ const TitleBar = () => {
 
         {/* Compact Mode */}
         <button
-          onClick={() => window.electronAPI.setCompactMode()}
+          onClick={() => window.electronAPI?.setCompactMode && window.electronAPI.setCompactMode()}
           className="w-9 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-[#242429] transition-colors"
           title="Compact Mode"
         >
-          <PictureInPicture2 size={14} strokeWidth={2.4} />
+          <AppWindow size={14} strokeWidth={2.4} />
         </button>
 
         {/* Minimize */}
