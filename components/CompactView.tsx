@@ -61,9 +61,10 @@ const CompactView: React.FC = () => {
         if (window.electronAPI?.resizeCompactWindow) {
             const taskCount = Math.min(otherTasks.length, 4);
             const completedHeight = completedTasks.length > 0 ? 30 : 0;
-            const spotifyHeight = 100; // Space for Spotify player
+            const spotifyHeight = 100; // Space for Spotify player (expanded to include margin)
             const extraHeight = isDropdownOpen ? 100 + (taskCount * 44) + completedHeight : 0;
-            window.electronAPI.resizeCompactWindow(140 + spotifyHeight + extraHeight);
+            // Base height increased to 150 to account for the margin between containers
+            window.electronAPI.resizeCompactWindow(150 + spotifyHeight + extraHeight);
         }
     }, [isDropdownOpen, otherTasks.length, completedTasks.length]);
 
@@ -324,61 +325,74 @@ const CompactView: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Spotify Player */}
-                    <div className="pt-2 border-t border-white/5">
-                        {!spotify.accessToken ? (
-                            <button
-                                onClick={beginLogin}
-                                className="w-full h-[52px] flex items-center justify-center gap-2 bg-[#1DB954]/10 hover:bg-[#1DB954]/20 border border-[#1DB954]/20 hover:border-[#1DB954]/40 rounded-xl group transition-all cursor-pointer"
-                            >
-                                <div className="p-1.5 bg-[#1DB954]/20 rounded-full group-hover:scale-110 transition-transform">
-                                    <Music className="w-4 h-4 text-[#1DB954]" />
-                                </div>
-                                <span className="text-[#1DB954] text-xs font-medium">Connect Spotify</span>
-                            </button>
-                        ) : spotifyTrack ? (
-                            <div className="bg-white/5 border border-white/5 rounded-xl p-2 flex items-center gap-3 backdrop-blur-sm">
-                                <img
-                                    src={spotifyTrack.album?.images?.[2]?.url || spotifyTrack.album?.images?.[0]?.url}
-                                    alt={spotifyTrack.album?.name}
-                                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-lg"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                        <Music className="w-3 h-3 text-[#1DB954]" />
-                                        <p className="text-xs font-medium text-white/90 truncate">{spotifyTrack.name}</p>
-                                    </div>
-                                    <p className="text-[10px] text-white/50 truncate pl-4.5">{spotifyTrack.artists?.map((a: any) => a.name).join(', ')}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={async () => { await skipPrevious(); setTimeout(refreshSpotify, 400); }}
-                                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
-                                    >
-                                        <SkipBack className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={async () => { await togglePlayback(!spotifyTrack.is_playing); setTimeout(refreshSpotify, 400); }}
-                                        className="p-1.5 text-white hover:scale-110 transition-transform cursor-pointer"
-                                    >
-                                        {spotifyTrack.is_playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                                    </button>
-                                    <button
-                                        onClick={async () => { await skipNext(); setTimeout(refreshSpotify, 400); }}
-                                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
-                                    >
-                                        <SkipForward className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="h-[52px] flex items-center justify-center gap-2 bg-white/5 border border-white/5 rounded-xl text-white/40 text-xs">
-                                <Music className="w-4 h-4 opacity-50" />
-                                <span>No music playing</span>
-                            </div>
-                        )}
-                    </div>
                 </div>
+            </div>
+
+            {/* Spotify Player Container */}
+            <div
+                className="compact-container mt-2"
+                style={{
+                    width: '300px',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+                    overflow: 'hidden',
+                    padding: '8px'
+                }}
+            >
+                {!spotify.accessToken ? (
+                    <button
+                        onClick={beginLogin}
+                        className="w-full h-[52px] flex items-center justify-center gap-2 bg-[#1DB954]/10 hover:bg-[#1DB954]/20 border border-[#1DB954]/20 hover:border-[#1DB954]/40 rounded-xl group transition-all cursor-pointer"
+                    >
+                        <div className="p-1.5 bg-[#1DB954]/20 rounded-full group-hover:scale-110 transition-transform">
+                            <Music className="w-4 h-4 text-[#1DB954]" />
+                        </div>
+                        <span className="text-[#1DB954] text-xs font-medium">Connect Spotify</span>
+                    </button>
+                ) : spotifyTrack ? (
+                    <div className="bg-white/5 border border-white/5 rounded-xl p-2 flex items-center gap-3 backdrop-blur-sm">
+                        <img
+                            src={spotifyTrack.album?.images?.[2]?.url || spotifyTrack.album?.images?.[0]?.url}
+                            alt={spotifyTrack.album?.name}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                                <Music className="w-3 h-3 text-[#1DB954]" />
+                                <p className="text-xs font-medium text-white/90 truncate">{spotifyTrack.name}</p>
+                            </div>
+                            <p className="text-[10px] text-white/50 truncate pl-4.5">{spotifyTrack.artists?.map((a: any) => a.name).join(', ')}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={async () => { await skipPrevious(); setTimeout(refreshSpotify, 400); }}
+                                className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                            >
+                                <SkipBack className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={async () => { await togglePlayback(!spotifyTrack.is_playing); setTimeout(refreshSpotify, 400); }}
+                                className="p-1.5 text-white hover:scale-110 transition-transform cursor-pointer"
+                            >
+                                {spotifyTrack.is_playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                            </button>
+                            <button
+                                onClick={async () => { await skipNext(); setTimeout(refreshSpotify, 400); }}
+                                className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                            >
+                                <SkipForward className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="h-[52px] flex items-center justify-center gap-2 bg-white/5 border border-white/5 rounded-xl text-white/40 text-xs">
+                        <Music className="w-4 h-4 opacity-50" />
+                        <span>No music playing</span>
+                    </div>
+                )}
             </div>
         </>
     );
