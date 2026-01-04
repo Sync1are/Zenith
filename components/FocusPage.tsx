@@ -142,10 +142,18 @@ const TimerContent: React.FC<{ taskId: string | null }> = ({ taskId }) => {
   const timerRemaining = useAppStore((s) => s.timerRemaining);
   const timerActive = useAppStore((s) => s.timerActive);
 
-  const activeTaskTitle = useMemo(() => tasks.find((t) => t.id === taskId)?.title || "—", [tasks, taskId]);
+  const activeTask = useMemo(() => tasks.find((t) => t.id === taskId), [tasks, taskId]);
+  const activeTaskTitle = activeTask?.title || "—";
 
-  // --- STANDARD TIMER DISPLAY (Always show task timer) ---
-  const isOvertime = timerRemaining < 0;
+  // Check if this is a count-up (stopwatch) task (no estimated time)
+  // Handle edge cases: undefined, null, 0, empty string, or NaN
+  const estimatedMins = activeTask?.estimatedTimeMinutes;
+  const isCountUpTask = activeTask && (!estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins)));
+
+  // --- TIMER DISPLAY LOGIC ---
+  // For count-up tasks: timerRemaining is the elapsed time (positive, no sign)
+  // For countdown tasks: timerRemaining is remaining time (negative = overtime, show + sign)
+  const isOvertime = !isCountUpTask && timerRemaining < 0;
   const absRemaining = Math.abs(timerRemaining);
   const minutes = Math.floor(absRemaining / 60).toString().padStart(2, "0");
   const seconds = (absRemaining % 60).toString().padStart(2, "0");
@@ -156,11 +164,11 @@ const TimerContent: React.FC<{ taskId: string | null }> = ({ taskId }) => {
       <p className="mt-2 text-sm lg:text-base text-white/80 font-medium max-w-[16rem] truncate text-center px-4">
         {activeTaskTitle}
       </p>
-      <div className={`mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black tracking-tighter font-mono ${isOvertime ? "text-red-500 animate-pulse" : "text-white"}`}>
+      <div className={`mt-1 text-[4rem] lg:text-[5.5rem] leading-none font-black tracking-tighter font-mono ${isCountUpTask ? "text-green-400" : isOvertime ? "text-red-500 animate-pulse" : "text-white"}`}>
         {isOvertime ? "+" : ""}{minutes}:{seconds}
       </div>
-      <p className={`mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] ${isOvertime ? "text-red-400 font-bold" : "text-white/40"}`}>
-        {isOvertime ? "OVERTIME" : (timerActive ? "Focus Interval" : "Ready")}
+      <p className={`mt-3 text-[9px] lg:text-[10px] uppercase tracking-[0.3em] ${isCountUpTask ? "text-green-400 font-bold" : isOvertime ? "text-red-400 font-bold" : "text-white/40"}`}>
+        {isCountUpTask ? "STOPWATCH" : isOvertime ? "OVERTIME" : (timerActive ? "Focus Interval" : "Ready")}
       </p>
     </div>
   );

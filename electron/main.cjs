@@ -337,9 +337,17 @@ ipcMain.on('set-compact-mode', () => {
 
 ipcMain.on('resize-compact-window', (event, newHeight) => {
   if (!mainWindow) return;
-  const targetHeight = Math.min(Math.max(newHeight, 130), 400);
-  const currentBounds = mainWindow.getBounds();
-  mainWindow.setSize(300, targetHeight);
+  const targetHeight = Math.min(Math.max(newHeight, 130), 600);
+  const bounds = mainWindow.getBounds();
+  const heightDiff = targetHeight - bounds.height;
+
+  // Grow upwards by subtracting the height difference from Y
+  mainWindow.setBounds({
+    x: bounds.x,
+    y: bounds.y - heightDiff,
+    width: 300,
+    height: targetHeight
+  });
 });
 
 ipcMain.on('set-normal-mode', () => {

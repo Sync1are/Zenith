@@ -146,9 +146,19 @@ export default function TasksPage() {
         }
     }, [startTask, pauseTask]);
 
+    const logSession = useAppStore((state) => state.logSession);
+
     const markAsDone = useCallback((id: string) => {
+        // Find the task to get its time spent
+        const task = tasks.find(t => t.id === id);
+
         if (activeTaskId === id) {
             pauseTask();
+        }
+
+        // Log the time spent on this task to analytics
+        if (task && task.timeSpentMinutes && task.timeSpentMinutes > 0) {
+            logSession(Math.round(task.timeSpentMinutes));
         }
 
         const animationType = 'complete';
@@ -164,7 +174,7 @@ export default function TasksPage() {
                 return next;
             });
         }, 400);
-    }, [activeTaskId, pauseTask, setTasks]);
+    }, [activeTaskId, pauseTask, setTasks, tasks, logSession]);
 
     const updateTask = useCallback((id: string, updates: Partial<Task>) => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));

@@ -394,9 +394,17 @@ export const useAppStore = create<AppState>()(
         const task = tasks.find((t) => t.id === taskId);
         if (!task) return;
 
+        // Check if this is a count-up (stopwatch) task (no estimated time)
+        // Handle edge cases: undefined, null, 0, empty string, or NaN
+        const estimatedMins = task.estimatedTimeMinutes;
+        const isCountUp = !estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins));
+
         // Convert estimatedTimeMinutes to seconds
-        const totalSeconds = task.estimatedTimeMinutes * 60;
-        const remaining = task.remainingTime ?? totalSeconds;
+        const totalSeconds = (Number(task.estimatedTimeMinutes) || 0) * 60;
+        // For count-up tasks, use absolute elapsed time (handles old negative data), for countdown use remaining
+        const remaining = isCountUp
+          ? Math.abs((task.timeSpentMinutes || 0) * 60)  // Start from positive elapsed time for count-up
+          : (task.remainingTime ?? totalSeconds);
 
         set((state) => ({
           activeTaskId: taskId,
@@ -405,7 +413,7 @@ export const useAppStore = create<AppState>()(
           lastStartRemaining: remaining,
           tasks: state.tasks.map((t) =>
             t.id === taskId
-              ? { ...t, status: TaskStatus.InProgress, remainingTime: remaining }
+              ? { ...t, status: TaskStatus.InProgress, remainingTime: isCountUp ? remaining : remaining }
               : t.status === TaskStatus.InProgress
                 ? { ...t, status: TaskStatus.Todo }
                 : t
@@ -463,21 +471,27 @@ export const useAppStore = create<AppState>()(
           get();
         if (!timerActive) return;
 
-        const newRemaining = timerRemaining - 1;
+        // Find the active task to check if it's a count-up (stopwatch) task
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        // Handle edge cases: undefined, null, 0, empty string, or NaN
+        const estimatedMins = activeTask?.estimatedTimeMinutes;
+        const isCountUp = activeTask && (!estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins)));
 
-        // Update the active task’s remaining time each tick
+        // For count-up: increment, for countdown: decrement
+        const newRemaining = isCountUp ? timerRemaining + 1 : timerRemaining - 1;
+
+        // Update the active task's remaining time each tick
         const newTasks = tasks.map((t) => {
           if (t.id !== activeTaskId) return t;
-          // Allow negative values for overtime
-          const taskRemaining = (t.remainingTime ?? newRemaining) - 1;
+          // For count-up tasks, remainingTime tracks elapsed seconds (positive)
+          // For countdown tasks, remainingTime decreases (can go negative for overtime)
+          const taskRemaining = isCountUp
+            ? (t.remainingTime ?? 0) + 1  // Count up
+            : (t.remainingTime ?? newRemaining) - 1;  // Count down
           // Update timeSpentMinutes (accumulate 1 second = 1/60 minutes)
           const timeSpent = (t.timeSpentMinutes || 0) + (1 / 60);
           return { ...t, remainingTime: taskRemaining, timeSpentMinutes: timeSpent };
         });
-
-        // Log session if we just crossed zero or are in overtime? 
-        // Actually, let's keep logging simple: log when pausing or finishing.
-        // If we are in overtime, we are still "active".
 
         set({
           timerRemaining: newRemaining,

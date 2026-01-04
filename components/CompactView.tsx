@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { useSpotifyStore } from '../store/useSpotifyStore';
+import { beginLogin } from '../auth/spotifyAuth';
 import { TaskStatus } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Maximize2, Play, Pause, ChevronDown, Clock, Coffee, Check, X } from 'lucide-react';
+import { Maximize2, Play, Pause, ChevronDown, Clock, Coffee, Check, X, SkipBack, SkipForward, Music } from 'lucide-react';
 
 const CompactView: React.FC = () => {
     const tasks = useAppStore(s => s.tasks);
@@ -21,6 +23,35 @@ const CompactView: React.FC = () => {
     const [previousTaskId, setPreviousTaskId] = useState<string | null>(null);
     const [previousTime, setPreviousTime] = useState<number>(0);
 
+    // Spotify state
+    const { spotify, ensureSpotifyAccessToken, getCurrentlyPlaying, togglePlayback, skipNext, skipPrevious } = useSpotifyStore();
+    const [spotifyTrack, setSpotifyTrack] = useState<any>(null);
+
+    // Fetch Spotify track
+    const refreshSpotify = async () => {
+        const token = await ensureSpotifyAccessToken();
+        if (!token) return;
+        const data = await getCurrentlyPlaying();
+        if (data?.item) {
+            setSpotifyTrack({
+                name: data.item.name,
+                artists: data.item.artists,
+                album: data.item.album,
+                is_playing: data.is_playing,
+            });
+        } else {
+            setSpotifyTrack(null);
+        }
+    };
+
+    // Sync Spotify every 5s when connected
+    useEffect(() => {
+        if (!spotify.accessToken) return;
+        refreshSpotify();
+        const interval = setInterval(refreshSpotify, 5000);
+        return () => clearInterval(interval);
+    }, [spotify.accessToken]);
+
     const activeTask = tasks.find(t => t.id === activeTaskId);
     const incompleteTasks = tasks.filter(t => t.status !== TaskStatus.Done);
     const completedTasks = tasks.filter(t => t.status === TaskStatus.Done);
@@ -30,15 +61,24 @@ const CompactView: React.FC = () => {
         if (window.electronAPI?.resizeCompactWindow) {
             const taskCount = Math.min(otherTasks.length, 4);
             const completedHeight = completedTasks.length > 0 ? 30 : 0;
+            const spotifyHeight = 100; // Space for Spotify player
             const extraHeight = isDropdownOpen ? 100 + (taskCount * 44) + completedHeight : 0;
-            window.electronAPI.resizeCompactWindow(130 + extraHeight);
+            window.electronAPI.resizeCompactWindow(140 + spotifyHeight + extraHeight);
         }
     }, [isDropdownOpen, otherTasks.length, completedTasks.length]);
 
-    const formatTime = (seconds: number) => {
+    // Check if active task is a count-up task (no estimated time)
+    // Handle edge cases: undefined, null, 0, empty string, or NaN
+    const estimatedMins = activeTask?.estimatedTimeMinutes;
+    const isCountUpTask = activeTask && (!estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins)));
+
+    const formatTime = (seconds: number, isCountUp: boolean = false) => {
         const mins = Math.floor(Math.abs(seconds) / 60).toString().padStart(2, '0');
         const secs = (Math.abs(seconds) % 60).toString().padStart(2, '0');
-        return `${seconds < 0 ? '+' : ''}${mins}:${secs}`;
+        // For count-up tasks, never show a sign
+        // For countdown tasks, show + when in overtime (negative)
+        const sign = !isCountUp && seconds < 0 ? '+' : '';
+        return `${sign}${mins}:${secs}`;
     };
 
     const handleExpand = () => {
@@ -108,6 +148,9 @@ const CompactView: React.FC = () => {
 
     // CSS to hide all scrollbars completely
     const hideScrollbarStyle = `
+        html, body, #root {
+            background: transparent !important;
+        }
         html, body, .compact-container, .compact-container * {
             scrollbar-width: none !important;
             -ms-overflow-style: none !important;
@@ -124,12 +167,14 @@ const CompactView: React.FC = () => {
 
     return (
         <>
+            {/* ... (styles and container setup) */}
             <style>{hideScrollbarStyle}</style>
             <div
                 className="compact-container"
                 style={{
                     width: '300px',
-                    background: 'rgba(17, 18, 23, 0.7)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
@@ -138,7 +183,7 @@ const CompactView: React.FC = () => {
             >
                 {/* Drag Handle */}
                 <div
-                    className="h-5 w-full cursor-move flex items-center justify-center"
+                    className="h-5 w-full cursor-move flex items-center justify-center hover:bg-white/5 transition-colors"
                     style={{ WebkitAppRegion: 'drag' } as any}
                 >
                     <div className="w-8 h-1 bg-white/20 rounded-full" />
@@ -149,9 +194,9 @@ const CompactView: React.FC = () => {
                     {incompleteTasks.length > 0 ? (
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <span className={`text-4xl font-mono font-bold ${isOnBreak ? 'text-orange-400' : timerRemaining < 0 ? 'text-red-400' : 'text-white'
+                                <span className={`text-4xl font-mono font-bold ${isOnBreak ? 'text-orange-400' : isCountUpTask ? 'text-green-400' : timerRemaining < 0 ? 'text-red-400' : 'text-white'
                                     }`}>
-                                    {formatTime(timerRemaining)}
+                                    {formatTime(timerRemaining, !!isCountUpTask)}
                                 </span>
                                 {isOnBreak && (
                                     <span className="text-[10px] text-orange-400 bg-orange-500/20 px-2 py-0.5 rounded-full uppercase tracking-wide">
@@ -192,7 +237,8 @@ const CompactView: React.FC = () => {
                         <div className="relative" style={{ overflow: 'hidden' }}>
                             <button
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="w-full flex items-center justify-between px-3 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-left transition-all cursor-pointer"
+                                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/5 border border-white/10 rounded-xl text-left transition-all cursor-pointer"
+                                style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
                             >
                                 <span className="text-sm text-white/90 truncate flex-1 pr-2">
                                     {incompleteTasks.length === 0 ? 'Add tasks from expanded view' : (activeTask?.title || 'Select task...')}
@@ -209,7 +255,7 @@ const CompactView: React.FC = () => {
                                         transition={{ duration: 0.2 }}
                                         className="mt-2 rounded-xl shadow-2xl"
                                         style={{
-                                            background: 'rgba(26, 27, 35, 0.85)',
+                                            background: 'rgba(26, 27, 35, 0.55)',
                                             backdropFilter: 'blur(16px)',
                                             WebkitBackdropFilter: 'blur(16px)',
                                             border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -277,6 +323,61 @@ const CompactView: React.FC = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* Spotify Player */}
+                    <div className="pt-2 border-t border-white/5">
+                        {!spotify.accessToken ? (
+                            <button
+                                onClick={beginLogin}
+                                className="w-full h-[52px] flex items-center justify-center gap-2 bg-[#1DB954]/10 hover:bg-[#1DB954]/20 border border-[#1DB954]/20 hover:border-[#1DB954]/40 rounded-xl group transition-all cursor-pointer"
+                            >
+                                <div className="p-1.5 bg-[#1DB954]/20 rounded-full group-hover:scale-110 transition-transform">
+                                    <Music className="w-4 h-4 text-[#1DB954]" />
+                                </div>
+                                <span className="text-[#1DB954] text-xs font-medium">Connect Spotify</span>
+                            </button>
+                        ) : spotifyTrack ? (
+                            <div className="bg-white/5 border border-white/5 rounded-xl p-2 flex items-center gap-3 backdrop-blur-sm">
+                                <img
+                                    src={spotifyTrack.album?.images?.[2]?.url || spotifyTrack.album?.images?.[0]?.url}
+                                    alt={spotifyTrack.album?.name}
+                                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-lg"
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <Music className="w-3 h-3 text-[#1DB954]" />
+                                        <p className="text-xs font-medium text-white/90 truncate">{spotifyTrack.name}</p>
+                                    </div>
+                                    <p className="text-[10px] text-white/50 truncate pl-4.5">{spotifyTrack.artists?.map((a: any) => a.name).join(', ')}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={async () => { await skipPrevious(); setTimeout(refreshSpotify, 400); }}
+                                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                                    >
+                                        <SkipBack className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={async () => { await togglePlayback(!spotifyTrack.is_playing); setTimeout(refreshSpotify, 400); }}
+                                        className="p-1.5 text-white hover:scale-110 transition-transform cursor-pointer"
+                                    >
+                                        {spotifyTrack.is_playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={async () => { await skipNext(); setTimeout(refreshSpotify, 400); }}
+                                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer"
+                                    >
+                                        <SkipForward className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-[52px] flex items-center justify-center gap-2 bg-white/5 border border-white/5 rounded-xl text-white/40 text-xs">
+                                <Music className="w-4 h-4 opacity-50" />
+                                <span>No music playing</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </>

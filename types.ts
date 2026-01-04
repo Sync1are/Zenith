@@ -120,8 +120,10 @@ declare global {
       onSpotifyDeepLink: (callback: (data: { code: string | null; state: string | null; error: string | null }) => void) => void;
       removeSpotifyDeepLinkListener: () => void;
       // Compact Mode
+      setCompactMode: () => void;
       setNormalMode: () => void;
       onCompactModeExited: (callback: () => void) => void;
+      resizeCompactWindow: (height: number) => void;
       // Secure Spotify
       spotify: {
         encryptToken: (token: string) => Promise<string>;

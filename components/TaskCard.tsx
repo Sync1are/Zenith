@@ -39,11 +39,18 @@ export const TaskCard = React.memo<TaskCardProps>(({
     const [editedTime, setEditedTime] = useState(task.estimatedTimeMinutes?.toString() || '');
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
-    const formatTime = (seconds: number) => {
+    // Check if this is a count-up task (no estimated time)
+    // Handle edge cases: undefined, null, 0, empty string, or NaN
+    const estimatedMins = task.estimatedTimeMinutes;
+    const isCountUpTask = !estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins));
+
+    const formatTime = (seconds: number, isCountUp: boolean = false) => {
         const absSeconds = Math.abs(seconds);
         const mins = Math.floor(absSeconds / 60).toString().padStart(2, '0');
         const secs = (absSeconds % 60).toString().padStart(2, '0');
-        const sign = seconds < 0 ? '+' : '';
+        // For count-up tasks, never show a sign
+        // For countdown tasks, show + when in overtime (negative)
+        const sign = !isCountUp && seconds < 0 ? '+' : '';
         return `${sign}${mins}:${secs}`;
     };
 
@@ -187,13 +194,13 @@ export const TaskCard = React.memo<TaskCardProps>(({
                                         <span className="flex items-center gap-1">
                                             <Hash size={10} /> {task.category}
                                         </span>
-                                        {(task.estimatedTimeMinutes > 0 || task.remainingTime !== undefined) && (
+                                        {(task.estimatedTimeMinutes > 0 || task.remainingTime !== undefined || task.timeSpentMinutes) && (
                                             <span className="flex items-center gap-1">
                                                 <Clock size={10} />
                                                 {isActive && timerRemaining !== undefined
-                                                    ? <span className="text-blue-400 font-mono">{formatTime(timerRemaining)}</span>
+                                                    ? <span className={`font-mono ${isCountUpTask ? 'text-green-400' : 'text-blue-400'}`}>{formatTime(timerRemaining, isCountUpTask)}</span>
                                                     : task.remainingTime !== undefined
-                                                        ? <span className="font-mono">{formatTime(task.remainingTime)}</span>
+                                                        ? <span className="font-mono">{formatTime(task.remainingTime, isCountUpTask)}</span>
                                                         : <span>{task.estimatedTimeMinutes}m</span>
                                                 }
                                             </span>
