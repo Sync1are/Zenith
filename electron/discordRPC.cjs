@@ -51,7 +51,8 @@ function setActivity(data) {
         return;
     }
 
-    const startTimestamp = data.startTimestamp || Date.now();
+    const startTimestamp = data.startTimestamp || (data.endTimestamp ? undefined : Date.now());
+    const endTimestamp = data.endTimestamp;
 
     let details = 'Viewing Dashboard';
     let state = 'Idle';
@@ -82,6 +83,12 @@ function setActivity(data) {
         case 'Calendar':
             details = '📅 Calendar View';
             state = 'Planning ahead';
+            break;
+        case 'Compact':
+            details = data.taskName ? `Working on: ${data.taskName.slice(0, 30)}` : 'Compact Mode';
+            state = data.timerActive ? '⏱️ Focus Timer Active' : '⏸️ Timer Paused';
+            smallImageKey = 'focus_icon';
+            smallImageText = 'Compact View';
             break;
         case 'Focus':
             if (data.isSuperFocus) {
@@ -134,6 +141,7 @@ function setActivity(data) {
         details,
         state,
         startTimestamp,
+        endTimestamp,
         largeImageKey,
         largeImageText,
         instance: false,

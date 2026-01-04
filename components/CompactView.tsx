@@ -147,6 +147,32 @@ const CompactView: React.FC = () => {
         }
     }, [timerRemaining, timerActive]);
 
+    // Update Discord RPC based on active task and timer
+    useEffect(() => {
+        if (!window.electronAPI?.updateDiscordPresence) return;
+
+        const rpcData: any = {
+            page: 'Compact',
+            taskName: activeTask?.title || 'No active task',
+            timerActive: timerActive
+        };
+
+        if (timerActive) {
+            if (isCountUpTask) {
+                // Count up: show elapsed time
+                rpcData.startTimestamp = Date.now() - (timerRemaining * 1000);
+            } else {
+                // Count down: show remaining time
+                rpcData.endTimestamp = Date.now() + (timerRemaining * 1000);
+                // Also set startTimestamp so Discord shows "elapsed" if needed, 
+                // but usually for countdown just endTimestamp is enough to show "X left".
+                // Actually, passing only endTimestamp is the standard for "time remaining".
+            }
+        }
+
+        window.electronAPI.updateDiscordPresence(rpcData);
+    }, [activeTask?.id, activeTask?.title, timerActive, isCountUpTask]);
+
     // CSS to hide all scrollbars completely
     const hideScrollbarStyle = `
         html, body, #root {

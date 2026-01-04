@@ -131,8 +131,16 @@ declare global {
       };
       // Discord Rich Presence
       updateDiscordPresence: (data: {
+        page?: string;
+        taskName?: string;
+        timerActive?: boolean;
+        taskCount?: number;
+        isSuperFocus?: boolean;
+        sessionCode?: string;
         details?: string;
         state?: string;
+        startTimestamp?: number;
+        endTimestamp?: number;
         largeImageKey?: string;
         largeImageText?: string;
         smallImageKey?: string;
