@@ -339,12 +339,11 @@ ipcMain.on('resize-compact-window', (event, newHeight) => {
   if (!mainWindow) return;
   const targetHeight = Math.min(Math.max(newHeight, 130), 600);
   const bounds = mainWindow.getBounds();
-  const heightDiff = targetHeight - bounds.height;
 
-  // Grow upwards by subtracting the height difference from Y
+  // Expand downwards by keeping Y position fixed
   mainWindow.setBounds({
     x: bounds.x,
-    y: bounds.y - heightDiff,
+    y: bounds.y, // Keep top position fixed
     width: 300,
     height: targetHeight
   });
