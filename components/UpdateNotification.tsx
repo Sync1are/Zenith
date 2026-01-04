@@ -53,7 +53,14 @@ const UpdateNotification: React.FC = () => {
 
         window.electronAPI.onUpdateError((data: any) => {
             setUpdateState('error');
-            setErrorMessage(data.message);
+            // Parse error message for common issues
+            let friendlyMessage = data.message;
+            if (data.message.includes('404') && data.message.includes('releases.atom')) {
+                friendlyMessage = "Cannot access updates. Repository might be private.";
+            } else if (data.message.includes('net::ERR_INTERNET_DISCONNECTED')) {
+                friendlyMessage = "No internet connection. Cannot check for updates.";
+            }
+            setErrorMessage(friendlyMessage);
         });
 
         return () => {
