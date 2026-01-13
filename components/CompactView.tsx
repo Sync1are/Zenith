@@ -10,6 +10,7 @@ const CompactView: React.FC = () => {
     const tasks = useAppStore(s => s.tasks);
     const activeTaskId = useAppStore(s => s.activeTaskId);
     const setActiveTask = useAppStore(s => s.setActiveTask);
+    const startTask = useAppStore(s => s.startTask);
     const timerRemaining = useAppStore(s => s.timerRemaining);
     const setTimerRemaining = useAppStore(s => s.setTimerRemaining);
     const timerActive = useAppStore(s => s.timerActive);
@@ -90,7 +91,21 @@ const CompactView: React.FC = () => {
     };
 
     const handleTaskSwitch = (taskId: string) => {
-        setActiveTask(taskId);
+        // Get the task to switch to
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+            // Calculate the correct timer value for this task
+            const estimatedMins = task.estimatedTimeMinutes;
+            const isCountUp = !estimatedMins || Number(estimatedMins) === 0 || Number.isNaN(Number(estimatedMins));
+            const totalSeconds = (Number(task.estimatedTimeMinutes) || 0) * 60;
+            const remaining = isCountUp
+                ? Math.abs((task.timeSpentMinutes || 0) * 60)
+                : (task.remainingTime ?? totalSeconds);
+
+            // Set the active task and update timer to this task's time
+            setActiveTask(taskId);
+            setTimerRemaining(remaining);
+        }
         setIsDropdownOpen(false);
         if (isOnBreak) setIsOnBreak(false);
     };
