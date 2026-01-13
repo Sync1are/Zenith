@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Task, TaskStatus, Priority } from '../types';
 import { breakDownTask } from '../services/geminiService';
 import { useAppStore } from '../store/useAppStore';
-import { Plus, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Plus, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, Clock, Target, TrendingUp, Briefcase, BookOpen, Heart, User } from 'lucide-react';
 import { TaskSection } from './TaskSection';
 import { TaskHeatmap } from './TaskHeatmap';
 import StatCard from './StatCard';
@@ -19,6 +19,9 @@ export default function TasksPage() {
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly'>('daily');
     const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Mon-Fri default
+
+    // Carousel state for Today's Progress section
+    const [progressCarouselIndex, setProgressCarouselIndex] = useState(0);
 
     // Use global task store to sync across Dashboard, Focus, and Tasks pages
     const tasks = useAppStore((state) => state.tasks);
@@ -452,71 +455,211 @@ export default function TasksPage() {
                         </div>
                     </div>
 
-                    {/* Today's Progress Card */}
+                    {/* Today's Progress Carousel */}
                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-                        <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-6">Today's Progress</h3>
-
-                        <div className="space-y-4 mb-6">
-                            <div className="flex justify-between items-center">
-                                <span className="text-white/70">Total Tasks</span>
-                                <span className="text-white font-bold text-lg">
-                                    {tasks.filter(t => {
-                                        const today = new Date();
-                                        today.setHours(0, 0, 0, 0);
-                                        return new Date(t.createdAt).getTime() >= today.getTime();
-                                    }).length}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-white/70">Completed</span>
-                                <span className="text-green-400 font-bold text-lg">
-                                    {tasks.filter(t => {
-                                        const today = new Date();
-                                        today.setHours(0, 0, 0, 0);
-                                        return t.status === TaskStatus.Done && t.completedAt && t.completedAt >= today.getTime();
-                                    }).length}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-white/70">In Progress</span>
-                                <span className="text-yellow-400 font-bold text-lg">
-                                    {tasks.filter(t => t.status === TaskStatus.InProgress).length}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-end mb-1">
-                                <span className="text-xs text-white/40">Completion</span>
-                                <span className="text-green-400 font-bold text-sm">
-                                    {(() => {
-                                        const todayTasks = tasks.filter(t => {
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0);
-                                            return new Date(t.createdAt).getTime() >= today.getTime();
-                                        });
-                                        const completedToday = todayTasks.filter(t => t.status === TaskStatus.Done).length;
-                                        return todayTasks.length > 0 ? Math.round((completedToday / todayTasks.length) * 100) : 0;
-                                    })()}%
-                                </span>
-                            </div>
-                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-green-500 rounded-full transition-all duration-500"
-                                    style={{
-                                        width: `${(() => {
-                                            const todayTasks = tasks.filter(t => {
-                                                const today = new Date();
-                                                today.setHours(0, 0, 0, 0);
-                                                return new Date(t.createdAt).getTime() >= today.getTime();
-                                            });
-                                            const completedToday = todayTasks.filter(t => t.status === TaskStatus.Done).length;
-                                            return todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
-                                        })()}%`
-                                    }}
+                        {/* Carousel Header with Navigation */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider">
+                                {progressCarouselIndex === 0 ? "Today's Progress" : "Daily Analytics"}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setProgressCarouselIndex(0)}
+                                    className={`w-2 h-2 rounded-full transition-all duration-300 ${progressCarouselIndex === 0 ? 'bg-blue-400 w-4' : 'bg-white/20 hover:bg-white/40'}`}
+                                />
+                                <button
+                                    onClick={() => setProgressCarouselIndex(1)}
+                                    className={`w-2 h-2 rounded-full transition-all duration-300 ${progressCarouselIndex === 1 ? 'bg-blue-400 w-4' : 'bg-white/20 hover:bg-white/40'}`}
                                 />
                             </div>
                         </div>
+
+                        {/* Carousel Container */}
+                        <div className="relative overflow-hidden">
+                            <div
+                                className="flex transition-transform duration-500 ease-out"
+                                style={{ transform: `translateX(-${progressCarouselIndex * 100}%)` }}
+                            >
+                                {/* Slide 1: Progress Stats */}
+                                <div className="w-full flex-shrink-0">
+                                    <div className="space-y-4 mb-6">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white/70 flex items-center gap-2">
+                                                <Target size={14} className="text-blue-400" />
+                                                Total Tasks
+                                            </span>
+                                            <span className="text-white font-bold text-lg">
+                                                {tasks.filter(t => {
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    return new Date(t.createdAt).getTime() >= today.getTime();
+                                                }).length}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white/70 flex items-center gap-2">
+                                                <CheckCircle2 size={14} className="text-green-400" />
+                                                Completed
+                                            </span>
+                                            <span className="text-green-400 font-bold text-lg">
+                                                {tasks.filter(t => {
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    return t.status === TaskStatus.Done && t.completedAt && t.completedAt >= today.getTime();
+                                                }).length}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white/70 flex items-center gap-2">
+                                                <TrendingUp size={14} className="text-yellow-400" />
+                                                In Progress
+                                            </span>
+                                            <span className="text-yellow-400 font-bold text-lg">
+                                                {tasks.filter(t => t.status === TaskStatus.InProgress).length}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <span className="text-xs text-white/40">Completion</span>
+                                            <span className="text-green-400 font-bold text-sm">
+                                                {(() => {
+                                                    const todayTasks = tasks.filter(t => {
+                                                        const today = new Date();
+                                                        today.setHours(0, 0, 0, 0);
+                                                        return new Date(t.createdAt).getTime() >= today.getTime();
+                                                    });
+                                                    const completedToday = todayTasks.filter(t => t.status === TaskStatus.Done).length;
+                                                    return todayTasks.length > 0 ? Math.round((completedToday / todayTasks.length) * 100) : 0;
+                                                })()}%
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
+                                                style={{
+                                                    width: `${(() => {
+                                                        const todayTasks = tasks.filter(t => {
+                                                            const today = new Date();
+                                                            today.setHours(0, 0, 0, 0);
+                                                            return new Date(t.createdAt).getTime() >= today.getTime();
+                                                        });
+                                                        const completedToday = todayTasks.filter(t => t.status === TaskStatus.Done).length;
+                                                        return todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0;
+                                                    })()}%`
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Slide 2: Daily Analytics */}
+                                <div className="w-full flex-shrink-0">
+                                    {(() => {
+                                        // Calculate today's analytics
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+
+                                        const todayTasks = tasks.filter(t => {
+                                            const taskDate = new Date(t.createdAt);
+                                            taskDate.setHours(0, 0, 0, 0);
+                                            return taskDate.getTime() === today.getTime() ||
+                                                (t.completedAt && t.completedAt >= today.getTime());
+                                        });
+
+                                        // Total hours from all tasks worked on today
+                                        const totalMinutes = todayTasks.reduce((acc, t) => acc + (t.timeSpentMinutes || 0), 0);
+                                        const totalHours = Math.floor(totalMinutes / 60);
+                                        const remainingMins = Math.round(totalMinutes % 60);
+
+                                        // Time per category
+                                        const categoryTime: Record<string, number> = {};
+                                        todayTasks.forEach(t => {
+                                            const cat = t.category || 'Personal';
+                                            categoryTime[cat] = (categoryTime[cat] || 0) + (t.timeSpentMinutes || 0);
+                                        });
+
+                                        const maxCategoryTime = Math.max(...Object.values(categoryTime), 1);
+
+                                        const categoryIcons: Record<string, React.ReactNode> = {
+                                            'Work': <Briefcase size={12} />,
+                                            'Study': <BookOpen size={12} />,
+                                            'Health': <Heart size={12} />,
+                                            'Personal': <User size={12} />
+                                        };
+
+                                        const categoryColors: Record<string, string> = {
+                                            'Work': 'from-blue-500 to-blue-400',
+                                            'Study': 'from-purple-500 to-purple-400',
+                                            'Health': 'from-red-500 to-red-400',
+                                            'Personal': 'from-amber-500 to-amber-400'
+                                        };
+
+                                        return (
+                                            <div className="space-y-4">
+                                                {/* Total Time */}
+                                                <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/10 rounded-2xl p-4 border border-white/10">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                                            <Clock size={20} className="text-blue-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-white/50 uppercase tracking-wide">Total Focus Time</p>
+                                                            <p className="text-xl font-bold text-white">
+                                                                {totalHours > 0 ? `${totalHours}h ` : ''}{remainingMins}m
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Category Breakdown */}
+                                                <div className="space-y-3">
+                                                    <p className="text-xs text-white/40 uppercase tracking-wide">By Category</p>
+                                                    {Object.entries(categoryTime).length > 0 ? (
+                                                        Object.entries(categoryTime).map(([cat, mins]) => (
+                                                            <div key={cat} className="space-y-1">
+                                                                <div className="flex items-center justify-between text-sm">
+                                                                    <span className="text-white/70 flex items-center gap-2">
+                                                                        <span className="text-white/40">{categoryIcons[cat] || <User size={12} />}</span>
+                                                                        {cat}
+                                                                    </span>
+                                                                    <span className="text-white/90 font-medium">
+                                                                        {mins >= 60 ? `${Math.floor(mins / 60)}h ${Math.round(mins % 60)}m` : `${Math.round(mins)}m`}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className={`h-full bg-gradient-to-r ${categoryColors[cat] || 'from-gray-500 to-gray-400'} rounded-full transition-all duration-500`}
+                                                                        style={{ width: `${(mins / maxCategoryTime) * 100}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-white/30 text-sm text-center py-4">No activity yet today</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Navigation Arrows */}
+                        <button
+                            onClick={() => setProgressCarouselIndex(prev => Math.max(0, prev - 1))}
+                            className={`absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all ${progressCarouselIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <button
+                            onClick={() => setProgressCarouselIndex(prev => Math.min(1, prev + 1))}
+                            className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all ${progressCarouselIndex === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                        >
+                            <ChevronRight size={16} />
+                        </button>
                     </div>
 
                     {/* Heatmap */}
