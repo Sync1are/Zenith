@@ -145,7 +145,7 @@ const AnalyticsPieChart: React.FC = () => {
                                             {task.title}
                                         </span>
                                         <span className="text-white/30 text-[10px]">
-                                            {task.timeSpentMinutes || task.estimatedTimeMinutes}m
+                                            {Math.round(task.timeSpentMinutes || task.estimatedTimeMinutes || 0)}m
                                         </span>
                                     </div>
                                     <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
