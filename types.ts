@@ -145,6 +145,9 @@ declare global {
         largeImageText?: string;
         smallImageKey?: string;
         smallImageText?: string;
+        // Task time progress fields
+        timerRemaining?: number; // Current remaining time in seconds
+        estimatedTimeMinutes?: number; // Total estimated time for the task in minutes
       }) => void;
 
       // Auto-Update
@@ -158,6 +161,27 @@ declare global {
       onUpdateDownloaded: (callback: (data: { version: string }) => void) => void;
       onUpdateError: (callback: (data: { message: string }) => void) => void;
       removeUpdateListeners: () => void;
+
+      // Local Whisper Speech-to-Text
+      whisper: {
+        transcribe: (audioBuffer: ArrayBuffer) => Promise<{
+          success?: boolean;
+          text?: string;
+          segments?: { start: number; end: number; text: string }[];
+          language?: string;
+          language_probability?: number;
+          error?: string;
+        }>;
+        checkHealth: () => Promise<{
+          status: string;
+          model?: string;
+          device?: string;
+          ready?: boolean;
+          message?: string;
+        }>;
+        startService: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        stopService: () => Promise<{ success: boolean; message?: string }>;
+      };
     };
   }
 
@@ -197,4 +221,45 @@ export interface DayColumn {
   dayName: string;
   dayNumber: string;
   isToday: boolean;
+}
+
+// ==================== JOURNAL TYPES ====================
+
+export interface JournalTopic {
+  id: string;
+  name: string;
+  color: string;           // Hex color e.g. '#6366f1'
+  icon: string;            // Emoji e.g. '📚'
+  createdAt: string;       // ISO date string
+}
+
+export interface JournalEntry {
+  id: string;
+  topicId: string;
+  date: string;            // YYYY-MM-DD format
+  content: string;         // Markdown/HTML content
+  plainText?: string;      // Plain text for search
+  mood?: number;           // 1-5 scale
+  moodEmoji?: string;      // Custom emoji
+  pinned: boolean;
+  attachments?: JournalAttachment[];
+  linkedTaskIds?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JournalAttachment {
+  id: string;
+  entryId: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: 'image' | 'audio' | 'document';
+  createdAt: string;
+}
+
+export interface JournalDraft {
+  topicId: string;
+  date: string;
+  content: string;
+  lastSaved: string;
 }

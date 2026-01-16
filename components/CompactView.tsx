@@ -169,7 +169,9 @@ const CompactView: React.FC = () => {
         const rpcData: any = {
             page: 'Compact',
             taskName: activeTask?.title || 'No active task',
-            timerActive: timerActive
+            timerActive: timerActive,
+            timerRemaining: timerRemaining,
+            estimatedTimeMinutes: activeTask?.estimatedTimeMinutes || 0
         };
 
         if (timerActive) {
@@ -186,7 +188,7 @@ const CompactView: React.FC = () => {
         }
 
         window.electronAPI.updateDiscordPresence(rpcData);
-    }, [activeTask?.id, activeTask?.title, timerActive, isCountUpTask]);
+    }, [activeTask?.id, activeTask?.title, timerActive, isCountUpTask, timerRemaining, activeTask?.estimatedTimeMinutes]);
 
     // CSS to hide all scrollbars completely
     const hideScrollbarStyle = `

@@ -1,0 +1,13 @@
+# Whisper Service Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Whisper
+faster-whisper>=1.0.0
+
+# CUDA support is handled by PyTorch
+# Make sure you have the CUDA version of PyTorch installed:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Optional: For better audio format support
+# pydub>=0.25.0
+# ffmpeg-python>=0.2.0

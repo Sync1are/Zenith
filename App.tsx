@@ -29,6 +29,7 @@ import MessagesApp from "./components/MessagesApp";
 import LoginPage from "./components/LoginPage";
 import SignUpPage from "./components/SignUpPage";
 import CompactView from "./components/CompactView";
+import JournalPage from "./components/JournalPage";
 
 
 // Stores
@@ -40,6 +41,7 @@ import { useCalendarStore } from "./store/useCalendarStore";
 import { useFocusStore } from "./store/useFocusStore";
 import { useGoalStore } from "./store/useGoalStore";
 import { useHabitStore } from "./components/HabitsPage";
+import { useJournalStore } from "./store/useJournalStore";
 import { handleAuthRedirectIfPresent } from "./auth/spotifyAuth";
 import { useFirebaseSync } from "./utils/firebaseSync";
 import { playClickSound } from "./utils/clickSound";
@@ -345,6 +347,17 @@ const App: React.FC = () => {
     store: useHabitStore,
   });
 
+  // Journal Firebase Sync
+  useFirebaseSync({
+    collectionName: 'journal-state',
+    store: useJournalStore,
+    selector: (state) => ({
+      topics: state.topics,
+      entries: state.entries,
+      drafts: state.drafts,
+    }),
+  });
+
   // Initialize Auth
   useEffect(() => {
     const unsub = initAuth();
@@ -477,6 +490,7 @@ const App: React.FC = () => {
       case "Habits": return <HabitsPage />;
       case "Calendar": return <CalendarPage />;
       case "Focus": return <FocusPage onAppClick={handleAppClick} />;
+      case "Journal": return <JournalPage />;
       case "Messages": return <ChatApp />;
       case "Settings": return <SettingsPage />;
       default:

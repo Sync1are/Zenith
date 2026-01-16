@@ -77,4 +77,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.removeAllListeners('update-downloaded');
     ipcRenderer.removeAllListeners('update-error');
   },
+
+  // Local Whisper Speech-to-Text
+  whisper: {
+    transcribe: (audioBlob, options) => ipcRenderer.invoke('whisper-transcribe', audioBlob, options),
+    checkHealth: () => ipcRenderer.invoke('whisper-health'),
+    startService: () => ipcRenderer.invoke('whisper-start'),
+    stopService: () => ipcRenderer.invoke('whisper-stop'),
+  },
 });

@@ -10,6 +10,7 @@ import {
     HabitsIcon
 } from "./icons/IconComponents";
 import { GoalsIcon } from "./icons/GoalsIcon";
+import { JournalIcon } from "./icons/JournalIcon";
 
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ const navItems = [
     { label: "Tasks", icon: <TasksIcon className="h-6 w-6" /> },
     { label: "Goals", icon: <GoalsIcon className="h-6 w-6" /> },
     { label: "Habits", icon: <HabitsIcon className="h-6 w-6" /> },
+    { label: "Journal", icon: <JournalIcon className="h-6 w-6" /> },
     { label: "Calendar", icon: <CalendarIcon className="h-6 w-6" /> },
     { label: "Focus", icon: <FocusIcon className="h-6 w-6" /> },
     { label: "Messages", icon: <MessagesIcon className="h-6 w-6" /> },

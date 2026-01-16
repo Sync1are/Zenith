@@ -13,11 +13,14 @@ interface DiscordPresenceData {
     timerActive?: boolean;
     isSuperFocus?: boolean;
     startTimestamp?: number;
+    timerRemaining?: number;
+    estimatedTimeMinutes?: number;
 }
 
 export function useDiscordPresence(currentPage: string) {
     const tasks = useAppStore((s) => s.tasks);
     const timerActive = useAppStore((s) => s.timerActive);
+    const timerRemaining = useAppStore((s) => s.timerRemaining);
     const activeTaskId = useAppStore((s) => s.activeTaskId);
     const superFocus = useSuperFocus();
 
@@ -39,11 +42,13 @@ export function useDiscordPresence(currentPage: string) {
         if (currentPage === 'Focus') {
             presenceData.timerActive = timerActive;
             presenceData.isSuperFocus = superFocus.isActive;
+            presenceData.timerRemaining = timerRemaining;
 
-            // Get active task name if focusing
+            // Get active task name and estimated time if focusing
             if (activeTaskId) {
                 const activeTask = tasks.find(t => t.id === activeTaskId);
                 presenceData.taskName = activeTask?.title;
+                presenceData.estimatedTimeMinutes = activeTask?.estimatedTimeMinutes || 0;
             }
         }
 
@@ -60,7 +65,7 @@ export function useDiscordPresence(currentPage: string) {
             lastUpdateRef.current = updateKey;
             electronAPI.updateDiscordPresence(presenceData);
         }
-    }, [currentPage, tasks, timerActive, activeTaskId, superFocus.isActive]);
+    }, [currentPage, tasks, timerActive, timerRemaining, activeTaskId, superFocus.isActive]);
 
     // Update start time when page changes
     useEffect(() => {

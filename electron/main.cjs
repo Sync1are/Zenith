@@ -120,6 +120,18 @@ app.whenReady().then(() => {
       autoUpdater.checkForUpdates();
     }, 10000);
   }
+
+  // Pre-start Whisper service in the background (3 second delay to not block UI)
+  setTimeout(async () => {
+    console.log('Pre-starting Whisper service...');
+    const result = await startWhisperService();
+    if (result.success) {
+      console.log('✓ Whisper service pre-started successfully');
+    } else {
+      console.warn('⚠ Whisper service pre-start failed:', result.error);
+      // Not critical - will retry when user actually tries to transcribe
+    }
+  }, 3000);
 });
 
 // Discord Rich Presence update handler
@@ -365,12 +377,214 @@ ipcMain.on('set-normal-mode', () => {
   mainWindow.webContents.send('compact-mode-exited');
 });
 
+// ==================== LOCAL WHISPER SERVICE ====================
+const { spawn } = require('child_process');
+let whisperProcess = null;
+const WHISPER_PORT = 5678;
+const WHISPER_URL = `http://127.0.0.1:${WHISPER_PORT}`;
+
+async function startWhisperService() {
+  if (whisperProcess) {
+    // Verify the existing process is still responsive
+    const health = await checkWhisperHealth();
+    if (health.status === 'ok') {
+      console.log('Whisper service already running and healthy');
+      return { success: true, message: 'Already running' };
+    }
+    // Process exists but not responding, kill and restart
+    console.log('Whisper process exists but not responding, restarting...');
+    whisperProcess.kill();
+    whisperProcess = null;
+  }
+
+  const servicePath = path.join(__dirname, '..', 'services', 'whisper_service.py');
+
+  return new Promise((resolve) => {
+    console.log('Starting Whisper service from:', servicePath);
+
+    // Try python first on Windows, python3 on Unix
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+
+    try {
+      whisperProcess = spawn(pythonCmd, [servicePath], {
+        cwd: path.join(__dirname, '..', 'services'),
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: false
+      });
+    } catch (spawnErr) {
+      console.error('Failed to spawn Whisper process:', spawnErr);
+      resolve({ success: false, error: `Failed to spawn: ${spawnErr.message}` });
+      return;
+    }
+
+    let hasResolved = false;
+    let startupOutput = '';
+    let startupError = '';
+
+    whisperProcess.stdout.on('data', (data) => {
+      const output = data.toString();
+      console.log('[Whisper]', output);
+      startupOutput += output;
+    });
+
+    whisperProcess.stderr.on('data', (data) => {
+      const errOutput = data.toString();
+      console.error('[Whisper Error]', errOutput);
+      startupError += errOutput;
+    });
+
+    whisperProcess.on('error', (err) => {
+      console.error('Whisper process error:', err);
+      whisperProcess = null;
+      if (!hasResolved) {
+        hasResolved = true;
+        resolve({ success: false, error: `Process error: ${err.message}` });
+      }
+    });
+
+    whisperProcess.on('close', (code) => {
+      console.log(`Whisper service exited with code ${code}`);
+      const wasRunning = whisperProcess !== null;
+      whisperProcess = null;
+
+      // Only resolve with error if we haven't resolved yet and process died early
+      if (!hasResolved && code !== 0) {
+        hasResolved = true;
+        resolve({ success: false, error: `Process exited with code ${code}. Error: ${startupError || 'Unknown error'}` });
+      }
+    });
+
+    // Poll health endpoint instead of parsing stdout (more reliable)
+    const pollInterval = 1000;
+    const maxAttempts = 90; // 90 seconds max wait
+    let attempts = 0;
+
+    const pollHealth = async () => {
+      if (hasResolved) return;
+
+      attempts++;
+      try {
+        const health = await checkWhisperHealth();
+        if (health.status === 'ok' && health.ready) {
+          if (!hasResolved) {
+            hasResolved = true;
+            console.log('Whisper service is ready!');
+            resolve({ success: true, message: 'Whisper service started' });
+          }
+          return;
+        }
+      } catch (e) {
+        // Service not ready yet, continue polling
+      }
+
+      if (attempts >= maxAttempts) {
+        if (!hasResolved) {
+          hasResolved = true;
+          resolve({ success: false, error: `Timeout after ${maxAttempts} seconds. Output: ${startupOutput.slice(-500)}` });
+        }
+      } else if (whisperProcess) {
+        // Only continue polling if process is still alive
+        setTimeout(pollHealth, pollInterval);
+      }
+    };
+
+    // Start polling after a short delay to give process time to start
+    setTimeout(pollHealth, 2000);
+  });
+}
+
+function stopWhisperService() {
+  if (whisperProcess) {
+    whisperProcess.kill();
+    whisperProcess = null;
+    return { success: true, message: 'Whisper service stopped' };
+  }
+  return { success: true, message: 'Whisper service was not running' };
+}
+
+async function checkWhisperHealth() {
+  try {
+    const response = await fetch(`${WHISPER_URL}/health`);
+    if (response.ok) {
+      return await response.json();
+    }
+    return { status: 'error', message: 'Service not responding' };
+  } catch (error) {
+    return { status: 'offline', message: error.message };
+  }
+}
+
+async function transcribeWithWhisper(audioBuffer, options = {}) {
+  try {
+    const headers = {
+      'Content-Type': 'application/octet-stream'
+    };
+
+    // Pass options as headers to the Python service
+    if (options.apiKey) {
+      headers['X-Ollama-Api-Key'] = options.apiKey;
+    }
+    if (options.enableCleanup !== undefined) {
+      headers['X-Enable-Cleanup'] = options.enableCleanup ? '1' : '0';
+    }
+
+    const response = await fetch(`${WHISPER_URL}/transcribe`, {
+      method: 'POST',
+      headers,
+      body: Buffer.from(audioBuffer)
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    const errorText = await response.text();
+    return { error: `Transcription failed: ${errorText}` };
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+// Whisper IPC Handlers
+ipcMain.handle('whisper-start', async () => {
+  return await startWhisperService();
+});
+
+ipcMain.handle('whisper-stop', async () => {
+  return stopWhisperService();
+});
+
+ipcMain.handle('whisper-health', async () => {
+  return await checkWhisperHealth();
+});
+
+ipcMain.handle('whisper-transcribe', async (event, audioBuffer, options = {}) => {
+  // First check if service is running
+  const health = await checkWhisperHealth();
+  if (health.status !== 'ok') {
+    console.log('Whisper service not healthy, attempting to start...', health);
+    // Try to start service
+    const startResult = await startWhisperService();
+    if (!startResult.success) {
+      console.error('Failed to start Whisper service:', startResult);
+      return { error: `Failed to start Whisper service: ${startResult.error || 'Unknown error'}` };
+    }
+    // The polling in startWhisperService already waits for readiness
+    // Add a brief extra delay just in case
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return await transcribeWithWhisper(audioBuffer, options);
+});
+
 app.on("window-all-closed", () => {
+  // Stop Whisper service when app closes
+  stopWhisperService();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  stopWhisperService();
   // Cleanup Discord RPC
   destroyRPC();
 });
